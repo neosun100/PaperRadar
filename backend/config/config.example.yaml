@@ -1,6 +1,6 @@
 llm:
   api_key: "YOUR_API_KEY"
-  base_url: "https://api.zhizengzeng.com/v1"
+  base_url: "https://openrouter.ai/api/v1"
   model: "gemini-2.5-flash"
   judge_model: "gemini-2.5-flash"
 processing:
