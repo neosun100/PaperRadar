@@ -104,11 +104,11 @@ const Dashboard = () => {
             <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/5 via-primary/10 to-transparent p-8 md:p-12 text-center border border-primary/10 shadow-sm">
                 <div className="relative z-10 mx-auto max-w-2xl space-y-6">
                     <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
-                        Simplify Your PDFs
+                        EasyPaper
                     </h1>
                     <p className="text-lg text-gray-600">
-                        Upload your academic papers and let AI extract the essence.
-                        Clean, readable, and distraction-free.
+                        Upload your English academic papers. Translate to Chinese or simplify
+                        complex vocabulary — while preserving layout, images, and formulas.
                     </p>
 
                     <div className="flex justify-center pt-4">
