@@ -1,0 +1,32 @@
+# Config with secrets
+backend/config/config.yaml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+backend/.venv/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Database
+*.db
+
+# Temp files & logs
+backend/tmp/
+backend/backend/
+backend/logs/
+
+# ML models
+backend/models/
+
+# IDE & editor
+.history/
+.vscode/
+*.swp
+
+# Test / debug files
+reproduce_issue.py
+*.pdf
