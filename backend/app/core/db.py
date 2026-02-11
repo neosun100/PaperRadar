@@ -1,8 +1,11 @@
+import logging
 from collections.abc import Generator
 
 from sqlmodel import Session, SQLModel, create_engine
 
 from .config import get_config
+
+logger = logging.getLogger(__name__)
 
 config = get_config()
 
@@ -29,6 +32,27 @@ def init_db():
             db_path.parent.mkdir(parents=True, exist_ok=True)
 
     SQLModel.metadata.create_all(engine)
+    _migrate_db()
+
+
+def _migrate_db() -> None:
+    """Add missing columns to existing tables for backward compatibility."""
+    migrations = [
+        ("task", "highlight", "BOOLEAN DEFAULT 0"),
+        ("task", "highlight_stats", "TEXT"),
+    ]
+    with engine.connect() as conn:
+        for table, column, col_type in migrations:
+            try:
+                existing = [
+                    row[1] for row in conn.exec_driver_sql(f"PRAGMA table_info({table})")
+                ]
+                if column not in existing:
+                    conn.exec_driver_sql(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+                    conn.commit()
+                    logger.info("Migrated: added %s.%s", table, column)
+            except Exception as exc:
+                logger.debug("Migration skip %s.%s: %s", table, column, exc)
 
 
 def get_session() -> Generator[Session, None, None]:

@@ -11,6 +11,7 @@ class TaskStatus(StrEnum):
     PARSING = "parsing"
     REWRITING = "rewriting"
     RENDERING = "rendering"
+    HIGHLIGHTING = "highlighting"
     COMPLETED = "completed"
     ERROR = "error"
 
@@ -39,6 +40,10 @@ class Task(SQLModel, table=True):
     percent: int = Field(default=0)
     message: str = Field(default="任务已排队")
     error: str | None = Field(default=None)
+
+    # Highlight
+    highlight: bool = Field(default=False)
+    highlight_stats: str | None = Field(default=None)
 
     # Result fields
     original_pdf_path: str | None = Field(default=None)

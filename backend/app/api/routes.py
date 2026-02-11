@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,7 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         request: Request,
         file: UploadFile = File(...),
         mode: str = Form("translate"),
+        highlight: bool = Form(False),
         user: User = Depends(get_current_user),
     ) -> dict[str, Any]:
         if mode not in ("translate", "simplify"):
@@ -45,7 +47,7 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
                 detail=f"文件大小超过限制（最大 {cfg.processing.max_upload_mb}MB）",
             )
 
-        task = task_manager.create_task(file.filename or "document.pdf", user_id=user.id, mode=mode)
+        task = task_manager.create_task(file.filename or "document.pdf", user_id=user.id, mode=mode, highlight=highlight)
 
         # Save original file
         original_path = Path(task_manager.config.storage.temp_dir) / f"{task.task_id}_original.pdf"
@@ -57,7 +59,7 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
 
         async def _process_with_limit() -> None:
             async with _semaphore:
-                await processor.process(task.task_id, file_bytes, task.filename, mode=mode)
+                await processor.process(task.task_id, file_bytes, task.filename, mode=mode, highlight=highlight)
 
         asyncio.create_task(_process_with_limit())
 
@@ -75,6 +77,7 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
                 "percent": t.percent,
                 "message": t.message,
                 "mode": t.mode,
+                "highlight": t.highlight,
             }
             for t in tasks
         ]
@@ -85,12 +88,15 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
         progress = task.progress
-        return {
+        result: dict[str, Any] = {
             "status": progress.status,
             "percent": progress.percent,
             "message": progress.message,
             "error": progress.error,
         }
+        if task.highlight_stats:
+            result["highlight_stats"] = json.loads(task.highlight_stats)
+        return result
 
     @router.get("/result/{task_id}/preview", response_class=HTMLResponse)
     async def get_preview(task_id: str, user: User = Depends(get_current_user)) -> str:

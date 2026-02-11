@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import tempfile
@@ -13,6 +14,7 @@ from string import Template
 
 from ..core.config import AppConfig
 from ..models.task import TaskResult, TaskStatus
+from .highlighter import HighlightService
 from .task_manager import TaskManager
 
 logger = logging.getLogger(__name__)
@@ -33,7 +35,9 @@ class DocumentProcessor:
         self.config = config
         self.task_manager = task_manager
 
-    async def process(self, task_id: str, file_bytes: bytes, filename: str, mode: str = "translate") -> None:
+    async def process(
+        self, task_id: str, file_bytes: bytes, filename: str, mode: str = "translate", highlight: bool = False
+    ) -> None:
         """使用 pdf2zh 处理 PDF 文档"""
 
         if mode == "simplify":
@@ -61,6 +65,30 @@ class DocumentProcessor:
                 return
 
             pdf_bytes, output_filename = result
+
+            # 高亮后处理
+            if highlight and pdf_bytes:
+                self.task_manager.update_progress(
+                    task_id, TaskStatus.HIGHLIGHTING, 85, "正在使用 AI 标注关键句..."
+                )
+                try:
+                    highlight_service = HighlightService(
+                        api_key=self.config.llm.api_key,
+                        model=self.config.llm.model,
+                        base_url=self.config.llm.base_url,
+                    )
+                    async with highlight_service:
+                        pdf_bytes, stats = await highlight_service.highlight_pdf(pdf_bytes)
+                        self.task_manager.set_highlight_stats(
+                            task_id, json.dumps(stats.to_dict())
+                        )
+                        logger.info(
+                            f"Task {task_id} 高亮完成: {stats.total} sentences highlighted"
+                        )
+                except Exception as exc:
+                    logger.warning(
+                        "Highlight post-processing failed, using non-highlighted PDF: %s", exc
+                    )
 
             # 生成简单的预览 HTML
             preview_html = self._build_simple_preview(mode)

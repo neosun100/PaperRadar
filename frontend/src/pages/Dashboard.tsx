@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search } from "lucide-react";
+import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -15,17 +15,19 @@ const MAX_FILE_SIZE_MB = 50;
 interface Task {
     task_id: string;
     filename: string;
-    status: "pending" | "processing" | "parsing" | "rewriting" | "rendering" | "completed" | "failed";
+    status: "pending" | "processing" | "parsing" | "rewriting" | "rendering" | "highlighting" | "completed" | "failed";
     created_at: string;
     percent?: number;
     message?: string;
     mode?: "translate" | "simplify";
+    highlight?: boolean;
 }
 
 const Dashboard = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [mode, setMode] = useState<"translate" | "simplify">("translate");
     const [search, setSearch] = useState("");
+    const [highlight, setHighlight] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const [dragging, setDragging] = useState(false);
     const navigate = useNavigate();
@@ -49,7 +51,7 @@ const Dashboard = () => {
 
         const tick = () => {
             const hasActive = tasks.some((t) =>
-                ["pending", "processing", "parsing", "rewriting", "rendering"].includes(t.status)
+                ["pending", "processing", "parsing", "rewriting", "rendering", "highlighting"].includes(t.status)
             );
             pollIntervalRef.current = hasActive ? 2000 : 15000;
         };
@@ -84,6 +86,7 @@ const Dashboard = () => {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("mode", mode);
+        formData.append("highlight", String(highlight));
 
         setUploadProgress(0);
         try {
@@ -144,6 +147,7 @@ const Dashboard = () => {
             case "parsing":
             case "rewriting":
             case "rendering":
+            case "highlighting":
                 return "text-blue-600 bg-blue-50 border-blue-200";
             case "failed": return "text-red-600 bg-red-50 border-red-200";
             default: return "text-gray-600 bg-gray-50 border-gray-200";
@@ -157,6 +161,7 @@ const Dashboard = () => {
             case "parsing":
             case "rewriting":
             case "rendering":
+            case "highlighting":
                 return <Clock className="h-4 w-4 animate-pulse" />;
             case "failed": return <AlertCircle className="h-4 w-4" />;
             default: return <Clock className="h-4 w-4" />;
@@ -191,7 +196,7 @@ const Dashboard = () => {
                     </p>
 
                     {/* Mode Selector */}
-                    <div className="flex justify-center gap-3">
+                    <div className="flex flex-wrap justify-center gap-3">
                         <button
                             onClick={() => setMode("translate")}
                             className={cn(
@@ -215,6 +220,18 @@ const Dashboard = () => {
                         >
                             <BookOpen className="h-4 w-4" />
                             Simplify English
+                        </button>
+                        <button
+                            onClick={() => setHighlight(!highlight)}
+                            className={cn(
+                                "flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all",
+                                highlight
+                                    ? "bg-amber-500 text-white shadow-md"
+                                    : "bg-white/80 text-gray-600 border border-gray-200 hover:bg-gray-50"
+                            )}
+                        >
+                            <Highlighter className="h-4 w-4" />
+                            AI Highlights
                         </button>
                     </div>
 
@@ -294,6 +311,11 @@ const Dashboard = () => {
                                                 <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
                                                     {task.mode === "simplify" ? "Simplify" : "Translate"}
                                                 </span>
+                                                {task.highlight && (
+                                                    <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
+                                                        Highlighted
+                                                    </span>
+                                                )}
                                             </CardDescription>
                                         </div>
                                     </div>
@@ -316,7 +338,7 @@ const Dashboard = () => {
 
                             <CardContent>
                                 <div className="space-y-3">
-                                    {["processing", "parsing", "rewriting", "rendering"].includes(task.status) && (
+                                    {["processing", "parsing", "rewriting", "rendering", "highlighting"].includes(task.status) && (
                                         <div className="space-y-1.5">
                                             <div className="flex justify-between text-xs text-muted-foreground">
                                                 <span>{task.message || "Processing..."}</span>

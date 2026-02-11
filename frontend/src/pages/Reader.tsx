@@ -2,9 +2,16 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Loader2, FileText, Sparkles } from "lucide-react";
+import { ArrowLeft, Download, Loader2, FileText, Sparkles, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
+
+interface HighlightStats {
+    core_conclusions: number;
+    method_innovations: number;
+    key_data: number;
+    total: number;
+}
 
 const Reader = () => {
     const { taskId } = useParams<{ taskId: string }>();
@@ -15,6 +22,7 @@ const Reader = () => {
     const [loading, setLoading] = useState(true);
     const [focusMode, setFocusMode] = useState(() => window.innerWidth < 768);
     const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+    const [highlightStats, setHighlightStats] = useState<HighlightStats | null>(null);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Track mobile breakpoint and auto-enable focus mode
@@ -38,6 +46,9 @@ const Reader = () => {
                 setStatus(response.data.status);
 
                 if (response.data.status === "completed") {
+                    if (response.data.highlight_stats) {
+                        setHighlightStats(response.data.highlight_stats);
+                    }
                     const [originalResponse, resultResponse] = await Promise.all([
                         api.get(`/api/original/${taskId}/pdf`, { responseType: "blob" }),
                         api.get(`/api/result/${taskId}/pdf`, { responseType: "blob" }),
@@ -86,12 +97,12 @@ const Reader = () => {
         }
     };
 
-    if (loading || status === "processing" || status === "pending" || status === "parsing" || status === "rewriting" || status === "rendering") {
+    if (loading || status === "processing" || status === "pending" || status === "parsing" || status === "rewriting" || status === "rendering" || status === "highlighting") {
         return (
             <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center space-y-4">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="text-lg font-medium text-muted-foreground">
-                    {["processing", "parsing", "rewriting", "rendering"].includes(status)
+                    {["processing", "parsing", "rewriting", "rendering", "highlighting"].includes(status)
                         ? "AI is processing your document..."
                         : "Loading..."}
                 </p>
@@ -125,6 +136,32 @@ const Reader = () => {
                     <h1 className="text-sm font-medium text-gray-900 hidden sm:block">Document Reader</h1>
                 </div>
                 <div className="flex items-center gap-2">
+                    {highlightStats && highlightStats.total > 0 && (
+                        <>
+                            <div className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-lg bg-gray-50 border text-xs">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: "rgb(255, 242, 153)" }} />
+                                    <span className="text-gray-600">Conclusions ({highlightStats.core_conclusions})</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: "rgb(179, 217, 255)" }} />
+                                    <span className="text-gray-600">Methods ({highlightStats.method_innovations})</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: "rgb(179, 255, 179)" }} />
+                                    <span className="text-gray-600">Data ({highlightStats.key_data})</span>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="md:hidden"
+                                title={`Highlights: ${highlightStats.core_conclusions} conclusions, ${highlightStats.method_innovations} methods, ${highlightStats.key_data} data`}
+                            >
+                                <Palette className="h-4 w-4 text-amber-500" />
+                            </Button>
+                        </>
+                    )}
                     <Button
                         variant="outline"
                         size="sm"

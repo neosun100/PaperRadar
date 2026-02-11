@@ -18,9 +18,11 @@ class TaskManager:
         # Ensure temp dir exists
         Path(self.config.storage.temp_dir).mkdir(parents=True, exist_ok=True)
 
-    def create_task(self, filename: str, user_id: int | None = None, mode: str = "translate") -> Task:
+    def create_task(
+        self, filename: str, user_id: int | None = None, mode: str = "translate", highlight: bool = False
+    ) -> Task:
         task_id = uuid.uuid4().hex
-        task = Task(task_id=task_id, filename=filename, user_id=user_id, mode=mode)
+        task = Task(task_id=task_id, filename=filename, user_id=user_id, mode=mode, highlight=highlight)
         with Session(engine) as session:
             session.add(task)
             session.commit()
@@ -79,6 +81,15 @@ class TaskManager:
             task.percent = 100
             task.message = "生成完成"
 
+            session.add(task)
+            session.commit()
+
+    def set_highlight_stats(self, task_id: str, stats_json: str) -> None:
+        with Session(engine) as session:
+            task = session.get(Task, task_id)
+            if not task:
+                return
+            task.highlight_stats = stats_json
             session.add(task)
             session.commit()
 
