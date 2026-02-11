@@ -2,8 +2,9 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Loader2, FileText, Sparkles, Palette } from "lucide-react";
+import { ArrowLeft, Download, Loader2, FileText, Sparkles, Palette, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import api from "@/lib/api";
 
 interface HighlightStats {
@@ -170,6 +171,22 @@ const Reader = () => {
                     >
                         <Sparkles className="h-4 w-4" />
                         <span className="hidden sm:inline">{focusMode ? "Show Original" : "Focus Mode"}</span>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 text-violet-600 border-violet-200 hover:bg-violet-50"
+                        onClick={async () => {
+                            try {
+                                await api.post(`/api/knowledge/extract/${taskId}`);
+                                toast.success("Knowledge extraction started!");
+                            } catch {
+                                toast.error("Failed to start extraction.");
+                            }
+                        }}
+                    >
+                        <Brain className="h-4 w-4" />
+                        <span className="hidden sm:inline">Extract Knowledge</span>
                     </Button>
                     <Button size="sm" onClick={handleDownload} className="gap-2">
                         <Download className="h-4 w-4" />

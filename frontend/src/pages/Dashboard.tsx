@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter } from "lucide-react";
+import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -349,14 +349,33 @@ const Dashboard = () => {
                                     )}
 
                                     {task.status === "completed" && (
-                                        <Button
-                                            className="w-full gap-2 group-hover:bg-primary group-hover:text-primary-foreground"
-                                            variant="outline"
-                                            onClick={() => navigate(`/reader/${task.task_id}`)}
-                                        >
-                                            Read Document
-                                            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                                        </Button>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                className="flex-1 gap-2 group-hover:bg-primary group-hover:text-primary-foreground"
+                                                variant="outline"
+                                                onClick={() => navigate(`/reader/${task.task_id}`)}
+                                            >
+                                                Read
+                                                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="shrink-0 text-violet-600 hover:bg-violet-50 hover:text-violet-700 border-violet-200"
+                                                title="Extract Knowledge"
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    try {
+                                                        await api.post(`/api/knowledge/extract/${task.task_id}`);
+                                                        toast.success("Knowledge extraction started!");
+                                                    } catch {
+                                                        toast.error("Failed to start extraction.");
+                                                    }
+                                                }}
+                                            >
+                                                <Brain className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     )}
 
                                     {task.status === "failed" && (

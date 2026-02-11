@@ -9,7 +9,7 @@ import {
     DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User as UserIcon, FileText } from "lucide-react";
+import { LogOut, User as UserIcon, FileText, Brain } from "lucide-react";
 
 const Layout = () => {
     const navigate = useNavigate();
@@ -33,6 +33,15 @@ const Layout = () => {
                     </div>
 
                     <div className="flex items-center gap-4">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-2 text-muted-foreground hover:text-primary"
+                            onClick={() => navigate("/knowledge")}
+                        >
+                            <Brain className="h-4 w-4" />
+                            <span className="hidden sm:inline">Knowledge Base</span>
+                        </Button>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-9 w-9 rounded-full">
