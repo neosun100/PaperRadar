@@ -1,10 +1,26 @@
+[English](README.md) | [简体中文](README_zh.md) | [繁體中文](README_tw.md) | [日本語](README_jp.md)
+
 # EasyPaper
 
 **Turn academic papers into knowledge you keep.**
 
-EasyPaper is a self-hosted web app that helps you read, understand, and retain knowledge from English academic papers. Upload a PDF — get back a translated or simplified version with layout intact, AI-highlighted key sentences, and a portable knowledge base you can export anywhere.
+🌐 **Live Demo:** [https://easypaper.aws.xin](https://easypaper.aws.xin) (Test account: `neo@test.com` / `test123456`)
 
-[中文说明](README_zh.md)
+### 🐳 Docker Quick Start
+
+```bash
+git clone https://github.com/neosun100/EasyPaper.git
+cd EasyPaper
+cp backend/config/config.example.yaml backend/config/config.yaml
+# Edit config.yaml — add your API key and choose your model
+docker compose up --build
+```
+
+Open http://localhost:9201 in your browser. That's it!
+
+---
+
+EasyPaper is a self-hosted web app that helps you read, understand, and retain knowledge from English academic papers. Upload a PDF — get back a translated or simplified version with layout intact, AI-highlighted key sentences, and a portable knowledge base you can export anywhere.
 
 ---
 

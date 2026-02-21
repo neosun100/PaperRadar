@@ -1,10 +1,26 @@
+[English](README.md) | [简体中文](README_zh.md) | [繁體中文](README_tw.md) | [日本語](README_jp.md)
+
 # EasyPaper
 
 **把论文变成带得走的知识。**
 
-EasyPaper 是一个可本地部署的 Web 应用，帮助你阅读、理解并留住英文学术论文中的知识。上传一个 PDF — 获取翻译或简化版本（排版完整保留）、AI 重点高亮，以及可导出到任何平台的便携知识库。
+🌐 **在线演示：** [https://easypaper.aws.xin](https://easypaper.aws.xin)（测试账号：`neo@test.com` / `test123456`）
 
-[English](README.md)
+### 🐳 Docker 一键部署
+
+```bash
+git clone https://github.com/neosun100/EasyPaper.git
+cd EasyPaper
+cp backend/config/config.example.yaml backend/config/config.yaml
+# 编辑 config.yaml — 填入你的 API Key，选择模型
+docker compose up --build
+```
+
+浏览器打开 http://localhost:9201 即可使用。就这么简单！
+
+---
+
+EasyPaper 是一个可本地部署的 Web 应用，帮助你阅读、理解并留住英文学术论文中的知识。上传一个 PDF — 获取翻译或简化版本（排版完整保留）、AI 重点高亮，以及可导出到任何平台的便携知识库。
 
 ---
 
