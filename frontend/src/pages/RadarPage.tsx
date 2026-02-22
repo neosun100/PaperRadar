@@ -119,6 +119,17 @@ const RadarPage = () => {
                                                 {p.status && p.status !== "completed" && (
                                                     <span className="text-blue-500">{p.status}</span>
                                                 )}
+                                                {!p.task_id && !p.status && p.pdf_url && (
+                                                    <button onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        try {
+                                                            await api.post("/api/upload-url", { url: p.arxiv_id, mode: "translate", highlight: true });
+                                                            toast.success("Processing started");
+                                                        } catch { toast.error("Failed"); }
+                                                    }} className="inline-flex items-center gap-0.5 hover:text-primary font-medium text-emerald-600">
+                                                        Process →
+                                                    </button>
+                                                )}
                                             </div>
                                             {p.reason && <p className="text-[10px] text-muted-foreground mt-1 italic">{p.reason}</p>}
                                             {selectedPaper === i && p.abstract && (
