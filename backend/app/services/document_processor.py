@@ -42,9 +42,9 @@ class DocumentProcessor:
         """使用 pdf2zh 处理 PDF 文档"""
 
         if mode == "simplify":
-            self.task_manager.update_progress(task_id, TaskStatus.PARSING, 10, "正在准备简化...")
+            self.task_manager.update_progress(task_id, TaskStatus.PARSING, 10, "Preparing to simplify...")
         else:
-            self.task_manager.update_progress(task_id, TaskStatus.PARSING, 10, "正在准备翻译...")
+            self.task_manager.update_progress(task_id, TaskStatus.PARSING, 10, "Preparing to translate...")
 
         # Use per-request LLM config if provided, else fallback to config.yaml
         cfg = llm_config or {}
@@ -67,7 +67,7 @@ class DocumentProcessor:
             )
 
             if result is None:
-                self.task_manager.set_error(task_id, "处理失败，请重试")
+                self.task_manager.set_error(task_id, "Processing failed, please retry")
                 return
 
             pdf_bytes, output_filename = result
@@ -75,7 +75,7 @@ class DocumentProcessor:
             # 高亮后处理
             if highlight and pdf_bytes:
                 self.task_manager.update_progress(
-                    task_id, TaskStatus.HIGHLIGHTING, 85, "正在使用 AI 标注关键句..."
+                    task_id, TaskStatus.HIGHLIGHTING, 85, "AI highlighting key sentences..."
                 )
                 try:
                     highlight_service = HighlightService(
@@ -140,11 +140,10 @@ class DocumentProcessor:
             input_path = Path(temp_dir) / filename
             input_path.write_bytes(file_bytes)
 
-            logger.info(f"开始处理: {input_path} (mode={mode}, lang_out={lang_out})")
+            logger.info(f"Processing: {input_path} (mode={mode}, lang_out={lang_out})")
 
-            # 更新进度
-            action = "简化" if mode == "simplify" else "翻译"
-            self.task_manager.update_progress(task_id, TaskStatus.REWRITING, 30, f"正在使用 AI {action}...")
+            action = "simplifying" if mode == "simplify" else "translating"
+            self.task_manager.update_progress(task_id, TaskStatus.REWRITING, 30, f"AI {action}...")
 
             # Progress callback: map pdf2zh page progress to 30%–80%
             def _on_page_progress(tqdm_bar):
@@ -152,7 +151,7 @@ class DocumentProcessor:
                     pct = 30 + int(50 * tqdm_bar.n / tqdm_bar.total)
                     self.task_manager.update_progress(
                         task_id, TaskStatus.REWRITING, pct,
-                        f"正在使用 AI {action}... ({tqdm_bar.n}/{tqdm_bar.total} 页)",
+                        f"AI {action}... ({tqdm_bar.n}/{tqdm_bar.total} pages)",
                     )
 
             try:
@@ -177,7 +176,7 @@ class DocumentProcessor:
                 file_mono, file_dual = results[0]
 
                 # 更新进度
-                self.task_manager.update_progress(task_id, TaskStatus.RENDERING, 80, "正在生成 PDF...")
+                self.task_manager.update_progress(task_id, TaskStatus.RENDERING, 80, "Generating PDF...")
 
                 # 优先使用双语版本，如果没有则使用单语版本
                 output_file = file_dual if file_dual else file_mono
@@ -197,17 +196,5 @@ class DocumentProcessor:
                 return None
 
     def _build_simple_preview(self, mode: str = "translate") -> str:
-        """生成简单的预览 HTML"""
-        if mode == "simplify":
-            return """
-        <div style="padding: 20px; text-align: center; color: #666;">
-            <p>PDF 简化完成，请下载查看。</p>
-            <p style="font-size: 12px;">使用 PDFMathTranslate 技术，保留公式和布局。</p>
-        </div>
-        """
-        return """
-        <div style="padding: 20px; text-align: center; color: #666;">
-            <p>PDF 翻译完成，请下载查看。</p>
-            <p style="font-size: 12px;">使用 PDFMathTranslate 技术，保留公式和布局。</p>
-        </div>
-        """
+        label = "Simplified" if mode == "simplify" else "Translated"
+        return f'<div style="padding:20px;text-align:center;color:#666"><p>PDF {label}. Download to view.</p></div>'

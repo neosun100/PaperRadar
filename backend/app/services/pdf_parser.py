@@ -68,7 +68,7 @@ class PDFParser:
             if progress_callback:
                 # Progress from 10% to 20%
                 current_progress = 10 + int(10 * ((page_index + 1) / doc.page_count))
-                progress_callback(current_progress, f"正在分析页面布局 ({page_index + 1}/{doc.page_count})")
+                progress_callback(current_progress, f"Analyzing layout ({page_index + 1}/{doc.page_count})")
 
             # 提取保护区域 (Non-Text Zones)
             protected_zones = []

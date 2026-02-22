@@ -79,7 +79,7 @@ class TaskManager:
             task.result_preview_html = result.preview_html
             task.status = TaskStatus.COMPLETED
             task.percent = 100
-            task.message = "生成完成"
+            task.message = "Completed"
 
             session.add(task)
             session.commit()
