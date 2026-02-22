@@ -106,7 +106,33 @@ class DocumentProcessor:
             )
 
             self.task_manager.set_result(task_id, task_result)
-            logger.info(f"Task {task_id} 处理完成 (mode={mode})")
+            logger.info(f"Task {task_id} completed (mode={mode})")
+
+            # Auto-extract knowledge if original PDF exists
+            if llm_config and llm_config.get("api_key"):
+                original_path = None
+                task_obj = self.task_manager.get_task(task_id)
+                if task_obj and task_obj.original_pdf_path:
+                    original_path = task_obj.original_pdf_path
+                if original_path and Path(original_path).exists():
+                    try:
+                        from .knowledge_extractor import KnowledgeExtractor
+                        original_bytes = Path(original_path).read_bytes()
+                        extractor = KnowledgeExtractor(
+                            api_key=llm_config["api_key"],
+                            model=llm_config.get("model", ""),
+                            base_url=llm_config.get("base_url", ""),
+                        )
+
+                        async def _extract():
+                            async with extractor:
+                                await extractor.extract(original_bytes, task_id, user_id=0)
+                            logger.info(f"Auto knowledge extraction completed for {task_id}")
+
+                        import asyncio
+                        asyncio.create_task(_extract())
+                    except Exception:
+                        logger.warning("Auto knowledge extraction failed to start for %s", task_id)
 
         except Exception as exc:
             logger.exception("Processing failed: %s", exc)
