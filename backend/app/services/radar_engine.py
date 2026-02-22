@@ -170,19 +170,23 @@ class RadarEngine:
         from ..models.task import Task
         with Session(db_engine) as session:
             existing_kb = session.exec(select(PaperKnowledge.arxiv_id)).all()
-            existing_tasks = session.exec(select(Task.filename)).all()
+            existing_tasks = session.exec(select(Task)).all()
         existing_ids = {aid for aid in existing_kb if aid}
-        # Check task filenames for arxiv IDs
-        for fn in existing_tasks:
-            if fn:
-                # Match radar_XXXX.pdf or arxiv_XXXX.pdf patterns
+        # Check all task filenames
+        existing_filenames = set()
+        for t in existing_tasks:
+            if t.filename:
+                existing_filenames.add(t.filename.lower())
                 for prefix in ("radar_", "arxiv_"):
-                    if fn.startswith(prefix):
-                        existing_ids.add(fn.replace(prefix, "").replace(".pdf", ""))
+                    if t.filename.startswith(prefix):
+                        existing_ids.add(t.filename.replace(prefix, "").replace(".pdf", ""))
         # Also exclude papers already discovered in this session
         for p in self._recent_papers:
             existing_ids.add(p.get("arxiv_id", ""))
-        return [p for p in candidates if p["arxiv_id"] not in existing_ids]
+        # Filter: check arxiv_id AND title not already a task filename
+        return [p for p in candidates
+                if p["arxiv_id"] not in existing_ids
+                and (p.get("title", "")[:80].lower() + ".pdf") not in existing_filenames]
 
     async def _auto_process(self, papers: list[dict]) -> None:
         """自动下载并处理论文（串行）：翻译 → 高亮 → 知识提取"""
