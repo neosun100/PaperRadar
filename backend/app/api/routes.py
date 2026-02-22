@@ -142,6 +142,18 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         asyncio.create_task(_process())
         return {"task_id": task.task_id, "arxiv_id": arxiv_id}
 
+    _CN_TO_EN = {"正在使用 AI 翻译": "AI translating", "正在使用 AI 简化": "AI simplifying",
+                 "正在生成 PDF": "Generating PDF", "正在准备翻译": "Preparing to translate",
+                 "正在准备简化": "Preparing to simplify", "正在使用 AI 标注关键句": "AI highlighting key sentences",
+                 "页": "pages", "生成完成": "Completed", "处理失败": "Processing failed"}
+
+    def _sanitize_msg(msg: str) -> str:
+        if not msg:
+            return msg
+        for cn, en in _CN_TO_EN.items():
+            msg = msg.replace(cn, en)
+        return msg
+
     @router.get("/tasks")
     async def list_tasks() -> list[dict[str, Any]]:
         tasks = task_manager.list_tasks()
@@ -152,7 +164,7 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
                 "status": t.status,
                 "created_at": t.created_at,
                 "percent": t.percent,
-                "message": t.message,
+                "message": _sanitize_msg(t.message or ""),
                 "mode": t.mode,
                 "highlight": t.highlight,
             }
