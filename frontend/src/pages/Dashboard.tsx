@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain, Settings, Radar } from "lucide-react";
+import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain, Settings, Radar, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api, { getLLMConfig } from "@/lib/api";
@@ -33,6 +33,7 @@ const Dashboard = () => {
     const [dragging, setDragging] = useState(false);
     const [queueInfo, setQueueInfo] = useState<{ processing: number; queued: number } | null>(null);
     const [radarStatus, setRadarStatus] = useState<any>(null);
+    const [urlInput, setUrlInput] = useState("");
     const navigate = useNavigate();
     const abortRef = useRef<AbortController | null>(null);
     const pollIntervalRef = useRef<number>(2000);
@@ -136,6 +137,18 @@ const Dashboard = () => {
             toast.success(t("dashboard.taskDeleted"));
         } catch {
             toast.error(t("dashboard.taskDeleteFailed"));
+        }
+    };
+
+    const handleUrlUpload = async () => {
+        if (!urlInput.trim()) return;
+        try {
+            await api.post("/api/upload-url", { url: urlInput.trim(), mode, highlight });
+            toast.success(t("dashboard.urlFetched"));
+            setUrlInput("");
+            fetchTasks();
+        } catch (error: any) {
+            toast.error(error.response?.data?.detail || t("dashboard.urlFetchFailed"));
         }
     };
 
@@ -263,6 +276,19 @@ const Dashboard = () => {
                             </Label>
                         )}
                         <p className="text-xs text-muted-foreground">{t("dashboard.dragHint")}</p>
+                        {/* URL Upload */}
+                        <div className="flex items-center gap-2 w-full max-w-md">
+                            <Input
+                                placeholder={t("dashboard.urlPlaceholder")}
+                                value={urlInput}
+                                onChange={(e) => setUrlInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter") handleUrlUpload(); }}
+                                className="h-9 text-sm"
+                            />
+                            <Button size="sm" onClick={handleUrlUpload} disabled={!urlInput.trim()} className="shrink-0 gap-1.5">
+                                <LinkIcon className="h-3.5 w-3.5" /> {t("dashboard.fetchPdf")}
+                            </Button>
+                        </div>
                         {uploadProgress !== null && (
                             <div className="w-full max-w-xs space-y-1">
                                 <div className="flex justify-between text-xs text-muted-foreground">

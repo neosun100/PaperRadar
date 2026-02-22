@@ -87,12 +87,24 @@ class RadarEngine:
             logger.exception("Radar scan+process failed")
 
     async def scan(self) -> list[dict]:
-        """执行一次扫描：arXiv → LLM 评分 → 去重 → 返回高相关论文"""
+        """执行一次扫描：arXiv + Semantic Scholar → LLM 评分 → 去重 → 返回高相关论文"""
         self._running = True
         logger.info("Radar scan started")
         try:
-            candidates = await asyncio.to_thread(self._fetch_arxiv)
-            logger.info("arXiv returned %d candidates", len(candidates))
+            # Fetch from multiple sources
+            arxiv_papers = await asyncio.to_thread(self._fetch_arxiv)
+            s2_papers = await self._fetch_semantic_scholar()
+            
+            # Merge and deduplicate by arxiv_id
+            seen = set()
+            candidates = []
+            for p in arxiv_papers + s2_papers:
+                aid = p.get("arxiv_id", "")
+                if aid and aid not in seen:
+                    seen.add(aid)
+                    candidates.append(p)
+            
+            logger.info("Sources: arXiv=%d, S2=%d, merged=%d", len(arxiv_papers), len(s2_papers), len(candidates))
             if not candidates:
                 self._last_scan = datetime.utcnow()
                 self._scan_count += 1
@@ -135,7 +147,7 @@ class RadarEngine:
         return [p for p in candidates if p["arxiv_id"] not in existing_ids]
 
     async def _auto_process(self, papers: list[dict]) -> None:
-        """自动下载并处理论文（串行，避免资源冲突）"""
+        """自动下载并处理论文（串行）：翻译 → 高亮 → 知识提取"""
         for p in papers:
             try:
                 pdf_url = p.get("pdf_url", "")
@@ -160,20 +172,35 @@ class RadarEngine:
                     "api_key": self.config.llm.api_key,
                     "model": self.config.llm.model,
                 }
-                # Process synchronously to avoid font download race conditions
+
+                # Step 1: Translate + Highlight
                 try:
                     await self._processor.process(task.task_id, pdf_bytes, filename, mode="translate", highlight=True, llm_config=llm_cfg)
                     p["task_id"] = task.task_id
-                    p["status"] = "completed"
-                    logger.info("Radar processed: %s", title)
+                    p["status"] = "translated"
+                    logger.info("Radar translated: %s", title)
                 except Exception:
-                    logger.exception("Radar processing failed for %s, cleaning up", p["arxiv_id"])
-                    p["status"] = "error"
-                    # Auto-cleanup failed radar tasks so they don't clutter the UI
+                    logger.exception("Radar translation failed for %s, cleaning up", p["arxiv_id"])
                     try:
                         self._task_manager.delete_task(task.task_id)
                     except Exception:
                         pass
+                    continue
+
+                # Step 2: Auto-extract knowledge
+                try:
+                    from .knowledge_extractor import KnowledgeExtractor
+                    extractor = KnowledgeExtractor(
+                        api_key=llm_cfg["api_key"], model=llm_cfg["model"], base_url=llm_cfg["base_url"],
+                    )
+                    async with extractor:
+                        await extractor.extract(pdf_bytes, task.task_id, user_id=0)
+                    p["status"] = "completed"
+                    logger.info("Radar knowledge extracted: %s", title)
+                except Exception:
+                    logger.exception("Radar knowledge extraction failed for %s", p["arxiv_id"])
+                    p["status"] = "translated"  # still usable, just no knowledge
+
             except Exception:
                 logger.exception("Failed to auto-process paper %s", p.get("arxiv_id"))
 
@@ -211,6 +238,7 @@ class RadarEngine:
                         "published": pub.isoformat(),
                         "pdf_url": result.pdf_url,
                         "categories": [cat],
+                        "source": "arxiv",
                     })
             except Exception:
                 logger.exception("Failed to fetch arXiv category %s", cat)
@@ -221,6 +249,43 @@ class RadarEngine:
                 seen.add(p["arxiv_id"])
                 unique.append(p)
         return unique
+
+    async def _fetch_semantic_scholar(self) -> list[dict]:
+        """从 Semantic Scholar 获取近期高引用论文"""
+        papers = []
+        topics = self.radar_cfg.topics.split(",")[0].strip()  # Use first topic
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(
+                    "https://api.semanticscholar.org/graph/v1/paper/search",
+                    params={
+                        "query": topics,
+                        "fields": "paperId,externalIds,title,abstract,authors,year,citationCount,publicationDate",
+                        "limit": 20,
+                        "sort": "citationCount:desc",
+                        "publicationDateOrYear": f"{datetime.utcnow().year}-",
+                    },
+                )
+                if resp.status_code == 200:
+                    data = resp.json().get("data", [])
+                    for item in data:
+                        arxiv_id = (item.get("externalIds") or {}).get("ArXiv", "")
+                        if not arxiv_id:
+                            continue
+                        papers.append({
+                            "arxiv_id": arxiv_id,
+                            "title": item.get("title", ""),
+                            "abstract": (item.get("abstract") or "")[:500],
+                            "authors": [a.get("name", "") for a in (item.get("authors") or [])[:5]],
+                            "published": item.get("publicationDate", ""),
+                            "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}.pdf",
+                            "categories": [],
+                            "source": "semantic_scholar",
+                            "citations": item.get("citationCount", 0),
+                        })
+        except Exception:
+            logger.exception("Failed to fetch Semantic Scholar papers")
+        return papers
 
     async def _score_papers(self, papers: list[dict]) -> list[dict]:
         cfg = self.config.llm

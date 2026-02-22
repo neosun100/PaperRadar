@@ -88,6 +88,60 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         asyncio.create_task(_process_with_limit())
         return {"task_id": task.task_id}
 
+    @router.post("/upload-url")
+    async def upload_from_url(request: Request) -> dict[str, Any]:
+        """Upload a paper by arXiv URL or ID"""
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        url_or_id = body.get("url", "").strip()
+        mode = body.get("mode", "translate")
+        highlight = body.get("highlight", True)
+
+        if not url_or_id:
+            raise HTTPException(400, "url is required")
+
+        # Extract arXiv ID from various URL formats
+        import re
+        arxiv_id = None
+        patterns = [
+            r"arxiv\.org/abs/(\d+\.\d+(?:v\d+)?)",
+            r"arxiv\.org/pdf/(\d+\.\d+(?:v\d+)?)",
+            r"^(\d{4}\.\d{4,5}(?:v\d+)?)$",
+        ]
+        for pat in patterns:
+            m = re.search(pat, url_or_id)
+            if m:
+                arxiv_id = m.group(1)
+                break
+        if not arxiv_id:
+            raise HTTPException(400, "Could not parse arXiv ID from URL")
+
+        pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
+        filename = f"arxiv_{arxiv_id}.pdf"
+
+        # Download PDF
+        async with httpx.AsyncClient(timeout=120.0, follow_redirects=True) as client:
+            resp = await client.get(pdf_url)
+            if resp.status_code != 200:
+                raise HTTPException(400, f"Failed to download PDF: HTTP {resp.status_code}")
+            file_bytes = resp.content
+
+        task = task_manager.create_task(filename, mode=mode, highlight=highlight)
+        original_path = Path(task_manager.config.storage.temp_dir) / f"{task.task_id}_original.pdf"
+        with open(original_path, "wb") as f:
+            f.write(file_bytes)
+        task_manager.update_original_path(task.task_id, str(original_path))
+
+        client_id = get_client_id(request)
+        sem = _get_semaphore(client_id)
+
+        async def _process():
+            async with sem:
+                await processor.process(task.task_id, file_bytes, filename, mode=mode, highlight=highlight, llm_config=llm_config)
+
+        asyncio.create_task(_process())
+        return {"task_id": task.task_id, "arxiv_id": arxiv_id}
+
     @router.get("/tasks")
     async def list_tasks() -> list[dict[str, Any]]:
         tasks = task_manager.list_tasks()
