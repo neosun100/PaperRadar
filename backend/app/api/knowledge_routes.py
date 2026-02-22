@@ -263,6 +263,29 @@ def create_knowledge_router() -> APIRouter:
         return _insights_cache["latest"]
 
     # ------------------------------------------------------------------
+    # 文献综述生成
+    # ------------------------------------------------------------------
+
+    @router.post("/review/generate")
+    async def generate_review(request: Request) -> dict[str, Any]:
+        from ..services.literature_review import LiteratureReviewGenerator
+        llm_config = get_llm_config(request)
+        body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+        topic = body.get("topic", "")
+
+        papers_json = _get_completed_papers_json()
+        if not papers_json:
+            raise HTTPException(400, "No papers in knowledge base")
+
+        gen = LiteratureReviewGenerator(
+            api_key=llm_config["api_key"],
+            model=llm_config.get("model", ""),
+            base_url=llm_config.get("base_url", ""),
+        )
+        review = await gen.generate(papers_json, topic)
+        return {"review": review, "paper_count": len(papers_json), "topic": topic}
+
+    # ------------------------------------------------------------------
     # 笔记 / 标注
     # ------------------------------------------------------------------
 

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Sparkles, Loader2, BookOpen, FlaskConical, Clock, AlertTriangle, Network, RefreshCw } from "lucide-react";
+import { ArrowLeft, Sparkles, Loader2, BookOpen, FlaskConical, Clock, AlertTriangle, Network, RefreshCw, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -16,6 +16,8 @@ const ResearchInsights = () => {
     const [insights, setInsights] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
+    const [review, setReview] = useState<string | null>(null);
+    const [reviewLoading, setReviewLoading] = useState(false);
     const [, setLang] = useState(i18n.language);
     useEffect(() => { const cb = (l: string) => setLang(l); i18n.on("languageChanged", cb); return () => { i18n.off("languageChanged", cb); }; }, [i18n]);
 
@@ -54,11 +56,37 @@ const ResearchInsights = () => {
                             {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : hasInsights ? <RefreshCw className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
                             {generating ? t("insights.generating") : hasInsights ? t("insights.regenerate") : t("insights.generate")}
                         </Button>
+                        <Button variant="outline" onClick={async () => {
+                            setReviewLoading(true);
+                            try { const r = await api.post("/api/knowledge/review/generate", {}); setReview(r.data.review); }
+                            catch (e: any) { toast.error(e.response?.data?.detail || "Failed"); }
+                            finally { setReviewLoading(false); }
+                        }} disabled={reviewLoading} className="gap-2">
+                            {reviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                            {reviewLoading ? "Writing..." : "Literature Review"}
+                        </Button>
                     </div>
                     {insights?.paper_count && <p className="text-xs text-muted-foreground">{insights.paper_count} papers analyzed</p>}
                 </div>
                 <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-emerald-200/30 dark:bg-emerald-500/10 blur-3xl" />
             </section>
+
+            {/* Literature Review */}
+            {review && (
+                <Card><CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold flex items-center gap-2"><FileText className="h-5 w-5" /> Literature Review</h2>
+                        <Button variant="ghost" size="sm" onClick={() => {
+                            const blob = new Blob([review], { type: "text/markdown" });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url; a.download = "literature_review.md"; a.click();
+                            URL.revokeObjectURL(url);
+                        }}>Download .md</Button>
+                    </div>
+                    <div className="prose dark:prose-invert max-w-none text-sm whitespace-pre-wrap">{review}</div>
+                </CardContent></Card>
+            )}
 
             {!hasInsights ? (
                 <div className="py-16 text-center text-muted-foreground bg-muted/50 rounded-xl border border-dashed">
