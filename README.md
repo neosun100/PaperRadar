@@ -173,6 +173,12 @@ cd frontend && npm run lint && npm run type-check
 
 ---
 
+## 🙏 Acknowledgments
+
+This project is forked from [CzsGit/EasyPaper](https://github.com/CzsGit/EasyPaper). Thanks to the original author for the foundational work. We've built upon it with UI/UX improvements, dark mode fixes, enhanced documentation, and additional optimizations.
+
+---
+
 ## 📄 License
 
 MIT

@@ -51,11 +51,11 @@ interface PaperKnowledge {
 }
 
 const TYPE_COLORS: Record<string, string> = {
-    method: "bg-blue-100 text-blue-700",
-    model: "bg-purple-100 text-purple-700",
-    dataset: "bg-green-100 text-green-700",
+    method: "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300",
+    model: "bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300",
+    dataset: "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300",
     metric: "bg-amber-100 text-amber-700",
-    concept: "bg-gray-100 text-gray-700",
+    concept: "bg-muted text-muted-foreground",
     task: "bg-rose-100 text-rose-700",
     person: "bg-cyan-100 text-cyan-700",
     organization: "bg-orange-100 text-orange-700",
@@ -159,7 +159,7 @@ const PaperDetail = () => {
                     {metadata.keywords && metadata.keywords.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-1">
                             {metadata.keywords.map((kw) => (
-                                <span key={kw} className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600">
+                                <span key={kw} className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
                                     {kw}
                                 </span>
                             ))}
@@ -217,13 +217,13 @@ const PaperDetail = () => {
                 <TabsContent value="entities" className="space-y-3">
                     <div className="grid gap-3 md:grid-cols-2">
                         {entities.map((ent) => (
-                            <Card key={ent.id} className="border-gray-200/60">
+                            <Card key={ent.id} className="border-border">
                                 <CardContent className="p-4">
                                     <div className="flex items-start justify-between gap-2">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="font-medium text-sm">{ent.name}</span>
-                                                <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", TYPE_COLORS[ent.type] || "bg-gray-100 text-gray-600")}>
+                                                <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", TYPE_COLORS[ent.type] || "bg-muted text-muted-foreground")}>
                                                     {ent.type}
                                                 </span>
                                             </div>
@@ -244,14 +244,14 @@ const PaperDetail = () => {
                 {/* Findings Tab */}
                 <TabsContent value="findings" className="space-y-3">
                     {findings.map((f) => (
-                        <Card key={f.id} className="border-gray-200/60">
+                        <Card key={f.id} className="border-border">
                             <CardContent className="p-4">
                                 <div className="flex items-start gap-3">
                                     <div className={cn(
                                         "shrink-0 mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium",
-                                        f.type === "result" ? "bg-green-100 text-green-700" :
+                                        f.type === "result" ? "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300" :
                                         f.type === "limitation" ? "bg-amber-100 text-amber-700" :
-                                        "bg-blue-100 text-blue-700"
+                                        "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300"
                                     )}>
                                         {f.type}
                                     </div>
@@ -271,7 +271,7 @@ const PaperDetail = () => {
                                 <FlaskConical className="h-4 w-4" /> Methods
                             </h3>
                             {methods.map((m, i) => (
-                                <Card key={i} className="border-gray-200/60">
+                                <Card key={i} className="border-border">
                                     <CardContent className="p-4">
                                         <p className="text-sm font-medium">{m.name}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{m.description}</p>
@@ -286,7 +286,7 @@ const PaperDetail = () => {
                                 <Database className="h-4 w-4" /> Datasets
                             </h3>
                             {datasets.map((d, i) => (
-                                <Card key={i} className="border-gray-200/60">
+                                <Card key={i} className="border-border">
                                     <CardContent className="p-4">
                                         <p className="text-sm font-medium">{d.name}</p>
                                         <p className="text-xs text-muted-foreground mt-1">{d.description}</p>
@@ -301,13 +301,13 @@ const PaperDetail = () => {
                 {/* Flashcards Tab */}
                 <TabsContent value="flashcards" className="space-y-3">
                     {flashcards.map((fc) => (
-                        <Card key={fc.id} className="border-gray-200/60">
+                        <Card key={fc.id} className="border-border">
                             <CardContent className="p-4 space-y-2">
                                 <p className="text-sm font-medium">Q: {fc.front}</p>
                                 <p className="text-sm text-muted-foreground">A: {fc.back}</p>
                                 <div className="flex items-center gap-2">
                                     {fc.tags.map((tag) => (
-                                        <span key={tag} className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600">
+                                        <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
                                             {tag}
                                         </span>
                                     ))}
@@ -323,7 +323,7 @@ const PaperDetail = () => {
                 {/* Relations Tab */}
                 <TabsContent value="relations" className="space-y-3">
                     {relationships.map((rel) => (
-                        <Card key={rel.id} className="border-gray-200/60">
+                        <Card key={rel.id} className="border-border">
                             <CardContent className="p-4">
                                 <div className="flex items-center gap-2 text-sm">
                                     <span className="font-medium">
@@ -359,7 +359,7 @@ const PaperDetail = () => {
                         </Button>
                     </div>
                     {annotations?.map((ann) => (
-                        <Card key={ann.id} className="border-gray-200/60">
+                        <Card key={ann.id} className="border-border">
                             <CardContent className="p-4">
                                 <p className="text-sm">{ann.content}</p>
                                 {ann.created_at && (

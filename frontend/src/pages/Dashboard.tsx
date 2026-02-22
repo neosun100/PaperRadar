@@ -145,15 +145,15 @@ const Dashboard = () => {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "completed": return "text-green-600 bg-green-50 border-green-200";
+            case "completed": return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800";
             case "processing":
             case "parsing":
             case "rewriting":
             case "rendering":
             case "highlighting":
-                return "text-blue-600 bg-blue-50 border-blue-200";
-            case "failed": return "text-red-600 bg-red-50 border-red-200";
-            default: return "text-gray-600 bg-gray-50 border-gray-200";
+                return "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800";
+            case "failed": return "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800";
+            default: return "text-muted-foreground bg-muted border-border";
         }
     };
 
@@ -209,10 +209,10 @@ const Dashboard = () => {
                 )}
             >
                 <div className="relative z-10 mx-auto max-w-2xl space-y-6">
-                    <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+                    <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
                         EasyPaper
                     </h1>
-                    <p className="text-lg text-gray-600">
+                    <p className="text-lg text-muted-foreground">
                         Upload your English academic papers. Translate to Chinese or simplify
                         complex vocabulary — while preserving layout, images, and formulas.
                     </p>
@@ -225,7 +225,7 @@ const Dashboard = () => {
                                 "flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all",
                                 mode === "translate"
                                     ? "bg-primary text-primary-foreground shadow-md"
-                                    : "bg-white/80 text-gray-600 border border-gray-200 hover:bg-gray-50"
+                                    : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent"
                             )}
                         >
                             <Languages className="h-4 w-4" />
@@ -237,7 +237,7 @@ const Dashboard = () => {
                                 "flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all",
                                 mode === "simplify"
                                     ? "bg-primary text-primary-foreground shadow-md"
-                                    : "bg-white/80 text-gray-600 border border-gray-200 hover:bg-gray-50"
+                                    : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent"
                             )}
                         >
                             <BookOpen className="h-4 w-4" />
@@ -249,7 +249,7 @@ const Dashboard = () => {
                                 "flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all",
                                 highlight
                                     ? "bg-amber-500 text-white shadow-md"
-                                    : "bg-white/80 text-gray-600 border border-gray-200 hover:bg-gray-50"
+                                    : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent"
                             )}
                         >
                             <Highlighter className="h-4 w-4" />
@@ -294,8 +294,8 @@ const Dashboard = () => {
                 </div>
 
                 {/* Decorative background elements */}
-                <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-blue-200/30 blur-3xl" />
-                <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 h-64 w-64 rounded-full bg-purple-200/30 blur-3xl" />
+                <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-blue-200/30 dark:bg-blue-500/10 blur-3xl" />
+                <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 h-64 w-64 rounded-full bg-purple-200/30 dark:bg-purple-500/10 blur-3xl" />
             </section>
 
             {/* Task List */}
@@ -317,11 +317,11 @@ const Dashboard = () => {
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredTasks.map((task) => (
-                        <Card key={task.task_id} className="group relative overflow-hidden transition-all hover:shadow-md border-gray-200/60">
+                        <Card key={task.task_id} className="group relative overflow-hidden transition-all hover:shadow-md border-border">
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-500 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                                             <FileText className="h-5 w-5" />
                                         </div>
                                         <div className="space-y-1">
@@ -330,7 +330,7 @@ const Dashboard = () => {
                                             </CardTitle>
                                             <CardDescription className="text-xs flex items-center gap-1.5">
                                                 {new Date(task.created_at).toLocaleDateString()}
-                                                <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">
+                                                <span className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                                                     {task.mode === "simplify" ? "Simplify" : "Translate"}
                                                 </span>
                                                 {task.highlight && (
@@ -383,7 +383,7 @@ const Dashboard = () => {
                                             <Button
                                                 variant="outline"
                                                 size="icon"
-                                                className="shrink-0 text-violet-600 hover:bg-violet-50 hover:text-violet-700 border-violet-200"
+                                                className="shrink-0 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/40 hover:text-violet-700 dark:hover:text-violet-300 border-violet-200 dark:border-violet-800"
                                                 title="Extract Knowledge"
                                                 onClick={async (e) => {
                                                     e.stopPropagation();
@@ -411,7 +411,7 @@ const Dashboard = () => {
                     ))}
 
                     {filteredTasks.length === 0 && (
-                        <div className="col-span-full py-12 text-center text-muted-foreground bg-gray-50/50 rounded-xl border border-dashed">
+                        <div className="col-span-full py-12 text-center text-muted-foreground bg-muted/50 rounded-xl border border-dashed">
                             <p>{search ? "No matching documents found." : "No documents yet. Upload one to get started!"}</p>
                         </div>
                     )}

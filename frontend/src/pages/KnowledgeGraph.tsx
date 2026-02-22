@@ -296,12 +296,12 @@ const KnowledgeGraph = () => {
     return (
         <div className="flex h-[calc(100vh-8rem)] flex-col gap-4">
             {/* Toolbar */}
-            <div className="flex items-center justify-between rounded-xl border bg-white p-3 shadow-sm">
+            <div className="flex items-center justify-between rounded-xl border bg-card p-3 shadow-sm">
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={() => navigate("/knowledge")}>
                         <ArrowLeft className="mr-2 h-4 w-4" /> Back
                     </Button>
-                    <div className="h-4 w-px bg-gray-200 mx-2 hidden sm:block" />
+                    <div className="h-4 w-px bg-border mx-2 hidden sm:block" />
                     <h1 className="text-sm font-medium hidden sm:block">Knowledge Graph</h1>
                     <span className="text-xs text-muted-foreground hidden sm:block">
                         ({nodes.length} entities, {edges.length} relationships)
@@ -338,7 +338,7 @@ const KnowledgeGraph = () => {
             </div>
 
             {/* Graph Canvas */}
-            <div className="relative flex-1 rounded-xl border bg-white shadow-sm overflow-hidden">
+            <div className="relative flex-1 rounded-xl border bg-card shadow-sm overflow-hidden">
                 <canvas
                     ref={canvasRef}
                     width={1200}
@@ -352,18 +352,18 @@ const KnowledgeGraph = () => {
                 />
 
                 {/* Legend */}
-                <div className="absolute bottom-4 left-4 flex flex-wrap gap-2 rounded-lg bg-white/90 border p-2 text-xs shadow-sm">
+                <div className="absolute bottom-4 left-4 flex flex-wrap gap-2 rounded-lg bg-card/90 backdrop-blur-sm border p-2 text-xs shadow-sm">
                     {Object.entries(TYPE_COLORS).map(([type, color]) => (
                         <div key={type} className="flex items-center gap-1">
                             <div className="h-3 w-3 rounded-full" style={{ backgroundColor: color }} />
-                            <span className="text-gray-600 capitalize">{type}</span>
+                            <span className="text-muted-foreground capitalize">{type}</span>
                         </div>
                     ))}
                 </div>
 
                 {/* Selected Node Detail */}
                 {selectedNode && (
-                    <div className="absolute top-4 right-4 w-64 rounded-lg bg-white border shadow-lg p-4 space-y-2">
+                    <div className="absolute top-4 right-4 w-64 rounded-lg bg-card border shadow-lg p-4 space-y-2">
                         <div className="flex items-center justify-between">
                             <h3 className="font-medium text-sm">{selectedNode.name}</h3>
                             <span
@@ -391,7 +391,7 @@ const KnowledgeGraph = () => {
                                         : nodes.find((n) => n.id === e.source);
                                     const direction = e.source === selectedNode.id ? "→" : "←";
                                     return (
-                                        <p key={e.id} className="text-xs text-gray-600">
+                                        <p key={e.id} className="text-xs text-muted-foreground">
                                             {direction} <span className="font-medium">{e.type}</span>{" "}
                                             {other?.name || "?"}
                                         </p>

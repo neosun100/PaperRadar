@@ -146,10 +146,10 @@ const KnowledgeBase = () => {
             {/* Header */}
             <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-500/5 via-purple-500/10 to-transparent p-8 md:p-12 border border-purple-500/10 shadow-sm">
                 <div className="relative z-10 mx-auto max-w-2xl text-center space-y-4">
-                    <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+                    <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
                         Knowledge Base
                     </h1>
-                    <p className="text-lg text-gray-600">
+                    <p className="text-lg text-muted-foreground">
                         Your personal academic knowledge library. Portable, exportable, yours.
                     </p>
                     <div className="flex flex-wrap justify-center gap-3 pt-2">
@@ -206,8 +206,8 @@ const KnowledgeBase = () => {
                         </DropdownMenu>
                     </div>
                 </div>
-                <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-violet-200/30 blur-3xl" />
-                <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 h-64 w-64 rounded-full bg-purple-200/30 blur-3xl" />
+                <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-violet-200/30 dark:bg-violet-500/10 blur-3xl" />
+                <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 h-64 w-64 rounded-full bg-purple-200/30 dark:bg-purple-500/10 blur-3xl" />
             </section>
 
             {/* Paper List */}
@@ -232,7 +232,7 @@ const KnowledgeBase = () => {
                         <Card
                             key={paper.id}
                             className={cn(
-                                "group relative overflow-hidden transition-all hover:shadow-md border-gray-200/60",
+                                "group relative overflow-hidden transition-all hover:shadow-md border-border",
                                 paper.extraction_status === "completed" && "cursor-pointer"
                             )}
                             onClick={() => {
@@ -244,7 +244,7 @@ const KnowledgeBase = () => {
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 text-violet-600">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400">
                                             <Brain className="h-5 w-5" />
                                         </div>
                                         <div className="space-y-1 min-w-0 flex-1">
@@ -284,8 +284,8 @@ const KnowledgeBase = () => {
                     ))}
 
                     {filteredPapers.length === 0 && (
-                        <div className="col-span-full py-12 text-center text-muted-foreground bg-gray-50/50 rounded-xl border border-dashed">
-                            <Brain className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                        <div className="col-span-full py-12 text-center text-muted-foreground bg-muted/50 rounded-xl border border-dashed">
+                            <Brain className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
                             <p>
                                 {search
                                     ? "No matching papers found."

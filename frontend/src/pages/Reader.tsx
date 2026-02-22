@@ -127,30 +127,30 @@ const Reader = () => {
     return (
         <div className="flex h-[calc(100vh-8rem)] flex-col gap-4">
             {/* Toolbar */}
-            <div className="flex items-center justify-between rounded-xl border bg-white p-3 shadow-sm">
+            <div className="flex items-center justify-between rounded-xl border bg-card p-3 shadow-sm">
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back
                     </Button>
-                    <div className="h-4 w-px bg-gray-200 mx-2 hidden sm:block" />
-                    <h1 className="text-sm font-medium text-gray-900 hidden sm:block">Document Reader</h1>
+                    <div className="h-4 w-px bg-border mx-2 hidden sm:block" />
+                    <h1 className="text-sm font-medium text-foreground hidden sm:block">Document Reader</h1>
                 </div>
                 <div className="flex items-center gap-2">
                     {highlightStats && highlightStats.total > 0 && (
                         <>
-                            <div className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-lg bg-gray-50 border text-xs">
+                            <div className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-lg bg-muted border text-xs">
                                 <div className="flex items-center gap-1.5">
                                     <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: "rgb(255, 242, 153)" }} />
-                                    <span className="text-gray-600">Conclusions ({highlightStats.core_conclusions})</span>
+                                    <span className="text-muted-foreground">Conclusions ({highlightStats.core_conclusions})</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: "rgb(179, 217, 255)" }} />
-                                    <span className="text-gray-600">Methods ({highlightStats.method_innovations})</span>
+                                    <span className="text-muted-foreground">Methods ({highlightStats.method_innovations})</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <span className="inline-block h-3 w-3 rounded-sm" style={{ backgroundColor: "rgb(179, 255, 179)" }} />
-                                    <span className="text-gray-600">Data ({highlightStats.key_data})</span>
+                                    <span className="text-muted-foreground">Data ({highlightStats.key_data})</span>
                                 </div>
                             </div>
                             <Button
@@ -175,7 +175,7 @@ const Reader = () => {
                     <Button
                         variant="outline"
                         size="sm"
-                        className="gap-2 text-violet-600 border-violet-200 hover:bg-violet-50"
+                        className="gap-2 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-violet-950/40"
                         onClick={async () => {
                             try {
                                 await api.post(`/api/knowledge/extract/${taskId}`);
@@ -198,19 +198,19 @@ const Reader = () => {
             {/* Split Pane */}
             <ResizablePanelGroup
                 direction={isMobile ? "vertical" : "horizontal"}
-                className="min-h-0 flex-1 rounded-xl border bg-white shadow-sm overflow-hidden"
+                className="min-h-0 flex-1 rounded-xl border bg-card shadow-sm overflow-hidden"
                 style={{ direction: "ltr" }}
             >
                 {/* Left Panel: AI Simplified PDF */}
                 <ResizablePanel defaultSize={focusMode ? 100 : 50} minSize={30}>
-                    <div className="flex h-full flex-col bg-white">
-                        <div className="flex items-center justify-between border-b bg-white px-4 py-2">
+                    <div className="flex h-full flex-col bg-card">
+                        <div className="flex items-center justify-between border-b bg-card px-4 py-2">
                             <div className="flex items-center gap-2">
                                 <Sparkles className="h-3 w-3 text-primary" />
                                 <span className="text-xs font-medium text-primary uppercase tracking-wider">AI Result (PDF)</span>
                             </div>
                         </div>
-                        <div className="flex-1 bg-gray-100/50">
+                        <div className="flex-1 bg-muted/50">
                             {resultPdfUrl && (
                                 <iframe
                                     src={resultPdfUrl}
@@ -228,10 +228,10 @@ const Reader = () => {
                         <ResizableHandle withHandle />
                         <ResizablePanel defaultSize={50} minSize={30}>
                             <div className="flex h-full flex-col">
-                                <div className="flex items-center justify-between border-b bg-gray-50/50 px-4 py-2">
+                                <div className="flex items-center justify-between border-b bg-muted/50 px-4 py-2">
                                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Original Source (PDF)</span>
                                 </div>
-                                <div className="flex-1 bg-gray-100/50">
+                                <div className="flex-1 bg-muted/50">
                                     {originalPdfUrl && (
                                         <iframe
                                             src={originalPdfUrl}

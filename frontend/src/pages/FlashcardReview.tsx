@@ -95,7 +95,7 @@ const FlashcardReview = () => {
     if (sessionDone) {
         return (
             <div className="flex h-[calc(100vh-8rem)] flex-col items-center justify-center space-y-6">
-                <div className="rounded-full bg-green-100 p-6">
+                <div className="rounded-full bg-green-100 dark:bg-green-950/40 p-6">
                     <CheckCircle className="h-12 w-12 text-green-600" />
                 </div>
                 <div className="text-center space-y-2">
@@ -149,7 +149,7 @@ const FlashcardReview = () => {
             </div>
 
             {/* Progress bar */}
-            <div className="h-1.5 rounded-full bg-gray-100">
+            <div className="h-1.5 rounded-full bg-muted">
                 <div
                     className="h-full rounded-full bg-primary transition-all"
                     style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
@@ -161,7 +161,7 @@ const FlashcardReview = () => {
                 <Card
                     className={cn(
                         "min-h-[300px] cursor-pointer transition-all duration-300",
-                        flipped ? "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200" : "bg-white"
+                        flipped ? "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-800" : "bg-card"
                     )}
                     onClick={() => setFlipped(!flipped)}
                 >
@@ -176,7 +176,7 @@ const FlashcardReview = () => {
                             </>
                         ) : (
                             <>
-                                <div className="mb-4 rounded-full bg-green-100 p-3">
+                                <div className="mb-4 rounded-full bg-green-100 dark:bg-green-950/40 p-3">
                                     <CheckCircle className="h-6 w-6 text-green-600" />
                                 </div>
                                 <p className="text-lg leading-relaxed">{currentCard.back}</p>
@@ -190,7 +190,7 @@ const FlashcardReview = () => {
             {currentCard.tags.length > 0 && (
                 <div className="flex justify-center gap-1.5">
                     {currentCard.tags.map((tag) => (
-                        <span key={tag} className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-600">
+                        <span key={tag} className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
                             {tag}
                         </span>
                     ))}

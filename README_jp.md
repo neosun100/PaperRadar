@@ -114,6 +114,12 @@ npm install && npm run dev
 
 ---
 
+## 🙏 謝辞
+
+本プロジェクトは [CzsGit/EasyPaper](https://github.com/CzsGit/EasyPaper) からフォークしました。オリジナル作者の基礎的な作業に感謝します。UI/UX の改善、ダークモードの修正、ドキュメントの強化、その他の最適化を行いました。
+
+---
+
 ## 📄 ライセンス
 
 MIT
