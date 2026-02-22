@@ -1,4 +1,4 @@
-"""知识提取服务 - 使用 LLM 从学术论文中提取结构化知识"""
+"""知识提取服务 - 使用 LLM 从学术论文中提取结构化知识（双语输出）"""
 
 from __future__ import annotations
 
@@ -22,33 +22,45 @@ from ..models.knowledge import (
 
 logger = logging.getLogger(__name__)
 
+# ------------------------------------------------------------------
+# 双语指令片段
+# ------------------------------------------------------------------
+BILINGUAL_INSTRUCTION = (
+    "\n\nIMPORTANT: For ALL text fields (titles, descriptions, definitions, statements, "
+    "questions, answers, summaries, etc.), output bilingual values as an object with "
+    '"en" (English) and "zh" (Chinese) keys. Example: {"en": "Transformer", "zh": "Transformer 模型"}. '
+    "Keep proper nouns, model names, and acronyms consistent across languages.\n"
+)
 
 METADATA_PROMPT = (
     "You are an expert academic paper metadata extractor. "
     "Extract the following metadata from the beginning of this paper:\n\n"
-    "- title: the exact paper title\n"
+    "- title: the exact paper title (bilingual)\n"
     "- authors: list of authors, each with name and affiliation if available\n"
     "- year: publication year (integer or null)\n"
     "- doi: DOI string if present, otherwise null\n"
     "- arxiv_id: arXiv ID if present (e.g. '2301.12345'), otherwise null\n"
     "- venue: conference or journal name if present, otherwise null\n"
-    "- abstract: the full abstract text\n"
-    "- keywords: list of keywords if present, otherwise empty list\n\n"
+    "- abstract: the full abstract text (bilingual)\n"
+    "- keywords: list of keywords (bilingual)\n"
+    + BILINGUAL_INSTRUCTION +
     "Respond ONLY with a JSON object:\n"
-    '{"title": "...", "authors": [{"name": "...", "affiliation": "..."}], '
+    '{"title": {"en": "...", "zh": "..."}, "authors": [{"name": "...", "affiliation": "..."}], '
     '"year": 2025, "doi": "...", "arxiv_id": "...", "venue": "...", '
-    '"abstract": "...", "keywords": ["..."]}\n'
+    '"abstract": {"en": "...", "zh": "..."}, "keywords": [{"en": "...", "zh": "..."}]}\n'
 )
 
 SECTIONS_PROMPT = (
     "You are an expert academic paper structure analyzer. "
     "Identify the section structure of this paper from the text.\n\n"
     "For each section, provide:\n"
-    "- title: the section heading\n"
+    "- title: the section heading (bilingual)\n"
     "- level: heading level (1 for main sections like Introduction, 2 for subsections)\n"
-    "- summary: a 1-2 sentence summary of the section content\n\n"
+    "- summary: a 1-2 sentence summary of the section content (bilingual)\n"
+    + BILINGUAL_INSTRUCTION +
     "Respond ONLY with a JSON object:\n"
-    '{"sections": [{"title": "Introduction", "level": 1, "summary": "..."}]}\n'
+    '{"sections": [{"title": {"en": "Introduction", "zh": "引言"}, "level": 1, '
+    '"summary": {"en": "...", "zh": "..."}}]}\n'
 )
 
 ENTITY_RELATIONSHIP_PROMPT = (
@@ -59,16 +71,17 @@ ENTITY_RELATIONSHIP_PROMPT = (
     "Entity types: method, model, dataset, metric, concept, task, person, organization\n"
     "Relationship types: extends, uses, evaluates_on, outperforms, similar_to, "
     "contradicts, part_of, requires\n\n"
-    "For each entity: name, type, aliases (list), definition (1 sentence), importance (0-1)\n"
-    "For each relationship: source (entity name), target (entity name), type, "
-    "description, confidence (0-1)\n\n"
+    "For each entity: name (bilingual), type, aliases (list), definition (bilingual, 1 sentence), importance (0-1)\n"
+    "For each relationship: source (entity English name), target (entity English name), type, "
+    "description (bilingual), confidence (0-1)\n\n"
     "Return 3-10 entities and 1-8 relationships per section. "
-    "Skip trivial or generic entities.\n\n"
+    "Skip trivial or generic entities.\n"
+    + BILINGUAL_INSTRUCTION +
     "Respond ONLY with JSON:\n"
-    '{"entities": [{"name": "...", "type": "method", "aliases": [], '
-    '"definition": "...", "importance": 0.8}], '
-    '"relationships": [{"source": "...", "target": "...", "type": "extends", '
-    '"description": "...", "confidence": 0.8}]}\n'
+    '{"entities": [{"name": {"en": "...", "zh": "..."}, "type": "method", "aliases": [], '
+    '"definition": {"en": "...", "zh": "..."}, "importance": 0.8}], '
+    '"relationships": [{"source": "English entity name", "target": "English entity name", "type": "extends", '
+    '"description": {"en": "...", "zh": "..."}, "confidence": 0.8}]}\n'
 )
 
 FINDINGS_PROMPT = (
@@ -76,11 +89,14 @@ FINDINGS_PROMPT = (
     "Extract the key findings, methods, and datasets from this paper text.\n\n"
     "For findings, classify as: result, limitation, or contribution\n"
     "For methods, describe the approach with inputs and outputs\n"
-    "For datasets, note the name, description, and how it was used\n\n"
+    "For datasets, note the name, description, and how it was used\n"
+    + BILINGUAL_INSTRUCTION +
     "Respond ONLY with JSON:\n"
-    '{"findings": [{"type": "result", "statement": "...", "evidence": "..."}], '
-    '"methods": [{"name": "...", "description": "...", "inputs": ["..."], "outputs": ["..."]}], '
-    '"datasets": [{"name": "...", "description": "...", "usage": "evaluation"}]}\n'
+    '{"findings": [{"type": "result", "statement": {"en": "...", "zh": "..."}, '
+    '"evidence": {"en": "...", "zh": "..."}}], '
+    '"methods": [{"name": {"en": "...", "zh": "..."}, "description": {"en": "...", "zh": "..."}}], '
+    '"datasets": [{"name": {"en": "...", "zh": "..."}, "description": {"en": "...", "zh": "..."}, '
+    '"usage": {"en": "...", "zh": "..."}}]}\n'
 )
 
 FLASHCARD_PROMPT = (
@@ -89,11 +105,13 @@ FLASHCARD_PROMPT = (
     "Rules:\n"
     "- Create 5-15 cards per paper\n"
     "- Each card tests ONE specific concept or finding\n"
-    "- Front: clear question. Back: concise, accurate answer\n"
+    "- Front: clear question (bilingual). Back: concise, accurate answer (bilingual)\n"
     "- Difficulty 1-5 (1=basic terminology, 5=nuanced understanding)\n"
-    "- Tag each card with relevant categories\n\n"
+    "- Tag each card with relevant categories\n"
+    + BILINGUAL_INSTRUCTION +
     "Respond ONLY with JSON:\n"
-    '{"flashcards": [{"front": "...", "back": "...", "tags": ["method"], "difficulty": 3}]}\n'
+    '{"flashcards": [{"front": {"en": "...", "zh": "..."}, '
+    '"back": {"en": "...", "zh": "..."}, "tags": ["method"], "difficulty": 3}]}\n'
 )
 
 
@@ -101,8 +119,15 @@ def _gen_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
 
 
+def _bi_text(val: any) -> str:
+    """从双语字段中提取英文文本用于数据库索引。"""
+    if isinstance(val, dict):
+        return val.get("en", val.get("zh", ""))
+    return str(val) if val else ""
+
+
 class KnowledgeExtractor:
-    """从学术论文 PDF 中提取结构化知识。"""
+    """从学术论文 PDF 中提取结构化知识（双语输出）。"""
 
     def __init__(
         self,
@@ -134,7 +159,6 @@ class KnowledgeExtractor:
         if paper_id is None:
             paper_id = _gen_id("pk")
 
-        # 创建初始记录
         paper = PaperKnowledge(
             id=paper_id,
             task_id=task_id,
@@ -147,7 +171,7 @@ class KnowledgeExtractor:
         try:
             knowledge = await self._run_pipeline(pdf_bytes, paper_id, user_id)
             paper.knowledge_json = json.dumps(knowledge, ensure_ascii=False)
-            paper.title = knowledge.get("metadata", {}).get("title", "")
+            paper.title = _bi_text(knowledge.get("metadata", {}).get("title", ""))
             paper.doi = knowledge.get("metadata", {}).get("doi")
             paper.arxiv_id = knowledge.get("metadata", {}).get("arxiv_id")
             paper.year = knowledge.get("metadata", {}).get("year")
@@ -169,21 +193,17 @@ class KnowledgeExtractor:
         self, pdf_bytes: bytes, paper_id: str, user_id: int
     ) -> dict:
         """执行提取流水线的各阶段。"""
-        # 1. 提取 PDF 全文
         pages_text = self._extract_text(pdf_bytes)
         full_text = "\n\n".join(pages_text)
 
-        # 2. 提取 metadata（前2页）
         first_pages = "\n\n".join(pages_text[:2])
         metadata = await self._llm_call(METADATA_PROMPT, first_pages, "metadata")
 
-        # 3. 识别 section 结构
         sections_data = await self._llm_call(SECTIONS_PROMPT, full_text[:8000], "sections")
         sections = sections_data.get("sections", [])
         for i, sec in enumerate(sections):
             sec["id"] = f"sec_{i + 1}"
 
-        # 4. 并发提取实体和关系（按 section 分块）
         chunks = self._split_by_sections(full_text, sections)
         all_entities: list[dict] = []
         all_relationships: list[dict] = []
@@ -203,7 +223,6 @@ class KnowledgeExtractor:
         ]
 
         if not tasks:
-            # 如果没有足够的 section 分块，对全文做一次提取
             result = await self._llm_call(
                 ENTITY_RELATIONSHIP_PROMPT, full_text[:6000], "entities"
             )
@@ -215,14 +234,14 @@ class KnowledgeExtractor:
                 all_entities.extend(result.get("entities", []))
                 all_relationships.extend(result.get("relationships", []))
 
-        # 去重实体
         entities = self._deduplicate_entities(all_entities)
 
-        # 给实体和关系分配 ID
         entity_map: dict[str, str] = {}
         for ent in entities:
             ent_id = _gen_id("ent")
-            entity_map[ent["name"].lower()] = ent_id
+            # 用英文名做 key（兼容双语和纯字符串）
+            name_en = _bi_text(ent.get("name", "")).lower()
+            entity_map[name_en] = ent_id
             ent["id"] = ent_id
 
         for rel in all_relationships:
@@ -232,13 +251,11 @@ class KnowledgeExtractor:
             rel["source_entity_id"] = entity_map.get(src, "")
             rel["target_entity_id"] = entity_map.get(tgt, "")
 
-        # 过滤掉无效关系
         relationships = [
             r for r in all_relationships
             if r.get("source_entity_id") and r.get("target_entity_id")
         ]
 
-        # 5. 提取 findings + methods + datasets
         findings_data = await self._llm_call(
             FINDINGS_PROMPT, full_text[:8000], "findings"
         )
@@ -248,7 +265,6 @@ class KnowledgeExtractor:
         methods = findings_data.get("methods", [])
         datasets = findings_data.get("datasets", [])
 
-        # 6. 生成闪卡
         flashcard_context = json.dumps(
             {"entities": entities[:15], "findings": findings[:10]},
             ensure_ascii=False,
@@ -266,7 +282,6 @@ class KnowledgeExtractor:
                 "next_review": datetime.utcnow().isoformat(),
             }
 
-        # 7. 组装 PaperKnowledge JSON
         knowledge = {
             "id": paper_id,
             "metadata": metadata,
@@ -280,9 +295,9 @@ class KnowledgeExtractor:
             "annotations": [],
             "extracted_at": datetime.utcnow().isoformat(),
             "extraction_model": self.model,
+            "bilingual": True,
         }
 
-        # 8. 存入索引表
         self._save_index_tables(paper_id, user_id, entities, relationships, flashcards)
 
         return knowledge
@@ -292,7 +307,6 @@ class KnowledgeExtractor:
     # ------------------------------------------------------------------
 
     def _extract_text(self, pdf_bytes: bytes) -> list[str]:
-        """用 PyMuPDF 提取每页文本。"""
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         pages = []
         try:
@@ -312,10 +326,8 @@ class KnowledgeExtractor:
     async def _llm_call(
         self, system_prompt: str, user_content: str, label: str
     ) -> dict:
-        """单次 LLM API 调用，带重试和 JSON 解析。"""
         max_retries = 3
         base_delay = 2
-
         for attempt in range(max_retries):
             try:
                 return await self._do_llm_call(system_prompt, user_content)
@@ -329,7 +341,6 @@ class KnowledgeExtractor:
         return {}
 
     async def _do_llm_call(self, system_prompt: str, user_content: str) -> dict:
-        """执行 LLM API 调用并解析 JSON 响应。"""
         payload = {
             "model": self.model,
             "messages": [
@@ -343,7 +354,6 @@ class KnowledgeExtractor:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-
         response = await self._client.post(
             "/chat/completions", json=payload, headers=headers
         )
@@ -351,7 +361,6 @@ class KnowledgeExtractor:
         data = response.json()
         content = data["choices"][0]["message"]["content"].strip()
 
-        # 去除 markdown 代码围栏
         if content.startswith("```"):
             lines = content.split("\n")
             start_idx = 1 if lines[0].startswith("```") else 0
@@ -372,10 +381,9 @@ class KnowledgeExtractor:
     # ------------------------------------------------------------------
 
     def _deduplicate_entities(self, entities: list[dict]) -> list[dict]:
-        """按名称（小写）去重实体，保留 importance 更高的。"""
         seen: dict[str, dict] = {}
         for ent in entities:
-            key = ent.get("name", "").lower().strip()
+            key = _bi_text(ent.get("name", "")).lower().strip()
             if not key:
                 continue
             existing = seen.get(key)
@@ -388,7 +396,6 @@ class KnowledgeExtractor:
     # ------------------------------------------------------------------
 
     def _split_by_sections(self, full_text: str, sections: list[dict]) -> list[str]:
-        """尝试按 section 标题分割文本，回退到等分。"""
         if not sections:
             return [full_text]
 
@@ -397,16 +404,15 @@ class KnowledgeExtractor:
         positions: list[int] = []
 
         for sec in sections:
-            title = sec.get("title", "").lower()
+            title_val = sec.get("title", "")
+            title = _bi_text(title_val).lower()
             pos = text_lower.find(title)
             positions.append(pos if pos >= 0 else -1)
 
-        # 用有效位置分割
         valid = [(pos, i) for i, pos in enumerate(positions) if pos >= 0]
         valid.sort()
 
         if len(valid) < 2:
-            # 回退：按 2000 字符等分
             chunk_size = 2000
             for start in range(0, len(full_text), chunk_size):
                 chunks.append(full_text[start : start + chunk_size])
@@ -435,17 +441,16 @@ class KnowledgeExtractor:
         relationships: list[dict],
         flashcards: list[dict],
     ) -> None:
-        """将实体、关系、闪卡存入索引表。"""
         with Session(engine) as session:
             for ent in entities:
                 session.merge(KnowledgeEntity(
                     id=ent["id"],
                     paper_id=paper_id,
                     user_id=user_id,
-                    name=ent.get("name", ""),
+                    name=_bi_text(ent.get("name", "")),
                     type=ent.get("type", "concept"),
                     aliases_json=json.dumps(ent.get("aliases", []), ensure_ascii=False),
-                    definition=ent.get("definition"),
+                    definition=_bi_text(ent.get("definition")),
                     importance=ent.get("importance", 0.5),
                 ))
 
@@ -457,7 +462,7 @@ class KnowledgeExtractor:
                     source_entity_id=rel["source_entity_id"],
                     target_entity_id=rel["target_entity_id"],
                     type=rel.get("type", "uses"),
-                    description=rel.get("description"),
+                    description=_bi_text(rel.get("description")),
                     confidence=rel.get("confidence", 0.5),
                 ))
 
@@ -467,8 +472,8 @@ class KnowledgeExtractor:
                     id=fc["id"],
                     paper_id=paper_id,
                     user_id=user_id,
-                    front=fc.get("front", ""),
-                    back=fc.get("back", ""),
+                    front=_bi_text(fc.get("front", "")),
+                    back=_bi_text(fc.get("back", "")),
                     tags_json=json.dumps(fc.get("tags", []), ensure_ascii=False),
                     difficulty=fc.get("difficulty", 3),
                     interval_days=1.0,

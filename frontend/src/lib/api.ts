@@ -4,7 +4,7 @@ const api = axios.create();
 
 // BYOK: attach LLM config headers from localStorage
 api.interceptors.request.use((config) => {
-    const raw = localStorage.getItem("easypaper_llm_config");
+    const raw = localStorage.getItem("paperradar_llm_config");
     if (raw) {
         try {
             const llm = JSON.parse(raw);
@@ -31,7 +31,7 @@ export interface LLMConfig {
 }
 
 export function getLLMConfig(): LLMConfig | null {
-    const raw = localStorage.getItem("easypaper_llm_config");
+    const raw = localStorage.getItem("paperradar_llm_config");
     if (!raw) return null;
     try {
         const c = JSON.parse(raw);
@@ -40,7 +40,7 @@ export function getLLMConfig(): LLMConfig | null {
 }
 
 export function saveLLMConfig(config: LLMConfig) {
-    localStorage.setItem("easypaper_llm_config", JSON.stringify(config));
+    localStorage.setItem("paperradar_llm_config", JSON.stringify(config));
 }
 
 export default api;

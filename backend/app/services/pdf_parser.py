@@ -23,16 +23,13 @@ class DocumentLayout:
 
 
 class PDFParser:
-    def __init__(self, max_pages: int = 100) -> None:
-        self.max_pages = max_pages
+    def __init__(self) -> None:
         from .layout_analyzer import LayoutAnalyzer
 
         self.layout_analyzer = LayoutAnalyzer()
 
     def parse(self, file_bytes: bytes, filename: str, progress_callback=None) -> DocumentLayout:
         doc = fitz.open(stream=file_bytes, filetype="pdf")
-        if doc.page_count > self.max_pages:
-            raise ValueError(f"PDF页数超过限制：{self.max_pages}")
 
         # 第一遍扫描：统计字体大小分布，确定正文字号
         font_sizes = []

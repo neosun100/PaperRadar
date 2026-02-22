@@ -1,16 +1,22 @@
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { FileText, Brain, Moon, Sun, Settings, Github, Star } from "lucide-react";
+import { Radar, Brain, Moon, Sun, Settings, Github, Star, Globe } from "lucide-react";
 import LLMSettings from "@/components/LLMSettings";
 import { useTheme } from "@/lib/useTheme";
 
-const GITHUB_URL = "https://github.com/neosun100/EasyPaper";
+const GITHUB_URL = "https://github.com/neosun100/PaperRadar";
 
 const Layout = () => {
     const navigate = useNavigate();
+    const { t, i18n } = useTranslation();
     const [dark, setDark] = useTheme();
     const [settingsOpen, setSettingsOpen] = useState(false);
+
+    const toggleLang = () => {
+        i18n.changeLanguage(i18n.language === "zh" ? "en" : "zh");
+    };
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 transition-colors">
@@ -18,15 +24,15 @@ const Layout = () => {
                 <div className="container mx-auto flex h-16 items-center justify-between px-4">
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/dashboard")}>
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
-                            <FileText className="h-5 w-5" />
+                            <Radar className="h-5 w-5" />
                         </div>
-                        <span className="text-lg font-semibold tracking-tight">EasyPaper</span>
+                        <span className="text-lg font-semibold tracking-tight">PaperRadar</span>
                     </div>
 
                     <div className="flex items-center gap-1">
                         <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400" onClick={() => navigate("/knowledge")}>
                             <Brain className="h-4 w-4" />
-                            <span className="hidden sm:inline">Knowledge Base</span>
+                            <span className="hidden sm:inline">{t("nav.knowledgeBase")}</span>
                         </Button>
                         <a
                             href={GITHUB_URL}
@@ -37,12 +43,15 @@ const Layout = () => {
                         >
                             <Github className="h-4 w-4" />
                             <Star className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline text-xs">Star</span>
+                            <span className="hidden sm:inline text-xs">{t("nav.star")}</span>
                         </a>
-                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setDark(!dark)} aria-label="Toggle dark mode">
+                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={toggleLang} aria-label={t("nav.language")} title={i18n.language === "zh" ? "English" : "中文"}>
+                            <Globe className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setDark(!dark)} aria-label={t("nav.toggleDark")}>
                             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setSettingsOpen(true)} aria-label="LLM Settings">
+                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setSettingsOpen(true)} aria-label={t("nav.llmSettings")}>
                             <Settings className="h-4 w-4" />
                         </Button>
                     </div>

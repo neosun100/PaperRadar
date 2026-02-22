@@ -1,4 +1,4 @@
-# EasyPaper Configuration
+# PaperRadar Configuration
 # Copy this file to config.yaml and customize as needed.
 # LLM settings are OPTIONAL here — users provide their own API key via the browser UI (BYOK).
 
@@ -9,13 +9,13 @@ llm:
   judge_model: "gpt-4o"                      # Optional fallback judge model
 
 processing:
-  max_pages: 100          # Maximum pages per PDF
-  max_upload_mb: 50       # Maximum upload file size in MB
-  max_concurrent: 3       # Concurrent processing tasks
-  preview_html: true      # Generate HTML preview
+  max_concurrent: 3       # Concurrent processing tasks per user
 
 security:
   secret_key: "not-used-in-byok-mode"
+  api_token: ""                              # Optional: API token for programmatic access (scripts, MCP)
+                                             # When set, callers can use "Authorization: Bearer <token>"
+                                             # and the server's LLM config above will be used automatically.
   cors_origins:
     - "http://localhost:5173"
     - "http://127.0.0.1:5173"

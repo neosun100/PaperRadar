@@ -18,7 +18,7 @@ from ..core.config import get_config
 from ..models.task import TaskStatus
 from ..services.document_processor import DocumentProcessor
 from ..services.task_manager import TaskManager
-from .deps import get_llm_config
+from .deps import get_llm_config, get_client_id
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +32,16 @@ class TestConnectionRequest(BaseModel):
 def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> APIRouter:
     router = APIRouter(prefix="/api", tags=["documents"])
     cfg = get_config()
-    _max_bytes = cfg.processing.max_upload_mb * 1024 * 1024
-    _semaphore = asyncio.Semaphore(cfg.processing.max_concurrent)
+    # Per-client semaphores: each user (identified by API key prefix) gets their own concurrency limit
+    _client_semaphores: dict[str, asyncio.Semaphore] = {}
+    _max_concurrent = cfg.processing.max_concurrent
+    _queue: list[str] = []  # track queued task_ids for position info
     limiter = Limiter(key_func=get_remote_address)
+
+    def _get_semaphore(client_id: str) -> asyncio.Semaphore:
+        if client_id not in _client_semaphores:
+            _client_semaphores[client_id] = asyncio.Semaphore(_max_concurrent)
+        return _client_semaphores[client_id]
 
     @router.post("/upload")
     @limiter.limit("10/minute")
@@ -45,6 +52,7 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         highlight: bool = Form(False),
     ) -> dict[str, Any]:
         llm_config = get_llm_config(request)
+        client_id = get_client_id(request)
 
         if mode not in ("translate", "simplify"):
             raise HTTPException(status_code=400, detail="mode must be 'translate' or 'simplify'")
@@ -53,8 +61,6 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         file_bytes = await file.read()
         if not file_bytes:
             raise HTTPException(status_code=400, detail="File is empty")
-        if len(file_bytes) > _max_bytes:
-            raise HTTPException(status_code=413, detail=f"File exceeds {cfg.processing.max_upload_mb}MB limit")
 
         task = task_manager.create_task(file.filename or "document.pdf", mode=mode, highlight=highlight)
 
@@ -63,8 +69,20 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
             f.write(file_bytes)
         task_manager.update_original_path(task.task_id, str(original_path))
 
+        _queue.append(task.task_id)
+        queue_pos = len(_queue)
+        if queue_pos > _max_concurrent:
+            task_manager.update_progress(
+                task.task_id, TaskStatus.PENDING, 0,
+                f"Queued (position {queue_pos - _max_concurrent})"
+            )
+
+        sem = _get_semaphore(client_id)
+
         async def _process_with_limit() -> None:
-            async with _semaphore:
+            async with sem:
+                if task.task_id in _queue:
+                    _queue.remove(task.task_id)
                 await processor.process(task.task_id, file_bytes, task.filename, mode=mode, highlight=highlight, llm_config=llm_config)
 
         asyncio.create_task(_process_with_limit())
@@ -86,6 +104,14 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
             }
             for t in tasks
         ]
+
+    @router.get("/queue")
+    async def queue_status() -> dict[str, int]:
+        tasks = task_manager.list_tasks(limit=200)
+        active_statuses = {TaskStatus.PARSING, TaskStatus.REWRITING, TaskStatus.RENDERING, TaskStatus.HIGHLIGHTING}
+        processing = sum(1 for t in tasks if t.status in active_statuses)
+        queued = sum(1 for t in tasks if t.status == TaskStatus.PENDING)
+        return {"processing": processing, "queued": queued, "max_concurrent": _max_concurrent}
 
     @router.get("/status/{task_id}")
     async def get_status(task_id: str) -> dict[str, Any]:

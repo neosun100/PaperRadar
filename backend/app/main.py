@@ -28,9 +28,9 @@ _start_time = time.time()
 
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(
-    title="EasyPaper API",
-    version="2.0.0",
-    description="Turn academic papers into knowledge you keep. BYOK edition.",
+    title="PaperRadar API",
+    version="3.0.0",
+    description="Discover, understand, and connect cutting-edge research — automatically.",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
     openapi_url="/api/openapi.json",
@@ -64,20 +64,10 @@ app.include_router(create_knowledge_router())
 @app.get("/health")
 async def healthcheck() -> dict:
     uptime = int(time.time() - _start_time)
-    return {"status": "ok", "version": "2.0.0", "uptime_seconds": uptime}
+    return {"status": "ok", "version": "3.0.0", "uptime_seconds": uptime}
 
 
 @app.on_event("startup")
 async def on_startup() -> None:
     init_db()
     Path(config.storage.temp_dir).mkdir(parents=True, exist_ok=True)
-    asyncio.create_task(run_cleanup_task())
-
-
-async def run_cleanup_task() -> None:
-    while True:
-        await asyncio.sleep(60 * config.storage.cleanup_minutes)
-        try:
-            task_manager.cleanup()
-        except Exception:
-            pass

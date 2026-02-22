@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,8 +11,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api, { getLLMConfig } from "@/lib/api";
 import LLMSettings from "@/components/LLMSettings";
-
-const MAX_FILE_SIZE_MB = 50;
 
 interface Task {
     task_id: string;
@@ -25,12 +24,14 @@ interface Task {
 }
 
 const Dashboard = () => {
+    const { t } = useTranslation();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [mode, setMode] = useState<"translate" | "simplify">("translate");
     const [search, setSearch] = useState("");
     const [highlight, setHighlight] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const [dragging, setDragging] = useState(false);
+    const [queueInfo, setQueueInfo] = useState<{ processing: number; queued: number } | null>(null);
     const navigate = useNavigate();
     const abortRef = useRef<AbortController | null>(null);
     const pollIntervalRef = useRef<number>(2000);
@@ -41,14 +42,17 @@ const Dashboard = () => {
         try {
             abortRef.current?.abort();
             abortRef.current = new AbortController();
-            const response = await api.get("/api/tasks", { signal: abortRef.current.signal });
-            setTasks(response.data);
+            const [tasksRes, queueRes] = await Promise.all([
+                api.get("/api/tasks", { signal: abortRef.current.signal }),
+                api.get("/api/queue", { signal: abortRef.current.signal }),
+            ]);
+            setTasks(tasksRes.data);
+            setQueueInfo(queueRes.data);
         } catch (error: any) {
             if (error.name === "CanceledError") return;
         }
     }, []);
 
-    // Smart polling: fast when tasks are processing, slow when idle
     useEffect(() => {
         fetchTasks();
 
@@ -73,11 +77,7 @@ const Dashboard = () => {
 
     const validateFile = (file: File): boolean => {
         if (file.type !== "application/pdf") {
-            toast.error("Only PDF files are supported.");
-            return false;
-        }
-        if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-            toast.error(`File size exceeds ${MAX_FILE_SIZE_MB}MB limit.`);
+            toast.error(t("dashboard.onlyPdf"));
             return false;
         }
         return true;
@@ -100,10 +100,10 @@ const Dashboard = () => {
                     }
                 },
             });
-            toast.success(`"${file.name}" uploaded successfully.`);
+            toast.success(t("dashboard.uploadSuccess", { name: file.name }));
             fetchTasks();
         } catch (error: any) {
-            const msg = error.response?.data?.detail || "Upload failed.";
+            const msg = error.response?.data?.detail || t("dashboard.uploadFailed");
             toast.error(msg);
         } finally {
             setUploadProgress(null);
@@ -117,15 +117,8 @@ const Dashboard = () => {
         uploadFile(file);
     };
 
-    // Drag & Drop handlers
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        setDragging(true);
-    };
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        setDragging(false);
-    };
+    const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragging(true); };
+    const handleDragLeave = (e: React.DragEvent) => { e.preventDefault(); setDragging(false); };
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setDragging(false);
@@ -137,20 +130,16 @@ const Dashboard = () => {
         try {
             await api.delete(`/api/tasks/${taskId}`);
             setTasks((prev) => prev.filter((t) => t.task_id !== taskId));
-            toast.success("Task deleted.");
+            toast.success(t("dashboard.taskDeleted"));
         } catch {
-            toast.error("Failed to delete task.");
+            toast.error(t("dashboard.taskDeleteFailed"));
         }
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
             case "completed": return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800";
-            case "processing":
-            case "parsing":
-            case "rewriting":
-            case "rendering":
-            case "highlighting":
+            case "processing": case "parsing": case "rewriting": case "rendering": case "highlighting":
                 return "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800";
             case "failed": return "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800";
             default: return "text-muted-foreground bg-muted border-border";
@@ -160,11 +149,7 @@ const Dashboard = () => {
     const getStatusIcon = (status: string) => {
         switch (status) {
             case "completed": return <CheckCircle className="h-4 w-4" />;
-            case "processing":
-            case "parsing":
-            case "rewriting":
-            case "rendering":
-            case "highlighting":
+            case "processing": case "parsing": case "rewriting": case "rendering": case "highlighting":
                 return <Clock className="h-4 w-4 animate-pulse" />;
             case "failed": return <AlertCircle className="h-4 w-4" />;
             default: return <Clock className="h-4 w-4" />;
@@ -177,114 +162,62 @@ const Dashboard = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* First-use guide */}
             {!hasLLMConfig && (
                 <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-6 text-center space-y-3">
-                    <h2 className="text-lg font-semibold">Welcome to EasyPaper! 👋</h2>
-                    <p className="text-sm text-muted-foreground">Configure your LLM API key to get started. Your key stays in your browser only.</p>
+                    <h2 className="text-lg font-semibold">{t("dashboard.welcome")}</h2>
+                    <p className="text-sm text-muted-foreground">{t("dashboard.welcomeDesc")}</p>
                     <div className="flex items-center justify-center gap-3">
                         <Button onClick={() => setShowSetup(true)} className="gap-2">
-                            <Settings className="h-4 w-4" /> Set Up API Key
+                            <Settings className="h-4 w-4" /> {t("dashboard.setupKey")}
                         </Button>
-                        <a href="https://github.com/neosun100/EasyPaper" target="_blank" rel="noopener noreferrer">
-                            <Button variant="outline" className="gap-2">
-                                ⭐ Star on GitHub
-                            </Button>
+                        <a href="https://github.com/neosun100/PaperRadar" target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" className="gap-2">{t("dashboard.starOnGithub")}</Button>
                         </a>
                     </div>
                 </div>
             )}
             <LLMSettings open={showSetup} onOpenChange={setShowSetup} />
 
-            {/* Hero Section with Drop Zone */}
             <section
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={cn(
                     "relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/5 via-primary/10 to-transparent p-8 md:p-12 text-center border shadow-sm transition-all",
-                    dragging
-                        ? "border-primary border-dashed border-2 bg-primary/5 scale-[1.01]"
-                        : "border-primary/10"
+                    dragging ? "border-primary border-dashed border-2 bg-primary/5 scale-[1.01]" : "border-primary/10"
                 )}
             >
                 <div className="relative z-10 mx-auto max-w-2xl space-y-6">
-                    <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-                        EasyPaper
-                    </h1>
-                    <p className="text-lg text-muted-foreground">
-                        Upload your English academic papers. Translate to Chinese or simplify
-                        complex vocabulary — while preserving layout, images, and formulas.
-                    </p>
+                    <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">{t("dashboard.title")}</h1>
+                    <p className="text-lg text-muted-foreground">{t("dashboard.subtitle")}</p>
 
-                    {/* Mode Selector */}
                     <div className="flex flex-wrap justify-center gap-3">
-                        <button
-                            onClick={() => setMode("translate")}
-                            className={cn(
-                                "flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all",
-                                mode === "translate"
-                                    ? "bg-primary text-primary-foreground shadow-md"
-                                    : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent"
-                            )}
-                        >
-                            <Languages className="h-4 w-4" />
-                            Translate to Chinese
+                        <button onClick={() => setMode("translate")} className={cn("flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all", mode === "translate" ? "bg-primary text-primary-foreground shadow-md" : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent")}>
+                            <Languages className="h-4 w-4" /> {t("dashboard.translateToChinese")}
                         </button>
-                        <button
-                            onClick={() => setMode("simplify")}
-                            className={cn(
-                                "flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all",
-                                mode === "simplify"
-                                    ? "bg-primary text-primary-foreground shadow-md"
-                                    : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent"
-                            )}
-                        >
-                            <BookOpen className="h-4 w-4" />
-                            Simplify English
+                        <button onClick={() => setMode("simplify")} className={cn("flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all", mode === "simplify" ? "bg-primary text-primary-foreground shadow-md" : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent")}>
+                            <BookOpen className="h-4 w-4" /> {t("dashboard.simplifyEnglish")}
                         </button>
-                        <button
-                            onClick={() => setHighlight(!highlight)}
-                            className={cn(
-                                "flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all",
-                                highlight
-                                    ? "bg-amber-500 text-white shadow-md"
-                                    : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent"
-                            )}
-                        >
-                            <Highlighter className="h-4 w-4" />
-                            AI Highlights
+                        <button onClick={() => setHighlight(!highlight)} className={cn("flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all", highlight ? "bg-amber-500 text-white shadow-md" : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent")}>
+                            <Highlighter className="h-4 w-4" /> {t("dashboard.aiHighlights")}
                         </button>
                     </div>
 
                     <div className="flex flex-col items-center gap-3 pt-2">
                         {dragging ? (
-                            <p className="text-primary font-medium text-lg">Drop PDF here</p>
+                            <p className="text-primary font-medium text-lg">{t("dashboard.dropPdfHere")}</p>
                         ) : (
-                            <Label
-                                htmlFor="file-upload"
-                                className={cn(
-                                    "group relative flex cursor-pointer items-center justify-center gap-3 rounded-full bg-primary px-8 py-4 text-lg font-medium text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl hover:scale-105 active:scale-95"
-                                )}
-                            >
+                            <Label htmlFor="file-upload" className={cn("group relative flex cursor-pointer items-center justify-center gap-3 rounded-full bg-primary px-8 py-4 text-lg font-medium text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl hover:scale-105 active:scale-95")}>
                                 <Upload className="h-5 w-5" />
-                                <span>Upload PDF</span>
-                                <Input
-                                    id="file-upload"
-                                    type="file"
-                                    accept=".pdf"
-                                    className="hidden"
-                                    onChange={handleUpload}
-                                />
+                                <span>{t("dashboard.uploadPdf")}</span>
+                                <Input id="file-upload" type="file" accept=".pdf" className="hidden" onChange={handleUpload} />
                             </Label>
                         )}
-                        <p className="text-xs text-muted-foreground">
-                            or drag and drop a PDF here (max {MAX_FILE_SIZE_MB}MB)
-                        </p>
+                        <p className="text-xs text-muted-foreground">{t("dashboard.dragHint")}</p>
                         {uploadProgress !== null && (
                             <div className="w-full max-w-xs space-y-1">
                                 <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span>Uploading...</span>
+                                    <span>{t("dashboard.uploading")}</span>
                                     <span>{uploadProgress}%</span>
                                 </div>
                                 <Progress value={uploadProgress} className="h-2" />
@@ -292,25 +225,34 @@ const Dashboard = () => {
                         )}
                     </div>
                 </div>
-
-                {/* Decorative background elements */}
                 <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-blue-200/30 dark:bg-blue-500/10 blur-3xl" />
                 <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 h-64 w-64 rounded-full bg-purple-200/30 dark:bg-purple-500/10 blur-3xl" />
             </section>
 
-            {/* Task List */}
             <section className="space-y-4">
                 <div className="flex items-center justify-between gap-4 px-2">
-                    <h2 className="text-2xl font-semibold tracking-tight shrink-0">Recent Documents</h2>
+                    <div className="flex items-center gap-3 shrink-0">
+                        <h2 className="text-2xl font-semibold tracking-tight">{t("dashboard.recentDocs")}</h2>
+                        {queueInfo && (queueInfo.processing > 0 || queueInfo.queued > 0) && (
+                            <div className="flex items-center gap-2">
+                                {queueInfo.processing > 0 && (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 text-xs font-medium text-blue-600 dark:text-blue-400">
+                                        <Clock className="h-3 w-3 animate-pulse" />
+                                        {t("dashboard.processingCount", { count: queueInfo.processing })}
+                                    </span>
+                                )}
+                                {queueInfo.queued > 0 && (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-2.5 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                                        {t("dashboard.queuedCount", { count: queueInfo.queued })}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
                     {tasks.length > 0 && (
                         <div className="relative max-w-xs w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search documents..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-9 h-9"
-                            />
+                            <Input placeholder={t("dashboard.searchDocs")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
                         </div>
                     )}
                 </div>
@@ -325,18 +267,14 @@ const Dashboard = () => {
                                             <FileText className="h-5 w-5" />
                                         </div>
                                         <div className="space-y-1">
-                                            <CardTitle className="text-base font-medium leading-none line-clamp-1" title={task.filename}>
-                                                {task.filename}
-                                            </CardTitle>
+                                            <CardTitle className="text-base font-medium leading-none line-clamp-1" title={task.filename}>{task.filename}</CardTitle>
                                             <CardDescription className="text-xs flex items-center gap-1.5">
                                                 {new Date(task.created_at).toLocaleDateString()}
                                                 <span className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                                                    {task.mode === "simplify" ? "Simplify" : "Translate"}
+                                                    {task.mode === "simplify" ? t("dashboard.simplify") : t("dashboard.translate")}
                                                 </span>
                                                 {task.highlight && (
-                                                    <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
-                                                        Highlighted
-                                                    </span>
+                                                    <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">{t("dashboard.highlighted")}</span>
                                                 )}
                                             </CardDescription>
                                         </div>
@@ -346,52 +284,40 @@ const Dashboard = () => {
                                             {getStatusIcon(task.status)}
                                             <span className="capitalize">{task.status}</span>
                                         </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-600"
-                                            onClick={() => handleDelete(task.task_id)}
-                                        >
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-600" onClick={() => handleDelete(task.task_id)}>
                                             <Trash2 className="h-3.5 w-3.5" />
                                         </Button>
                                     </div>
                                 </div>
                             </CardHeader>
-
                             <CardContent>
                                 <div className="space-y-3">
                                     {["processing", "parsing", "rewriting", "rendering", "highlighting"].includes(task.status) && (
                                         <div className="space-y-1.5">
                                             <div className="flex justify-between text-xs text-muted-foreground">
-                                                <span>{task.message || "Processing..."}</span>
+                                                <span>{task.message || t("dashboard.processing")}</span>
                                                 <span>{task.percent || 0}%</span>
                                             </div>
                                             <Progress value={task.percent || 0} className="h-1.5" />
                                         </div>
                                     )}
-
                                     {task.status === "completed" && (
                                         <div className="flex gap-2">
-                                            <Button
-                                                className="flex-1 gap-2 group-hover:bg-primary group-hover:text-primary-foreground"
-                                                variant="outline"
-                                                onClick={() => navigate(`/reader/${task.task_id}`)}
-                                            >
-                                                Read
+                                            <Button className="flex-1 gap-2 group-hover:bg-primary group-hover:text-primary-foreground" variant="outline" onClick={() => navigate(`/reader/${task.task_id}`)}>
+                                                {t("dashboard.read")}
                                                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                                             </Button>
                                             <Button
-                                                variant="outline"
-                                                size="icon"
+                                                variant="outline" size="icon"
                                                 className="shrink-0 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/40 hover:text-violet-700 dark:hover:text-violet-300 border-violet-200 dark:border-violet-800"
-                                                title="Extract Knowledge"
+                                                title={t("dashboard.extractKnowledge")}
                                                 onClick={async (e) => {
                                                     e.stopPropagation();
                                                     try {
                                                         await api.post(`/api/knowledge/extract/${task.task_id}`);
-                                                        toast.success("Knowledge extraction started!");
+                                                        toast.success(t("dashboard.extractionStarted"));
                                                     } catch {
-                                                        toast.error("Failed to start extraction.");
+                                                        toast.error(t("dashboard.extractionFailed"));
                                                     }
                                                 }}
                                             >
@@ -399,11 +325,8 @@ const Dashboard = () => {
                                             </Button>
                                         </div>
                                     )}
-
                                     {task.status === "failed" && (
-                                        <p className="text-xs text-red-500">
-                                            {task.message || "Processing failed"}
-                                        </p>
+                                        <p className="text-xs text-red-500">{task.message || "Processing failed"}</p>
                                     )}
                                 </div>
                             </CardContent>
@@ -412,7 +335,7 @@ const Dashboard = () => {
 
                     {filteredTasks.length === 0 && (
                         <div className="col-span-full py-12 text-center text-muted-foreground bg-muted/50 rounded-xl border border-dashed">
-                            <p>{search ? "No matching documents found." : "No documents yet. Upload one to get started!"}</p>
+                            <p>{search ? t("dashboard.noDocsMatch") : t("dashboard.noDocs")}</p>
                         </div>
                     )}
                 </div>

@@ -1,53 +1,27 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-    ArrowLeft,
-    Download,
-    Brain,
-    Lightbulb,
-    Link2,
-    FlaskConical,
-    Database,
-    GraduationCap,
-    StickyNote,
-    Plus,
-    Loader2,
-} from "lucide-react";
+import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { biText } from "@/lib/biText";
 
 interface PaperKnowledge {
     id: string;
-    metadata: {
-        title: string;
-        authors: { name: string; affiliation?: string }[];
-        year?: number;
-        doi?: string;
-        venue?: string;
-        abstract?: string;
-        keywords?: string[];
-    };
-    entities: { id: string; name: string; type: string; definition?: string; importance: number }[];
-    relationships: {
-        id: string;
-        source_entity_id: string;
-        target_entity_id: string;
-        type: string;
-        description?: string;
-        source?: string;
-        target?: string;
-    }[];
-    findings: { id: string; type: string; statement: string; evidence?: string }[];
-    methods: { name: string; description: string }[];
-    datasets: { name: string; description: string; usage?: string }[];
-    flashcards: { id: string; front: string; back: string; tags: string[]; difficulty: number }[];
+    metadata: { title: any; authors: { name: string; affiliation?: string }[]; year?: number; doi?: string; venue?: string; abstract?: any; keywords?: any[] };
+    entities: { id: string; name: any; type: string; definition?: any; importance: number }[];
+    relationships: { id: string; source_entity_id: string; target_entity_id: string; type: string; description?: any; source?: string; target?: string }[];
+    findings: { id: string; type: string; statement: any; evidence?: any }[];
+    methods: { name: any; description: any }[];
+    datasets: { name: any; description: any; usage?: any }[];
+    flashcards: { id: string; front: any; back: any; tags: string[]; difficulty: number }[];
     annotations: { id: string; type: string; content: string; created_at?: string }[];
-    structure?: { sections: { id: string; title: string; level: number; summary?: string }[] };
+    structure?: { sections: { id: string; title: any; level: number; summary?: any }[] };
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -62,95 +36,73 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 const PaperDetail = () => {
+    const { t, i18n } = useTranslation();
     const { paperId } = useParams<{ paperId: string }>();
     const navigate = useNavigate();
     const [paper, setPaper] = useState<PaperKnowledge | null>(null);
     const [loading, setLoading] = useState(true);
     const [newNote, setNewNote] = useState("");
+    // Force re-render on language change
+    const [, setLang] = useState(i18n.language);
+    useEffect(() => {
+        const cb = (lng: string) => setLang(lng);
+        i18n.on("languageChanged", cb);
+        return () => { i18n.off("languageChanged", cb); };
+    }, [i18n]);
 
     useEffect(() => {
         const fetchPaper = async () => {
-            try {
-                const response = await api.get(`/api/knowledge/papers/${paperId}`);
-                setPaper(response.data);
-            } catch {
-                toast.error("Failed to load paper.");
-            } finally {
-                setLoading(false);
-            }
+            try { const response = await api.get(`/api/knowledge/papers/${paperId}`); setPaper(response.data); }
+            catch { toast.error(t("paperDetail.loadFailed")); }
+            finally { setLoading(false); }
         };
         fetchPaper();
-    }, [paperId]);
+    }, [paperId, t]);
 
     const handleExport = async () => {
         try {
-            const response = await api.get(`/api/knowledge/export/paper/${paperId}`, {
-                responseType: "blob",
-            });
+            const response = await api.get(`/api/knowledge/export/paper/${paperId}`, { responseType: "blob" });
             const blob = new Blob([response.data], { type: "application/json" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `${paper?.metadata.title || "paper"}.epaper.json`;
+            link.download = `${biText(paper?.metadata.title) || "paper"}.epaper.json`;
             document.body.appendChild(link);
             link.click();
             link.parentNode?.removeChild(link);
-            toast.success("Exported as .epaper.json");
-        } catch {
-            toast.error("Export failed.");
-        }
+            toast.success(t("paperDetail.exportedEpaper"));
+        } catch { toast.error(t("paperDetail.exportFailed")); }
     };
 
     const handleAddNote = async () => {
         if (!newNote.trim()) return;
         try {
-            await api.post(`/api/knowledge/papers/${paperId}/annotations`, null, {
-                params: { type: "note", content: newNote },
-            });
+            await api.post(`/api/knowledge/papers/${paperId}/annotations`, null, { params: { type: "note", content: newNote } });
             setNewNote("");
-            // Refresh paper data
             const response = await api.get(`/api/knowledge/papers/${paperId}`);
             setPaper(response.data);
-            toast.success("Note added.");
-        } catch {
-            toast.error("Failed to add note.");
-        }
+            toast.success(t("paperDetail.noteAdded"));
+        } catch { toast.error(t("paperDetail.noteAddFailed")); }
     };
 
-    if (loading) {
-        return (
-            <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            </div>
-        );
-    }
+    if (loading) return <div className="flex h-[calc(100vh-8rem)] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
-    if (!paper) {
-        return (
-            <div className="flex h-[calc(100vh-8rem)] flex-col items-center justify-center space-y-4">
-                <p className="text-muted-foreground">Paper not found.</p>
-                <Button onClick={() => navigate("/knowledge")}>Back to Knowledge Base</Button>
-            </div>
-        );
-    }
+    if (!paper) return (
+        <div className="flex h-[calc(100vh-8rem)] flex-col items-center justify-center space-y-4">
+            <p className="text-muted-foreground">{t("paperDetail.paperNotFound")}</p>
+            <Button onClick={() => navigate("/knowledge")}>{t("paperDetail.knowledgeBase")}</Button>
+        </div>
+    );
 
     const { metadata, entities, relationships, findings, methods, datasets, flashcards, annotations } = paper;
-
-    // Build entity name map for relationship display
     const entityMap: Record<string, string> = {};
-    entities.forEach((e) => {
-        entityMap[e.id] = e.name;
-    });
+    entities.forEach((e) => { entityMap[e.id] = biText(e.name); });
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Header */}
             <div className="flex items-start justify-between gap-4">
                 <div className="space-y-2">
-                    <Button variant="ghost" size="sm" onClick={() => navigate("/knowledge")}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Knowledge Base
-                    </Button>
-                    <h1 className="text-2xl font-bold tracking-tight">{metadata.title}</h1>
+                    <Button variant="ghost" size="sm" onClick={() => navigate("/knowledge")}><ArrowLeft className="mr-2 h-4 w-4" />{t("paperDetail.knowledgeBase")}</Button>
+                    <h1 className="text-2xl font-bold tracking-tight">{biText(metadata.title)}</h1>
                     <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                         <span>{metadata.authors?.map((a) => a.name).join(", ")}</span>
                         {metadata.year && <span>({metadata.year})</span>}
@@ -158,223 +110,115 @@ const PaperDetail = () => {
                     </div>
                     {metadata.keywords && metadata.keywords.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-1">
-                            {metadata.keywords.map((kw) => (
-                                <span key={kw} className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">
-                                    {kw}
-                                </span>
-                            ))}
+                            {metadata.keywords.map((kw, i) => <span key={i} className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{biText(kw)}</span>)}
                         </div>
                     )}
                 </div>
-                <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={handleExport}>
-                    <Download className="h-4 w-4" />
-                    .epaper.json
-                </Button>
+                <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={handleExport}><Download className="h-4 w-4" />.epaper.json</Button>
             </div>
 
-            {/* Abstract */}
             {metadata.abstract && (
                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Abstract</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-sm leading-relaxed">{metadata.abstract}</p>
-                    </CardContent>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t("paperDetail.abstract")}</CardTitle></CardHeader>
+                    <CardContent><p className="text-sm leading-relaxed">{biText(metadata.abstract)}</p></CardContent>
                 </Card>
             )}
 
-            {/* Tabs */}
             <Tabs defaultValue="entities" className="space-y-4">
                 <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
-                    <TabsTrigger value="entities" className="gap-1.5">
-                        <Brain className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Entities ({entities.length})</span>
-                        <span className="sm:hidden">{entities.length}</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="findings" className="gap-1.5">
-                        <Lightbulb className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Findings ({findings.length})</span>
-                        <span className="sm:hidden">{findings.length}</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="flashcards" className="gap-1.5">
-                        <GraduationCap className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Cards ({flashcards.length})</span>
-                        <span className="sm:hidden">{flashcards.length}</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="relations" className="gap-1.5">
-                        <Link2 className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Relations ({relationships.length})</span>
-                        <span className="sm:hidden">{relationships.length}</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="notes" className="gap-1.5">
-                        <StickyNote className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Notes</span>
-                    </TabsTrigger>
+                    <TabsTrigger value="entities" className="gap-1.5"><Brain className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.entities")} ({entities.length})</span><span className="sm:hidden">{entities.length}</span></TabsTrigger>
+                    <TabsTrigger value="findings" className="gap-1.5"><Lightbulb className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.findings")} ({findings.length})</span><span className="sm:hidden">{findings.length}</span></TabsTrigger>
+                    <TabsTrigger value="flashcards" className="gap-1.5"><GraduationCap className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.cards")} ({flashcards.length})</span><span className="sm:hidden">{flashcards.length}</span></TabsTrigger>
+                    <TabsTrigger value="relations" className="gap-1.5"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.relations")} ({relationships.length})</span><span className="sm:hidden">{relationships.length}</span></TabsTrigger>
+                    <TabsTrigger value="notes" className="gap-1.5"><StickyNote className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.notes")}</span></TabsTrigger>
                 </TabsList>
 
-                {/* Entities Tab */}
                 <TabsContent value="entities" className="space-y-3">
                     <div className="grid gap-3 md:grid-cols-2">
                         {entities.map((ent) => (
-                            <Card key={ent.id} className="border-border">
-                                <CardContent className="p-4">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium text-sm">{ent.name}</span>
-                                                <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", TYPE_COLORS[ent.type] || "bg-muted text-muted-foreground")}>
-                                                    {ent.type}
-                                                </span>
-                                            </div>
-                                            {ent.definition && (
-                                                <p className="text-xs text-muted-foreground leading-relaxed">{ent.definition}</p>
-                                            )}
+                            <Card key={ent.id} className="border-border"><CardContent className="p-4">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium text-sm">{biText(ent.name)}</span>
+                                            <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", TYPE_COLORS[ent.type] || "bg-muted text-muted-foreground")}>{ent.type}</span>
                                         </div>
-                                        <div className="text-xs text-muted-foreground shrink-0">
-                                            {Math.round(ent.importance * 100)}%
-                                        </div>
+                                        {ent.definition && <p className="text-xs text-muted-foreground leading-relaxed">{biText(ent.definition)}</p>}
                                     </div>
-                                </CardContent>
-                            </Card>
+                                    <div className="text-xs text-muted-foreground shrink-0">{Math.round(ent.importance * 100)}%</div>
+                                </div>
+                            </CardContent></Card>
                         ))}
                     </div>
                 </TabsContent>
 
-                {/* Findings Tab */}
                 <TabsContent value="findings" className="space-y-3">
                     {findings.map((f) => (
-                        <Card key={f.id} className="border-border">
-                            <CardContent className="p-4">
-                                <div className="flex items-start gap-3">
-                                    <div className={cn(
-                                        "shrink-0 mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium",
-                                        f.type === "result" ? "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300" :
-                                        f.type === "limitation" ? "bg-amber-100 text-amber-700" :
-                                        "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300"
-                                    )}>
-                                        {f.type}
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-sm">{f.statement}</p>
-                                        {f.evidence && (
-                                            <p className="text-xs text-muted-foreground">Evidence: {f.evidence}</p>
-                                        )}
-                                    </div>
+                        <Card key={f.id} className="border-border"><CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                                <div className={cn("shrink-0 mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                                    f.type === "result" ? "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300" :
+                                    f.type === "limitation" ? "bg-amber-100 text-amber-700" : "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300"
+                                )}>{f.type}</div>
+                                <div className="space-y-1">
+                                    <p className="text-sm">{biText(f.statement)}</p>
+                                    {f.evidence && <p className="text-xs text-muted-foreground">{t("paperDetail.evidence")}: {biText(f.evidence)}</p>}
                                 </div>
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </CardContent></Card>
                     ))}
                     {methods.length > 0 && (
                         <div className="space-y-3 pt-4">
-                            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <FlaskConical className="h-4 w-4" /> Methods
-                            </h3>
-                            {methods.map((m, i) => (
-                                <Card key={i} className="border-border">
-                                    <CardContent className="p-4">
-                                        <p className="text-sm font-medium">{m.name}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">{m.description}</p>
-                                    </CardContent>
-                                </Card>
-                            ))}
+                            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><FlaskConical className="h-4 w-4" /> {t("paperDetail.methodsSection")}</h3>
+                            {methods.map((m, i) => <Card key={i} className="border-border"><CardContent className="p-4"><p className="text-sm font-medium">{biText(m.name)}</p><p className="text-xs text-muted-foreground mt-1">{biText(m.description)}</p></CardContent></Card>)}
                         </div>
                     )}
                     {datasets.length > 0 && (
                         <div className="space-y-3 pt-4">
-                            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                <Database className="h-4 w-4" /> Datasets
-                            </h3>
-                            {datasets.map((d, i) => (
-                                <Card key={i} className="border-border">
-                                    <CardContent className="p-4">
-                                        <p className="text-sm font-medium">{d.name}</p>
-                                        <p className="text-xs text-muted-foreground mt-1">{d.description}</p>
-                                        {d.usage && <p className="text-xs text-muted-foreground">Usage: {d.usage}</p>}
-                                    </CardContent>
-                                </Card>
-                            ))}
+                            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Database className="h-4 w-4" /> {t("paperDetail.datasetsSection")}</h3>
+                            {datasets.map((d, i) => <Card key={i} className="border-border"><CardContent className="p-4"><p className="text-sm font-medium">{biText(d.name)}</p><p className="text-xs text-muted-foreground mt-1">{biText(d.description)}</p>{d.usage && <p className="text-xs text-muted-foreground">{t("paperDetail.usage")}: {biText(d.usage)}</p>}</CardContent></Card>)}
                         </div>
                     )}
                 </TabsContent>
 
-                {/* Flashcards Tab */}
                 <TabsContent value="flashcards" className="space-y-3">
                     {flashcards.map((fc) => (
-                        <Card key={fc.id} className="border-border">
-                            <CardContent className="p-4 space-y-2">
-                                <p className="text-sm font-medium">Q: {fc.front}</p>
-                                <p className="text-sm text-muted-foreground">A: {fc.back}</p>
-                                <div className="flex items-center gap-2">
-                                    {fc.tags.map((tag) => (
-                                        <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                                            {tag}
-                                        </span>
-                                    ))}
-                                    <span className="text-[10px] text-muted-foreground ml-auto">
-                                        Difficulty: {fc.difficulty}/5
-                                    </span>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <Card key={fc.id} className="border-border"><CardContent className="p-4 space-y-2">
+                            <p className="text-sm font-medium">Q: {biText(fc.front)}</p>
+                            <p className="text-sm text-muted-foreground">A: {biText(fc.back)}</p>
+                            <div className="flex items-center gap-2">
+                                {fc.tags.map((tag) => <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">{tag}</span>)}
+                                <span className="text-[10px] text-muted-foreground ml-auto">{t("paperDetail.difficulty")}: {fc.difficulty}/5</span>
+                            </div>
+                        </CardContent></Card>
                     ))}
                 </TabsContent>
 
-                {/* Relations Tab */}
                 <TabsContent value="relations" className="space-y-3">
                     {relationships.map((rel) => (
-                        <Card key={rel.id} className="border-border">
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-2 text-sm">
-                                    <span className="font-medium">
-                                        {entityMap[rel.source_entity_id] || rel.source || "?"}
-                                    </span>
-                                    <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-medium">
-                                        {rel.type}
-                                    </span>
-                                    <span className="font-medium">
-                                        {entityMap[rel.target_entity_id] || rel.target || "?"}
-                                    </span>
-                                </div>
-                                {rel.description && (
-                                    <p className="text-xs text-muted-foreground mt-1">{rel.description}</p>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <Card key={rel.id} className="border-border"><CardContent className="p-4">
+                            <div className="flex items-center gap-2 text-sm">
+                                <span className="font-medium">{entityMap[rel.source_entity_id] || rel.source || "?"}</span>
+                                <span className="rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-medium">{rel.type}</span>
+                                <span className="font-medium">{entityMap[rel.target_entity_id] || rel.target || "?"}</span>
+                            </div>
+                            {rel.description && <p className="text-xs text-muted-foreground mt-1">{biText(rel.description)}</p>}
+                        </CardContent></Card>
                     ))}
                 </TabsContent>
 
-                {/* Notes Tab */}
                 <TabsContent value="notes" className="space-y-3">
                     <div className="flex gap-2">
-                        <Input
-                            placeholder="Add a note..."
-                            value={newNote}
-                            onChange={(e) => setNewNote(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
-                        />
-                        <Button size="sm" onClick={handleAddNote} className="gap-1 shrink-0">
-                            <Plus className="h-4 w-4" />
-                            Add
-                        </Button>
+                        <Input placeholder={t("paperDetail.addNote")} value={newNote} onChange={(e) => setNewNote(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAddNote()} />
+                        <Button size="sm" onClick={handleAddNote} className="gap-1 shrink-0"><Plus className="h-4 w-4" />{t("paperDetail.add")}</Button>
                     </div>
                     {annotations?.map((ann) => (
-                        <Card key={ann.id} className="border-border">
-                            <CardContent className="p-4">
-                                <p className="text-sm">{ann.content}</p>
-                                {ann.created_at && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                        {new Date(ann.created_at).toLocaleString()}
-                                    </p>
-                                )}
-                            </CardContent>
-                        </Card>
+                        <Card key={ann.id} className="border-border"><CardContent className="p-4">
+                            <p className="text-sm">{ann.content}</p>
+                            {ann.created_at && <p className="text-xs text-muted-foreground mt-1">{new Date(ann.created_at).toLocaleString()}</p>}
+                        </CardContent></Card>
                     ))}
-                    {(!annotations || annotations.length === 0) && !newNote && (
-                        <p className="text-sm text-muted-foreground text-center py-8">
-                            No notes yet. Add one above.
-                        </p>
-                    )}
+                    {(!annotations || annotations.length === 0) && !newNote && <p className="text-sm text-muted-foreground text-center py-8">{t("paperDetail.noNotes")}</p>}
                 </TabsContent>
             </Tabs>
         </div>

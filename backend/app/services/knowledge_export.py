@@ -170,7 +170,7 @@ def _paper_to_markdown(paper: dict) -> str:
         lines.append(f'doi: "{metadata["doi"]}"')
     if keywords:
         lines.append(f"tags: [{', '.join(keywords)}]")
-    lines.append(f'easypaper_id: "{paper.get("id", "")}"')
+    lines.append(f'paperradar_id: "{paper.get("id", "")}"')
     lines.append("---")
     lines.append("")
     lines.append(f"# {title}")

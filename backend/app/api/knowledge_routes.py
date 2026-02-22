@@ -230,6 +230,39 @@ def create_knowledge_router() -> APIRouter:
         return {"status": "deleted"}
 
     # ------------------------------------------------------------------
+    # 研究洞察（跨论文分析）
+    # ------------------------------------------------------------------
+
+    # In-memory cache for insights (regenerate on demand)
+    _insights_cache: dict[str, Any] = {}
+
+    @router.post("/insights/generate")
+    async def generate_insights(request: Request) -> dict[str, Any]:
+        from ..services.insights_generator import InsightsGenerator
+        llm_config = get_llm_config(request)
+        papers_json = _get_completed_papers_json()
+        if len(papers_json) < 2:
+            raise HTTPException(400, "Need at least 2 papers to generate insights")
+
+        generator = InsightsGenerator(
+            api_key=llm_config["api_key"],
+            model=llm_config.get("model", ""),
+            base_url=llm_config.get("base_url", ""),
+        )
+        try:
+            result = await generator.generate(papers_json)
+            _insights_cache["latest"] = result
+            return result
+        finally:
+            await generator.close()
+
+    @router.get("/insights")
+    async def get_insights() -> dict[str, Any]:
+        if "latest" not in _insights_cache:
+            return {"paper_count": 0, "message": "No insights generated yet. Click 'Generate Insights' to analyze your papers."}
+        return _insights_cache["latest"]
+
+    # ------------------------------------------------------------------
     # 笔记 / 标注
     # ------------------------------------------------------------------
 
@@ -335,7 +368,7 @@ def create_knowledge_router() -> APIRouter:
                 entry += "}\n"
                 bib_entries.append(entry)
         return PlainTextResponse(content="\n".join(bib_entries), media_type="text/plain",
-                                 headers={"Content-Disposition": "attachment; filename=easypaper_references.bib"})
+                                 headers={"Content-Disposition": "attachment; filename=paperradar_references.bib"})
 
     @router.get("/export/obsidian")
     async def export_obsidian():
@@ -344,7 +377,7 @@ def create_knowledge_router() -> APIRouter:
         papers_json = _get_completed_papers_json()
         zip_bytes = KnowledgeExporter.export_obsidian_vault(papers_json)
         return Response(content=zip_bytes, media_type="application/zip",
-                        headers={"Content-Disposition": "attachment; filename=easypaper_vault.zip"})
+                        headers={"Content-Disposition": "attachment; filename=paperradar_vault.zip"})
 
     @router.get("/export/csv")
     async def export_csv():
@@ -358,7 +391,7 @@ def create_knowledge_router() -> APIRouter:
             zf.writestr("entities.csv", ent_csv)
             zf.writestr("relationships.csv", rel_csv)
         return Response(content=buf.getvalue(), media_type="application/zip",
-                        headers={"Content-Disposition": "attachment; filename=easypaper_csv.zip"})
+                        headers={"Content-Disposition": "attachment; filename=paperradar_csv.zip"})
 
     @router.get("/export/csl-json")
     async def export_csl_json():
@@ -367,7 +400,7 @@ def create_knowledge_router() -> APIRouter:
         papers_json = _get_completed_papers_json()
         csl_bytes = KnowledgeExporter.export_csl_json(papers_json)
         return Response(content=csl_bytes, media_type="application/json",
-                        headers={"Content-Disposition": "attachment; filename=easypaper_references.json"})
+                        headers={"Content-Disposition": "attachment; filename=paperradar_references.json"})
 
     # ------------------------------------------------------------------
     # Helpers

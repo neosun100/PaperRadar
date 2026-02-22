@@ -17,10 +17,7 @@ class LLMConfig(BaseModel):
 
 
 class ProcessingConfig(BaseModel):
-    max_pages: int = Field(100, alias="max_pages")
-    max_upload_mb: int = Field(50, alias="max_upload_mb")
     max_concurrent: int = Field(3, alias="max_concurrent")
-    preview_html: bool = Field(True, alias="preview_html")
 
 
 class StorageConfig(BaseModel):
@@ -39,6 +36,7 @@ class DatabaseConfig(BaseModel):
 
 class SecurityConfig(BaseModel):
     secret_key: str = Field("CHANGE_THIS_TO_A_SECURE_SECRET_KEY", alias="secret_key")
+    api_token: str = Field("", alias="api_token")
     cors_origins: list[str] = Field(
         default=["http://localhost:5173", "http://127.0.0.1:5173"],
         alias="cors_origins",
