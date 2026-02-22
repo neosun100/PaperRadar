@@ -45,6 +45,10 @@ const PaperDetail = () => {
     const [chatInput, setChatInput] = useState("");
     const [chatHistory, setChatHistory] = useState<{ role: string; content: string }[]>([]);
     const [chatLoading, setChatLoading] = useState(false);
+    const [audioStatus, setAudioStatus] = useState<"idle" | "generating" | "ready">("idle");
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [audioRef] = useState(() => new Audio());
     // Force re-render on language change
     const [, setLang] = useState(i18n.language);
     useEffect(() => {
@@ -61,6 +65,47 @@ const PaperDetail = () => {
         };
         fetchPaper();
     }, [paperId, t]);
+
+    // Check audio status on mount
+    useEffect(() => {
+        api.get(`/api/knowledge/papers/${paperId}/audio/status`).then(r => {
+            if (r.data.status === "ready") { setAudioStatus("ready"); setAudioUrl(r.data.url); }
+        }).catch(() => {});
+        return () => { audioRef.pause(); };
+    }, [paperId, audioRef]);
+
+    const handleGenerateAudio = async () => {
+        setAudioStatus("generating");
+        try {
+            const r = await api.post(`/api/knowledge/papers/${paperId}/audio`);
+            if (r.data.status === "ready") { setAudioStatus("ready"); setAudioUrl(r.data.url); return; }
+            // Poll for completion
+            const poll = setInterval(async () => {
+                try {
+                    const s = await api.get(`/api/knowledge/papers/${paperId}/audio/status`);
+                    if (s.data.status === "ready") { clearInterval(poll); setAudioStatus("ready"); setAudioUrl(s.data.url); }
+                } catch { /* keep polling */ }
+            }, 3000);
+            setTimeout(() => clearInterval(poll), 120000); // stop after 2min
+        } catch { toast.error(t("paperDetail.audioFailed")); setAudioStatus("idle"); }
+    };
+
+    const togglePlayback = () => {
+        if (!audioUrl) return;
+        if (isPlaying) { audioRef.pause(); setIsPlaying(false); }
+        else {
+            audioRef.src = audioUrl;
+            audioRef.onended = () => setIsPlaying(false);
+            audioRef.play(); setIsPlaying(true);
+        }
+    };
+
+    const handleRegenerateAudio = async () => {
+        audioRef.pause(); setIsPlaying(false);
+        await api.delete(`/api/knowledge/papers/${paperId}/audio`).catch(() => {});
+        setAudioStatus("idle"); setAudioUrl(null);
+        handleGenerateAudio();
+    };
 
     const handleExport = async () => {
         try {
@@ -141,8 +186,9 @@ const PaperDetail = () => {
             )}
 
             <Tabs defaultValue="chat" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+                <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
                     <TabsTrigger value="chat" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.chat")}</span></TabsTrigger>
+                    <TabsTrigger value="audio" className="gap-1.5"><Headphones className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.audio")}</span></TabsTrigger>
                     <TabsTrigger value="entities" className="gap-1.5"><Brain className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.entities")} ({entities.length})</span><span className="sm:hidden">{entities.length}</span></TabsTrigger>
                     <TabsTrigger value="findings" className="gap-1.5"><Lightbulb className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.findings")} ({findings.length})</span><span className="sm:hidden">{findings.length}</span></TabsTrigger>
                     <TabsTrigger value="relations" className="gap-1.5"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.relations")} ({relationships.length})</span><span className="sm:hidden">{relationships.length}</span></TabsTrigger>
@@ -171,6 +217,38 @@ const PaperDetail = () => {
                                 <Send className="h-4 w-4" />
                             </Button>
                         </div>
+                    </CardContent></Card>
+                </TabsContent>
+
+                {/* Audio Summary Tab */}
+                <TabsContent value="audio" className="space-y-3">
+                    <Card><CardContent className="p-6 flex flex-col items-center gap-4">
+                        {audioStatus === "idle" && (
+                            <>
+                                <Headphones className="h-12 w-12 text-muted-foreground" />
+                                <p className="text-sm text-muted-foreground text-center">{t("paperDetail.audioDesc")}</p>
+                                <Button onClick={handleGenerateAudio} className="gap-2"><Headphones className="h-4 w-4" />{t("paperDetail.generateAudio")}</Button>
+                            </>
+                        )}
+                        {audioStatus === "generating" && (
+                            <>
+                                <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                                <p className="text-sm text-muted-foreground">{t("paperDetail.audioGenerating")}</p>
+                            </>
+                        )}
+                        {audioStatus === "ready" && (
+                            <>
+                                <div className="flex items-center gap-3">
+                                    <Button size="lg" variant={isPlaying ? "secondary" : "default"} onClick={togglePlayback} className="gap-2 rounded-full h-14 w-14 p-0">
+                                        {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-0.5" />}
+                                    </Button>
+                                </div>
+                                <p className="text-sm font-medium">{t("paperDetail.audioReady")}</p>
+                                <Button variant="ghost" size="sm" onClick={handleRegenerateAudio} className="gap-1.5 text-muted-foreground">
+                                    <RotateCcw className="h-3.5 w-3.5" />{t("paperDetail.regenerateAudio")}
+                                </Button>
+                            </>
+                        )}
                     </CardContent></Card>
                 </TabsContent>
 

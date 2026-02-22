@@ -1,5 +1,13 @@
 # PaperRadar Changelog
 
+## v1.7.0 (2026-02-23)
+- Paper Audio Summary: NotebookLM-style podcast generation
+  - LLM generates conversational podcast script (two AI hosts)
+  - OpenAI-compatible TTS API synthesizes audio (alloy + nova voices)
+  - New "Audio" tab on Paper Detail page with play/pause/regenerate
+  - Audio cached in /app/data/audio/ for instant replay
+  - Background generation with polling status updates
+
 ## v1.6.1 (2026-02-23)
 - Definitive fix for duplicate tasks (5-layer dedup)
 - Global semantic search on Dashboard (v1.6.0)

@@ -4,7 +4,7 @@
 - **Project**: PaperRadar (formerly EasyPaper)
 - **GitHub**: https://github.com/neosun100/PaperRadar
 - **Docker Hub**: neosun/paperradar
-- **Current Version**: 1.6.1
+- **Current Version**: 1.7.0
 - **Kiro Model**: claude-opus-4.6-1m
 
 ## Architecture
@@ -25,6 +25,7 @@
 - `backend/app/services/insights_generator.py` — Cross-paper analysis (5 dimensions)
 - `backend/app/services/literature_review.py` — Auto literature review generation
 - `backend/app/services/document_processor.py` — pdf2zh translate/simplify, auto knowledge extraction on completion
+- `backend/app/services/audio_summary.py` — Paper audio summary: LLM script + TTS synthesis
 - `backend/app/services/notification.py` — Bark (iOS) + Lark (Card 2.0)
 - `backend/app/api/routes.py` — Upload, URL upload, tasks, queue, radar, trending, recommendations
 - `backend/app/api/knowledge_routes.py` — Knowledge, chat, compare, search, insights, review, export
@@ -39,7 +40,8 @@
 - `frontend/src/pages/PaperDetail.tsx` — Paper detail with chat tab (6 tabs total)
 - `frontend/src/pages/KnowledgeGraph.tsx` — Force-directed graph
 
-## Completed Features (v1.6.1)
+## Completed Features (v1.7.0)
+- Paper Audio Summary (NotebookLM-style podcast via LLM + TTS)
 - 3-source radar (arXiv + Semantic Scholar + HuggingFace Daily Papers)
 - HuggingFace upvote ranking, trending 7d/14d/30d
 - Smart hybrid scoring (HF upvotes, S2 citations, keyword pre-filter)
@@ -104,9 +106,8 @@ git add -A && git commit -m "message" && git push origin main
 12. Vector index papers automatically on knowledge extraction completion
 
 ## TODO Priority (next items)
-1. Paper Audio Summary (NotebookLM-style podcast)
-2. Citation Network Visualization (paper-level citation graph via S2 API)
-3. Paper Annotation & Highlighting in Reader
-4. AI Inline Explanations (click sentence → simplified explanation)
-5. MCP Server (expose PaperRadar to Claude/Cursor)
-6. More data sources (Papers with Code, alphaXiv)
+1. Citation Network Visualization (paper-level citation graph via S2 API)
+2. Paper Annotation & Highlighting in Reader
+3. AI Inline Explanations (click sentence → simplified explanation)
+4. MCP Server (expose PaperRadar to Claude/Cursor)
+5. More data sources (Papers with Code, alphaXiv)

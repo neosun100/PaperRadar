@@ -58,11 +58,11 @@
 
 ### Phase 1: Intelligence & Discovery (High Priority)
 
-- [ ] **Paper Audio Summary (NotebookLM-style)**
+- [x] **Paper Audio Summary (NotebookLM-style)**
   - Generate podcast-style audio overview of papers using TTS
   - Two AI hosts discuss key findings in conversational format
   - Inspired by Google NotebookLM's Audio Overviews feature
-  - Could use existing TTS services on the server (cosyvoice, kokoro-tts)
+  - Uses OpenAI-compatible TTS API (/audio/speech)
 
 - [ ] **Smart Paper Recommendations**
   - Use Semantic Scholar Recommendations API (`/recommendations/v1/papers/`)

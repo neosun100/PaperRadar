@@ -132,7 +132,14 @@
     "methodsSection": "方法",
     "datasetsSection": "数据集",
     "usage": "用途",
-    "relationships": "关系"
+    "relationships": "关系",
+    "audio": "音频",
+    "audioDesc": "生成播客风格的论文音频摘要。两位 AI 主持人将以对话形式讨论论文的核心发现。",
+    "generateAudio": "生成音频",
+    "audioGenerating": "正在生成音频摘要...可能需要一分钟。",
+    "audioReady": "音频摘要已就绪",
+    "audioFailed": "生成音频摘要失败。",
+    "regenerateAudio": "重新生成"
   },
   "flashcard": {
     "knowledgeBase": "知识库",
