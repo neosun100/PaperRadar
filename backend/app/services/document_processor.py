@@ -109,8 +109,8 @@ class DocumentProcessor:
             logger.info(f"Task {task_id} 处理完成 (mode={mode})")
 
         except Exception as exc:
-            logger.exception("处理失败: %s", exc)
-            self.task_manager.set_error(task_id, f"处理失败: {exc}")
+            logger.exception("Processing failed: %s", exc)
+            self.task_manager.set_error(task_id, f"Processing failed: {exc}")
 
     def _translate_with_pdf2zh(
         self,
@@ -192,7 +192,7 @@ class DocumentProcessor:
                 return None
 
             except Exception as e:
-                logger.exception(f"pdf2zh 处理失败: {e}")
+                logger.exception(f"pdf2zh Processing failed: {e}")
                 return None
 
     def _build_simple_preview(self, mode: str = "translate") -> str:

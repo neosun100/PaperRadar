@@ -24,8 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download pdf2zh/babeldoc fonts (avoid runtime download failures)
-RUN python -c "import asyncio; from babeldoc.assets.assets import download_all_fonts_async; asyncio.run(download_all_fonts_async())"
+# Pre-download pdf2zh/babeldoc fonts and models (avoid runtime download failures)
+RUN python -c "import asyncio; from babeldoc.assets.assets import download_all_fonts_async; asyncio.run(download_all_fonts_async())" \
+    && python -c "from pdf2zh.doclayout import DocLayoutModel; DocLayoutModel.load_available(); print('Model downloaded')"
 
 # Copy backend
 COPY backend/ /app/
