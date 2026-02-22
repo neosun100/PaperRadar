@@ -165,6 +165,10 @@ class RadarEngine:
                     continue
 
                 task = self._task_manager.create_task(filename, mode="translate", highlight=True)
+                # Store paper title as filename for better UI display
+                title_clean = p.get("title", "")[:80].replace("/", "-").replace("\\", "-")
+                if title_clean:
+                    self._task_manager.update_task_filename(task.task_id, f"{title_clean}.pdf")
                 dest = Path(self._task_manager.config.storage.temp_dir) / f"{task.task_id}_original.pdf"
                 dest.write_bytes(pdf_bytes)
                 self._task_manager.update_original_path(task.task_id, str(dest))

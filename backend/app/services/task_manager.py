@@ -64,6 +64,15 @@ class TaskManager:
             session.add(task)
             session.commit()
 
+    def update_task_filename(self, task_id: str, filename: str) -> None:
+        with Session(engine) as session:
+            task = session.get(Task, task_id)
+            if not task:
+                return
+            task.filename = filename
+            session.add(task)
+            session.commit()
+
     def set_result(self, task_id: str, result: TaskResult) -> None:
         with Session(engine) as session:
             task = session.get(Task, task_id)
