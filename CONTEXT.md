@@ -4,7 +4,7 @@
 - **Project**: PaperRadar (formerly EasyPaper)
 - **GitHub**: https://github.com/neosun100/PaperRadar
 - **Docker Hub**: neosun/paperradar
-- **Current Version**: 1.2.1
+- **Current Version**: 1.5.1
 - **Model for Kiro**: claude-opus-4.6-1m
 
 ## Architecture
@@ -20,6 +20,8 @@
 - `backend/app/services/paper_chat.py` — Single + cross-paper chat
 - `backend/app/services/insights_generator.py` — Cross-paper analysis
 - `backend/app/services/notification.py` — Bark + Lark Card 2.0
+- `backend/app/services/vector_search.py` — ChromaDB + Bedrock Embedding
+- `backend/app/services/literature_review.py` — Auto literature review generation
 - `backend/app/api/routes.py` — Upload, URL upload, tasks, queue, radar APIs
 - `backend/app/api/knowledge_routes.py` — Knowledge, chat, insights, export APIs
 - `backend/app/core/config.py` — Config model (llm, processing, radar, notification, security)

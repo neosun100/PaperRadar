@@ -76,12 +76,22 @@ async def healthcheck() -> dict:
     with Session(db_eng) as session:
         total_tasks = session.exec(select(func.count(Task.task_id))).one()
         total_papers = session.exec(select(func.count(PaperKnowledge.id))).one()
+    # Vector stats
+    vec_stats = {}
+    try:
+        from .services.vector_search import get_vector_service
+        vs = get_vector_service()
+        if vs:
+            vec_stats = vs.stats
+    except Exception:
+        pass
     return {
         "status": "ok",
         "version": "3.0.0",
         "uptime_seconds": uptime,
         "total_tasks": total_tasks,
         "total_papers": total_papers,
+        "vector": vec_stats,
     }
 
 
