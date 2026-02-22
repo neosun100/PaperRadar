@@ -127,6 +127,14 @@ class RadarEngine:
             relevant.sort(key=lambda p: p.get("score", 0), reverse=True)
             relevant = relevant[:self.radar_cfg.max_papers_per_scan]
 
+            # Ensure diversity: at least 1 paper from each source if available
+            sources_in_top = {p.get("source") for p in relevant}
+            all_sources = {p.get("source") for p in scored if p.get("score", 0) >= threshold}
+            for src in all_sources - sources_in_top:
+                src_papers = [p for p in scored if p.get("source") == src and p.get("score", 0) >= threshold]
+                if src_papers:
+                    relevant.append(max(src_papers, key=lambda p: p.get("score", 0)))
+
             self._last_scan = datetime.utcnow()
             self._scan_count += 1
             self._papers_found += len(relevant)
@@ -335,8 +343,20 @@ class RadarEngine:
 
     async def _score_papers(self, papers: list[dict]) -> list[dict]:
         cfg = self.config.llm
-        topics_lower = self.radar_cfg.topics.lower().split(",")
-        topics_lower = [t.strip() for t in topics_lower]
+        # Build keyword list: split by comma, also add common abbreviations
+        raw_topics = [t.strip().lower() for t in self.radar_cfg.topics.split(",")]
+        # Expand: "large language model" also matches "llm", "llms"
+        keywords = set(raw_topics)
+        for t in raw_topics:
+            # Add individual words for multi-word topics
+            words = t.split()
+            if len(words) > 1:
+                keywords.update(words)
+        # Common AI/ML abbreviations
+        keywords.update(["llm", "llms", "rag", "rlhf", "moe", "vllm", "lora", "qlora",
+                         "transformer", "attention", "fine-tuning", "finetuning", "pretraining",
+                         "pre-training", "benchmark", "instruction tuning", "chain-of-thought",
+                         "cot", "in-context learning", "icl", "multimodal", "vlm"])
 
         for p in papers:
             # HuggingFace papers: score by community upvotes
@@ -361,7 +381,7 @@ class RadarEngine:
             title_lower = p.get("title", "").lower()
             abstract_lower = p.get("abstract", "").lower()
             text = title_lower + " " + abstract_lower
-            keyword_hits = sum(1 for t in topics_lower if t in text)
+            keyword_hits = sum(1 for t in keywords if t in text)
             if keyword_hits == 0:
                 p["score"] = 0.3
                 p["reason"] = "No keyword match"
