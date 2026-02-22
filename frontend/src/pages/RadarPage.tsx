@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Radar, Loader2, Play, Clock, ExternalLink, TrendingUp, Zap } from "lucide-react";
+import { ArrowLeft, Radar, Loader2, Play, Clock, ExternalLink, TrendingUp, Zap, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -19,6 +19,8 @@ const RadarPage = () => {
     const [trending, setTrending] = useState<any>(null);
     const [trendingDays, setTrendingDays] = useState(7);
     const [trendingLoading, setTrendingLoading] = useState(false);
+    const [recs, setRecs] = useState<any>(null);
+    const [recsLoading, setRecsLoading] = useState(false);
 
     const fetchStatus = useCallback(async () => {
         try { const r = await api.get("/api/radar/status"); setStatus(r.data); }
@@ -35,6 +37,10 @@ const RadarPage = () => {
 
     useEffect(() => { fetchStatus(); const id = setInterval(fetchStatus, 5000); return () => clearInterval(id); }, [fetchStatus]);
     useEffect(() => { fetchTrending(trendingDays); }, [fetchTrending, trendingDays]);
+    useEffect(() => {
+        setRecsLoading(true);
+        api.get("/api/radar/recommendations").then(r => setRecs(r.data)).catch(() => {}).finally(() => setRecsLoading(false));
+    }, []);
 
     const handleScan = async () => {
         setScanning(true);
@@ -137,9 +143,10 @@ const RadarPage = () => {
 
             {/* Tabs: Discoveries + Trending */}
             <Tabs defaultValue="discoveries" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+                <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
                     <TabsTrigger value="discoveries" className="gap-1.5"><Zap className="h-3.5 w-3.5" />{t("radar.recentDiscoveries")}</TabsTrigger>
                     <TabsTrigger value="trending" className="gap-1.5"><TrendingUp className="h-3.5 w-3.5" />Trending</TabsTrigger>
+                    <TabsTrigger value="recommended" className="gap-1.5"><Sparkles className="h-3.5 w-3.5" />For You</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="discoveries" className="space-y-3">
@@ -174,6 +181,26 @@ const RadarPage = () => {
                         </div>
                     ) : (
                         <div className="py-8 text-center text-muted-foreground">No trending data</div>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="recommended" className="space-y-3">
+                    {recsLoading ? (
+                        <div className="py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" /></div>
+                    ) : recs?.recommendations?.length > 0 ? (
+                        <>
+                            <p className="text-xs text-muted-foreground px-1">Based on {recs.based_on} papers in your knowledge base</p>
+                            <div className="grid gap-3 md:grid-cols-2">
+                                {recs.recommendations.map((p: any, i: number) => (
+                                    <PaperCard key={i} p={{...p, upvotes: p.citations, source: "semantic_scholar"}} i={i + 2000} showDate />
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="py-8 text-center text-muted-foreground">
+                            <Sparkles className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                            <p>{recs?.message || "Add papers to your knowledge base to get personalized recommendations"}</p>
+                        </div>
                     )}
                 </TabsContent>
             </Tabs>

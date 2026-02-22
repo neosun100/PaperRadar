@@ -338,4 +338,63 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         papers = await _radar_instance.scan()
         return {"found": len(papers), "papers": papers}
 
+    @router.get("/radar/recommendations")
+    async def get_recommendations() -> dict[str, Any]:
+        """Get paper recommendations based on knowledge base papers"""
+        from sqlmodel import Session, select
+        from ..core.db import engine as db_eng
+        from ..models.knowledge import PaperKnowledge
+        # Get arxiv IDs from knowledge base
+        with Session(db_eng) as session:
+            papers = session.exec(select(PaperKnowledge).where(PaperKnowledge.extraction_status == "completed")).all()
+        if not papers:
+            return {"recommendations": [], "message": "No papers in knowledge base yet"}
+
+        # Get S2 paper IDs for our papers
+        arxiv_ids = [p.arxiv_id for p in papers if p.arxiv_id][:5]
+        if not arxiv_ids:
+            return {"recommendations": [], "message": "No arXiv IDs found"}
+
+        # Call S2 recommendations API
+        s2_ids = []
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            for aid in arxiv_ids:
+                try:
+                    resp = await client.get(f"https://api.semanticscholar.org/graph/v1/paper/ArXiv:{aid}", params={"fields": "paperId"})
+                    if resp.status_code == 200:
+                        s2_ids.append(resp.json().get("paperId", ""))
+                except Exception:
+                    pass
+                if len(s2_ids) >= 3:
+                    break
+
+        if not s2_ids:
+            return {"recommendations": [], "message": "Could not resolve paper IDs"}
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    "https://api.semanticscholar.org/recommendations/v1/papers/",
+                    params={"limit": 10, "fields": "paperId,externalIds,title,abstract,citationCount,year,authors"},
+                    json={"positivePaperIds": s2_ids},
+                )
+                if resp.status_code == 200:
+                    recs = resp.json().get("recommendedPapers", [])
+                    results = []
+                    for r in recs:
+                        aid = (r.get("externalIds") or {}).get("ArXiv", "")
+                        results.append({
+                            "arxiv_id": aid,
+                            "title": r.get("title", ""),
+                            "abstract": (r.get("abstract") or "")[:300],
+                            "citations": r.get("citationCount", 0),
+                            "year": r.get("year"),
+                            "authors": [a.get("name", "") for a in (r.get("authors") or [])[:3]],
+                            "pdf_url": f"https://arxiv.org/pdf/{aid}.pdf" if aid else "",
+                        })
+                    return {"recommendations": results, "based_on": len(s2_ids)}
+        except Exception:
+            pass
+        return {"recommendations": [], "message": "Recommendation API unavailable"}
+
     return router

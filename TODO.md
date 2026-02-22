@@ -1,193 +1,186 @@
 # PaperRadar — Development Roadmap
 
-## ✅ Completed
+## ✅ Completed (v1.0.3)
 
 ### Core Platform
-- [x] PDF Upload — drag & drop, no file size limit
-- [x] PDF Translation — English → Chinese via pdf2zh, preserving layout/images/formulas
-- [x] PDF Simplification — Complex English → Plain English (CEFR A2/B1)
-- [x] AI Highlighting — Three-color annotation (conclusions/methods/data)
-- [x] Document Reader — Split-pane PDF viewer with focus mode
-- [x] Task Queue — Per-user concurrency control (3 concurrent per API key)
-- [x] Queue Status UI — Processing/queued counts in Dashboard header
+- [x] PDF Upload (drag & drop, URL upload, no size limit)
+- [x] PDF Translation (English → Chinese, pdf2zh, layout preserved)
+- [x] PDF Simplification (Complex → Plain English, CEFR A2/B1)
+- [x] AI Highlighting (3-color: conclusions/methods/data)
+- [x] Document Reader (split-pane, focus mode)
+- [x] Task Queue (per-user concurrency, queue status UI)
+- [x] Zombie Task Recovery (auto-detect and re-process on restart)
 
 ### Knowledge Base
-- [x] Knowledge Extraction — Bilingual (en/zh) entities, relationships, findings, flashcards
-- [x] Paper Detail — Tabs for chat, entities, findings, relations, flashcards, notes
-- [x] Paper Chat — Chat with any paper using extracted knowledge as context
-- [x] Knowledge Graph — Interactive force-directed graph visualization
-- [x] Research Insights — Cross-paper analysis (field overview, method comparison, timeline, research gaps, paper connections)
-- [x] Flashcard Review — SM-2 spaced repetition (accessible from knowledge base)
-- [x] Multi-Format Export — JSON, BibTeX, Obsidian Vault, CSL-JSON, CSV
+- [x] Bilingual Knowledge Extraction (en/zh entities, relationships, findings, flashcards)
+- [x] Paper Chat (single-paper Q&A with knowledge context)
+- [x] Cross-Paper Chat ("Ask All Papers" across entire KB)
+- [x] Research Insights (field overview, method comparison, timeline, gaps, connections)
+- [x] Knowledge Graph (force-directed, bilingual nodes)
+- [x] Multi-Format Export (JSON, BibTeX, Obsidian, CSL-JSON, CSV)
+- [x] Flashcard Review (SM-2 spaced repetition)
 
 ### Radar Engine
-- [x] arXiv Auto-Scan — Scans cs.CL, cs.AI, cs.LG every hour on the hour
-- [x] Startup Scan — Immediate scan when container starts
-- [x] LLM Relevance Scoring — Intelligent agent scores each paper's relevance
-- [x] Auto-Download & Process — Top 3 papers per scan: download PDF → translate → highlight
-- [x] Deduplication — Skip papers already in knowledge base (by arxiv_id)
-- [x] Serial Processing — Avoid font/resource conflicts
-- [x] Auto-Cleanup — Failed radar tasks automatically removed from UI
-- [x] Radar UI Panel — Dashboard shows scanning animation, stats, recent discoveries grid
-- [x] Font Pre-Download — All babeldoc fonts baked into Docker image
+- [x] 3-Source Radar: arXiv + Semantic Scholar + HuggingFace Daily Papers
+- [x] HuggingFace Upvote Ranking (community signal for quality)
+- [x] Trending Papers (7d/14d/30d aggregation with upvote sort)
+- [x] Smart Hybrid Scoring (HF upvotes, S2 citations, keyword pre-filter)
+- [x] Auto-Download & Process (top 3 per scan, serial, with knowledge extraction)
+- [x] Queue Capacity Control (≥3 active → scan only, no flooding)
+- [x] Robust Deduplication (KB + tasks + session)
+- [x] Configurable Startup Scan
+- [x] Radar Management Page (/radar with stats, discoveries, trending tabs)
+- [x] Dashboard Radar Panel (animation, recent discoveries, source tags, upvotes)
 
-### Notifications (Code Ready)
-- [x] Bark Service — iOS push notification implementation
-- [x] Lark Service — Card 2.0 interactive message implementation
-- [ ] Configure Bark key in config.yaml to activate
-- [ ] Configure Lark webhook in config.yaml to activate
+### Notifications
+- [x] Bark iOS Push (code ready, configure bark_key to activate)
+- [x] Lark Card 2.0 (code ready, configure lark_webhook to activate)
 
 ### Infrastructure
-- [x] All-in-one Docker — Frontend (nginx) + Backend (uvicorn) + supervisord
-- [x] API Token Auth — Bearer token for programmatic access, uses server-side LLM
-- [x] Per-User Concurrency — Each API key gets independent processing queue
-- [x] No File Limits — No page count or file size restrictions
-- [x] Permanent Storage — All results permanently stored on cloud, no auto-cleanup
-- [x] Shared Results — All users benefit from each other's processed papers
-- [x] Privacy Protection — Secrets only in runtime config volume, never in Git or Docker image
+- [x] All-in-one Docker (nginx + uvicorn + supervisord)
+- [x] Pre-downloaded fonts + ONNX model in image
+- [x] API Token Auth (Bearer token → server-side LLM)
+- [x] Per-User Concurrency Isolation
+- [x] Permanent Storage (no auto-cleanup)
+- [x] Privacy Protection (secrets in volume, never in Git/image)
 
 ### UI/UX
-- [x] Multilingual UI (i18n) — Full English/Chinese with one-click switching
-- [x] Bilingual Knowledge — All extracted knowledge has en/zh, follows UI language
-- [x] Dark Mode — Full dark mode across entire UI
-- [x] Favicon — Radar icon in browser tab
-- [x] Cloud/Security Notice — Clear explanation in LLM Settings dialog
-- [x] Brand — PaperRadar with radar logo and tagline
-
-### Documentation
-- [x] README.md — English, full feature docs
-- [x] README_zh.md — Chinese version
-- [x] config.example.yaml — Documented configuration template
-- [x] TODO.md — This roadmap
+- [x] i18n (English/Chinese, one-click switch)
+- [x] Bilingual Knowledge (follows UI language)
+- [x] Dark Mode
+- [x] Favicon (radar icon)
+- [x] Stats Overview Panel
+- [x] Auto-sanitize legacy Chinese messages
 
 ---
 
 ## 🔲 To Do — Prioritized Roadmap
 
-### Phase 1: Complete the Radar Loop (High Priority)
+### Phase 1: Intelligence & Discovery (High Priority)
 
-These make the radar truly autonomous end-to-end:
+- [ ] **Paper Audio Summary (NotebookLM-style)**
+  - Generate podcast-style audio overview of papers using TTS
+  - Two AI hosts discuss key findings in conversational format
+  - Inspired by Google NotebookLM's Audio Overviews feature
+  - Could use existing TTS services on the server (cosyvoice, kokoro-tts)
 
-- [ ] **Radar Auto-Knowledge-Extract** — After radar translates a paper, automatically trigger knowledge extraction + Research Insights regeneration. The full pipeline: arXiv → download → translate → highlight → extract knowledge → update insights → notify.
+- [ ] **Smart Paper Recommendations**
+  - Use Semantic Scholar Recommendations API (`/recommendations/v1/papers/`)
+  - Based on papers already in knowledge base, suggest related papers
+  - "Because you read X, you might like Y" — ResearchRabbit-style
+  - Show on Dashboard as "Recommended for You" section
 
-- [ ] **Radar Management Page** — Dedicated `/radar` page with:
-  - Live scan status with animation
-  - Configurable categories and topics (editable in UI)
-  - Scan history log (timestamp, papers found, papers processed)
-  - All discovered papers with scores, filterable/sortable
-  - Manual "Scan Now" button
-  - Next scan countdown timer
+- [ ] **Citation Network Visualization**
+  - Paper-level citation graph (not just entity-level)
+  - "Papers that cite this" and "Papers this cites"
+  - Use Semantic Scholar citation data
+  - Connected Papers / Litmaps style visualization
+  - Inspired by: Connected Papers, Litmaps, Paperscape
 
-- [ ] **Multi-Source Radar** — Expand beyond arXiv:
-  - **Hugging Face Daily Papers** — `https://huggingface.co/api/daily_papers` for community-curated trending AI papers
-  - **Semantic Scholar** — Use their free API (200M+ papers, 100 req/5min) for citation-based discovery: find highly-cited recent papers, track influential citations
-  - **Papers with Code** — Use `paperswithcode-client` Python package for SOTA results and trending papers with code implementations
-  - **alphaXiv** — Hot/trending papers with community discussion scores
+- [ ] **Automatic Literature Review Generation**
+  - Given a topic/question, generate a structured literature review
+  - Cite papers from knowledge base with proper references
+  - Inspired by: OpenScholar, Elicit systematic review automation
+  - Output as Markdown, exportable
 
-### Phase 2: Deeper Understanding (Medium Priority)
+### Phase 2: Enhanced Reading & Understanding (Medium Priority)
 
-These leverage external tools to make PaperRadar smarter:
+- [ ] **Paper Annotation & Highlighting in Reader**
+  - User can highlight text in the PDF reader
+  - Add notes to specific passages
+  - Annotations saved and searchable
+  - Inspired by: Hypothesis, Readwise
 
-- [ ] **Cross-Paper Chat** — Chat across the entire knowledge base: "Compare all RLHF methods", "What are the latest advances in RAG?". Uses all extracted knowledge as context.
+- [ ] **AI Inline Explanations**
+  - Click any sentence in the reader to get simplified explanation
+  - "Explain this to me like I'm a beginner"
+  - Context-aware using paper's knowledge
 
-- [ ] **Vector Search (ChromaDB)** — Embed paper content for semantic search:
-  - ChromaDB (pure Python, embedded, zero-config) for vector storage
-  - Embed paper abstracts + findings + entities on extraction
-  - Power semantic search: "find papers about efficient inference"
-  - Enable better cross-paper chat with RAG retrieval
-  - Reference: LangGraph Research Agent pattern, ArXiv Paper Curator (GROBID + OpenSearch)
+- [ ] **Smart Citations (scite.ai-style)**
+  - Show how a paper is cited: supporting, contrasting, or mentioning
+  - Help users understand citation context
+  - Use Semantic Scholar citation context API
 
-- [ ] **Connected Papers Integration** — Use Connected Papers / Semantic Scholar citation graph to:
-  - Auto-discover related papers from citations of papers in knowledge base
-  - Show citation network visualization (paper-level, not just entity-level)
-  - "Papers that cite this paper" and "Papers this paper cites"
+- [ ] **Vector Search (ChromaDB)**
+  - Embed paper content for semantic search
+  - "Find papers about efficient inference" → semantic matching
+  - Power better cross-paper chat with RAG retrieval
+  - ChromaDB: pure Python, embedded, zero-config
 
-- [ ] **Paper Upload via URL** — Paste arXiv URL or DOI to auto-download and process. Detect arXiv ID from URL, fetch metadata from Semantic Scholar API.
+- [ ] **Paper Comparison View**
+  - Side-by-side comparison of 2-3 papers
+  - Auto-generated comparison table (methods, results, datasets)
+  - Inspired by: Elicit's comparison tables
 
-- [ ] **Smart Recommendations** — Based on existing knowledge base:
-  - Use Semantic Scholar Recommendations API to find related papers
-  - Score recommendations against user's topic interests
-  - Show "Recommended for you" section on Dashboard
-  - Reference: ResearchRabbit's "paper Spotify" approach, Scholar Inbox's personalization
+### Phase 3: Platform & Integration (Lower Priority)
 
-### Phase 3: Platform Features (Lower Priority)
+- [ ] **MCP Server**
+  - Expose PaperRadar as MCP server for Claude/Cursor
+  - Tools: search KB, ask questions, trigger scans, get trending
+  - Inspired by: blazickjp/arxiv-mcp-server (⭐2.2k), alphaXiv MCP
 
-- [ ] **Paper Reading Enhancements**:
-  - ar5iv HTML rendering — Convert LaTeX to HTML5 for better in-browser reading (reference: arXiv Labs ar5iv)
-  - Inline AI explanations — Click any sentence to get a simplified explanation
-  - Smart Citations — Show citation context (supporting/contrasting) like scite.ai
+- [ ] **Chirpz-style Paper Prioritization**
+  - AI agent that understands your research context
+  - Ranks papers by relevance to YOUR specific work
+  - Learns from your reading patterns
+  - Inspired by: Chirpz Agent (280M+ papers)
 
-- [ ] **MCP Server** — Expose PaperRadar as an MCP server so Claude/Cursor can:
-  - Search the knowledge base
-  - Ask questions about papers
-  - Trigger radar scans
-  - Reference: blazickjp/arxiv-mcp-server (⭐2.2k), alphaXiv MCP server
+- [ ] **Multi-Language Paper Support**
+  - Support Chinese papers (翻译为英文)
+  - Support papers in other languages
+  - Bidirectional translation
 
-- [ ] **Batch Upload** — Upload multiple PDFs at once, or paste multiple arXiv IDs
+- [ ] **Collaborative Features**
+  - Shared reading lists / paper collections
+  - Team annotations and discussions
+  - Inspired by: alphaXiv discussions, ResearchRabbit collections
 
-- [ ] **Email Digest** — Weekly email summary of radar discoveries, configurable
+- [ ] **Paper Writing Assistant**
+  - Help write related work sections
+  - Auto-generate citations from knowledge base
+  - Inspired by: Paperguide writing assistance
 
-- [ ] **CI/CD Pipeline** — GitHub Actions for:
-  - Automated TypeScript type checking
-  - Python linting
-  - Docker image build and push on tag
+- [ ] **Webhook / API Notifications**
+  - Webhook callback when radar discovers papers
+  - Slack / Discord / Telegram integration
+  - Email digest (daily/weekly)
 
-- [ ] **Mobile Responsive** — Optimize radar panel and knowledge base for mobile/tablet
+- [ ] **CI/CD Pipeline**
+  - GitHub Actions: TypeScript check, Python lint, Docker build+push on tag
+
+- [ ] **Mobile Responsive**
+  - Optimize for mobile/tablet viewing
 
 ---
 
-## 🔍 External Tools & APIs to Integrate
+## 🔍 External Tools & APIs Reference
 
-Based on comprehensive research of the arXiv ecosystem:
-
-| Tool/API | How to Use | Priority |
-|----------|-----------|----------|
-| **Semantic Scholar API** | Free, 200M+ papers, citation data, recommendations, TLDR summaries. 100 req/5min. Python SDK: `semanticscholar` | High |
-| **HuggingFace Daily Papers** | `/api/daily_papers` endpoint for trending AI papers. Free, no auth needed | High |
-| **Papers with Code** | `paperswithcode-client` Python package. SOTA results, code repos, trending | High |
-| **alphaXiv** | MCP server + trending/hot papers with community scores | Medium |
-| **ChromaDB** | Embedded vector DB, pure Python, zero-config. For semantic search | Medium |
-| **Semantic Scholar Recommendations** | `/recommendations/v1/papers/` endpoint for personalized suggestions | Medium |
-| **Connected Papers** | Citation graph visualization, related paper discovery | Medium |
-| **ar5iv** | LaTeX → HTML5 conversion for better reading experience | Low |
-| **scite.ai** | Smart citation context (supporting/contrasting) | Low |
-
----
-
-## 📦 Version History
-
-| Version | Date | Highlights |
-|---------|------|------------|
-| 0.3.4 | 2026-02-22 | Favicon, Chinese message fix |
-| 0.3.3 | 2026-02-22 | Fix hardcoded Chinese progress messages |
-| 0.3.2 | 2026-02-22 | Auto-cleanup failed radar tasks |
-| 0.3.1 | 2026-02-22 | Pre-download fonts, serial radar processing |
-| 0.3.0 | 2026-02-22 | Radar UI panel, auto-process top 3, hourly scans |
-| 0.2.0 | 2026-02-22 | Radar Engine, Paper Chat, Bark/Lark notifications |
-| 0.1.0 | 2026-02-22 | Brand rename to PaperRadar, initial release |
+| Tool/API | Integration Plan | Status |
+|----------|-----------------|--------|
+| **arXiv API** | Paper discovery, PDF download | ✅ Integrated |
+| **Semantic Scholar API** | Citation data, recommendations, trending | ✅ Partial (search), 🔲 recommendations |
+| **HuggingFace Daily Papers** | Community-curated trending, upvotes | ✅ Integrated |
+| **Papers with Code** | SOTA results, code repos | 🔲 Planned |
+| **alphaXiv** | Community discussions, hot papers | 🔲 Planned |
+| **ChromaDB** | Vector search, semantic retrieval | 🔲 Planned |
+| **scite.ai** | Smart citation context | 🔲 Planned |
+| **Connected Papers** | Citation graph visualization | 🔲 Planned (via S2 API) |
+| **Google NotebookLM** | Audio overview inspiration | 🔲 Planned (own TTS) |
 
 ---
 
 ## 💡 Design Inspirations
 
-Key insights from the arXiv ecosystem research:
-
-1. **Elicit** — Best-in-class for structured data extraction from papers. Their comparison table UI is excellent. We already have this in Research Insights.
-
-2. **ResearchRabbit** — "Paper Spotify" concept: build collections → get algorithmic recommendations. Our knowledge base + smart recommendations could achieve this.
-
-3. **Scholar Inbox / IArxiv** — Personalized daily recommendations based on research interests. Our radar + LLM scoring already does this, but we can enhance with Semantic Scholar's recommendation API.
-
-4. **Connected Papers / Litmaps** — Citation graph visualization. We have entity-level knowledge graph; adding paper-level citation network would be powerful.
-
-5. **alphaXiv** — Community discussion and trending scores. Their MCP server could feed our radar with community-validated hot papers.
-
-6. **OpenScholar** — RAG-based literature review with accurate citations. Our Research Insights + future vector search could approach this quality.
-
-7. **ArXiv Paper Curator** — Production RAG pipeline (Airflow + GROBID + OpenSearch). Good architecture reference for scaling our radar.
+1. **Google NotebookLM** — Audio Overviews: turn papers into podcast-style conversations. Revolutionary UX for consuming research.
+2. **Elicit** — Structured data extraction, comparison tables, systematic review automation. Gold standard for research workflow.
+3. **Chirpz Agent** — Context-aware paper prioritization across 280M+ papers. Understands YOUR research needs.
+4. **ResearchRabbit** — "Paper Spotify": collections → algorithmic recommendations → citation graphs.
+5. **OpenScholar** — RAG-based literature review with accurate citations. Outperforms GPT in citation accuracy.
+6. **Connected Papers / Litmaps** — Citation graph visualization. See how papers relate.
+7. **alphaXiv** — Community discussion layer on top of arXiv. Social signal for paper quality.
+8. **Paperguide** — Chat with PDFs, writing assistance, reference management. All-in-one research tool.
+9. **scite.ai** — Smart citations: supporting vs contrasting. Understand citation context.
 
 ---
 
-*Last updated: 2026-02-22*
-
-> **Note**: Version history moved to CHANGELOG.md for cleaner separation.
+*Last updated: 2026-02-23*
