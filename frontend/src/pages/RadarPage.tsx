@@ -14,6 +14,7 @@ const RadarPage = () => {
     const [status, setStatus] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [scanning, setScanning] = useState(false);
+    const [selectedPaper, setSelectedPaper] = useState<number | null>(null);
 
     const fetchStatus = useCallback(async () => {
         try { const r = await api.get("/api/radar/status"); setStatus(r.data); }
@@ -91,7 +92,7 @@ const RadarPage = () => {
                 {status?.recent_papers?.length > 0 ? (
                     <div className="grid gap-3 md:grid-cols-2">
                         {status.recent_papers.slice().reverse().map((p: any, i: number) => (
-                            <Card key={i} className="group hover:shadow-md transition-all">
+                            <Card key={i} className="group hover:shadow-md transition-all cursor-pointer" onClick={() => setSelectedPaper(selectedPaper === i ? null : i)}>
                                 <CardContent className="p-4">
                                     <div className="flex items-start gap-3">
                                         <span className={cn("shrink-0 mt-0.5 rounded-full px-2 py-0.5 text-xs font-mono font-bold",
@@ -105,12 +106,12 @@ const RadarPage = () => {
                                                 <span>{p.authors?.slice(0, 2).join(", ")}</span>
                                                 {p.source && <span className="bg-muted px-1.5 py-0.5 rounded">{p.source}</span>}
                                             {p.pdf_url && (
-                                                    <a href={p.pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 hover:text-primary">
+                                                    <a href={p.pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 hover:text-primary" onClick={(e) => e.stopPropagation()}>
                                                         PDF <ExternalLink className="h-2.5 w-2.5" />
                                                     </a>
                                                 )}
                                                 {p.task_id && p.status === "completed" && (
-                                                    <button onClick={() => navigate(`/reader/${p.task_id}`)} className="inline-flex items-center gap-0.5 hover:text-primary font-medium">
+                                                    <button onClick={(e) => { e.stopPropagation(); navigate(`/reader/${p.task_id}`); }} className="inline-flex items-center gap-0.5 hover:text-primary font-medium">
                                                         Read →
                                                     </button>
                                                 )}
@@ -119,6 +120,9 @@ const RadarPage = () => {
                                                 )}
                                             </div>
                                             {p.reason && <p className="text-[10px] text-muted-foreground mt-1 italic">{p.reason}</p>}
+                                            {selectedPaper === i && p.abstract && (
+                                                <p className="text-xs text-muted-foreground mt-2 leading-relaxed border-t pt-2 animate-in fade-in duration-200">{p.abstract}</p>
+                                            )}
                                         </div>
                                     </div>
                                 </CardContent>

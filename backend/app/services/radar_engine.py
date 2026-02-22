@@ -142,10 +142,17 @@ class RadarEngine:
             self._running = False
 
     def _deduplicate(self, candidates: list[dict]) -> list[dict]:
-        """排除已在知识库中的论文（按 arxiv_id）"""
+        """排除已在知识库或任务队列中的论文"""
+        from ..models.task import Task
         with Session(db_engine) as session:
-            existing = session.exec(select(PaperKnowledge.arxiv_id)).all()
-        existing_ids = {aid for aid in existing if aid}
+            existing_kb = session.exec(select(PaperKnowledge.arxiv_id)).all()
+            existing_tasks = session.exec(select(Task.filename)).all()
+        existing_ids = {aid for aid in existing_kb if aid}
+        # Also check task filenames for radar_ prefix
+        for fn in existing_tasks:
+            if fn and fn.startswith("radar_"):
+                aid = fn.replace("radar_", "").replace(".pdf", "")
+                existing_ids.add(aid)
         return [p for p in candidates if p["arxiv_id"] not in existing_ids]
 
     async def _auto_process(self, papers: list[dict]) -> None:
