@@ -195,6 +195,28 @@ const Dashboard = () => {
             <LLMSettings open={showSetup} onOpenChange={setShowSetup} />
 
             {/* Radar Status Panel */}
+            {/* Stats Overview */}
+            {(tasks.length > 0 || radarStatus?.papers_found > 0) && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="rounded-xl border bg-card p-4 text-center">
+                        <p className="text-2xl font-bold text-primary">{tasks.length}</p>
+                        <p className="text-xs text-muted-foreground">{t("dashboard.recentDocs")}</p>
+                    </div>
+                    <div className="rounded-xl border bg-card p-4 text-center">
+                        <p className="text-2xl font-bold text-green-600">{tasks.filter(t => t.status === "completed").length}</p>
+                        <p className="text-xs text-muted-foreground">Completed</p>
+                    </div>
+                    <div className="rounded-xl border bg-card p-4 text-center">
+                        <p className="text-2xl font-bold text-emerald-600">{radarStatus?.papers_found || 0}</p>
+                        <p className="text-xs text-muted-foreground">{t("radar.found")}</p>
+                    </div>
+                    <div className="rounded-xl border bg-card p-4 text-center">
+                        <p className="text-2xl font-bold text-violet-600">{radarStatus?.scan_count || 0}</p>
+                        <p className="text-xs text-muted-foreground">{t("radar.scans")}</p>
+                    </div>
+                </div>
+            )}
+
             {radarStatus?.enabled && (
                 <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 p-5 space-y-3">
                     <div className="flex items-center justify-between">
