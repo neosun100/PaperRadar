@@ -131,7 +131,11 @@ async def on_startup() -> None:
 
     if pending_tasks:
         logger.info("Re-queuing %d pending tasks for processing", len(pending_tasks))
+        requeued = set()
         for t in pending_tasks[:3]:  # Process max 3 at startup
+            if t.filename in requeued:
+                continue
+            requeued.add(t.filename)
             pdf_bytes = Path(t.original_pdf_path).read_bytes()
             llm_cfg = {"base_url": config.llm.base_url, "api_key": config.llm.api_key, "model": config.llm.model}
             asyncio.create_task(
