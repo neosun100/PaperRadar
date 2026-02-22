@@ -76,5 +76,6 @@ async def on_startup() -> None:
         from .services.radar_engine import RadarEngine, _radar_instance
         from .services import radar_engine as re_mod
         radar = RadarEngine(config)
+        radar.set_processor(task_manager, processor)
         re_mod._radar_instance = radar
         asyncio.create_task(radar.start_loop())

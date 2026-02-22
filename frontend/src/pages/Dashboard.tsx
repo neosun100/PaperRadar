@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain, Settings } from "lucide-react";
+import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain, Settings, Radar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api, { getLLMConfig } from "@/lib/api";
@@ -32,6 +32,7 @@ const Dashboard = () => {
     const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const [dragging, setDragging] = useState(false);
     const [queueInfo, setQueueInfo] = useState<{ processing: number; queued: number } | null>(null);
+    const [radarStatus, setRadarStatus] = useState<any>(null);
     const navigate = useNavigate();
     const abortRef = useRef<AbortController | null>(null);
     const pollIntervalRef = useRef<number>(2000);
@@ -42,12 +43,14 @@ const Dashboard = () => {
         try {
             abortRef.current?.abort();
             abortRef.current = new AbortController();
-            const [tasksRes, queueRes] = await Promise.all([
+            const [tasksRes, queueRes, radarRes] = await Promise.all([
                 api.get("/api/tasks", { signal: abortRef.current.signal }),
                 api.get("/api/queue", { signal: abortRef.current.signal }),
+                api.get("/api/radar/status", { signal: abortRef.current.signal }).catch(() => null),
             ]);
             setTasks(tasksRes.data);
             setQueueInfo(queueRes.data);
+            if (radarRes) setRadarStatus(radarRes.data);
         } catch (error: any) {
             if (error.name === "CanceledError") return;
         }
@@ -177,6 +180,52 @@ const Dashboard = () => {
                 </div>
             )}
             <LLMSettings open={showSetup} onOpenChange={setShowSetup} />
+
+            {/* Radar Status Panel */}
+            {radarStatus?.enabled && (
+                <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className={cn("relative flex h-10 w-10 items-center justify-center rounded-full", radarStatus.running ? "bg-emerald-500" : "bg-emerald-600/80")}>
+                                <Radar className={cn("h-5 w-5 text-white", radarStatus.running && "animate-spin")} />
+                                {radarStatus.running && <span className="absolute inset-0 rounded-full border-2 border-emerald-400 animate-ping" />}
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-sm">{t("radar.title")}</h3>
+                                <p className="text-xs text-muted-foreground">
+                                    {radarStatus.running ? t("radar.scanning") : t("radar.idle")}
+                                    {radarStatus.scan_count > 0 && ` · ${radarStatus.scan_count} ${t("radar.scans")}`}
+                                    {radarStatus.papers_found > 0 && ` · ${radarStatus.papers_found} ${t("radar.found")}`}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {radarStatus.last_scan && <span>{t("radar.lastScan")}: {new Date(radarStatus.last_scan).toLocaleTimeString()}</span>}
+                            <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full">{radarStatus.categories?.join(", ")}</span>
+                        </div>
+                    </div>
+                    {radarStatus.recent_papers?.length > 0 && (
+                        <div className="space-y-1.5">
+                            <p className="text-xs font-medium text-muted-foreground">{t("radar.recentDiscoveries")}:</p>
+                            <div className="grid gap-1.5 md:grid-cols-2 lg:grid-cols-3">
+                                {radarStatus.recent_papers.slice(-6).reverse().map((p: any, i: number) => (
+                                    <div key={i} className="flex items-start gap-2 rounded-lg bg-white/60 dark:bg-white/5 border border-border p-2.5">
+                                        <span className={cn("shrink-0 mt-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-mono font-bold",
+                                            p.score >= 0.9 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" :
+                                            p.score >= 0.8 ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300" :
+                                            "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"
+                                        )}>{Math.round(p.score * 100)}%</span>
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-medium leading-tight line-clamp-2">{p.title}</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">{p.authors?.slice(0, 2).join(", ")}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <section
                 onDragOver={handleDragOver}

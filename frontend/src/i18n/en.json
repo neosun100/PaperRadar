@@ -44,6 +44,20 @@
     "extractionStarted": "Knowledge extraction started!",
     "extractionFailed": "Failed to start extraction."
   },
+  "radar": {
+    "title": "Paper Radar",
+    "scanning": "Scanning arXiv...",
+    "idle": "Radar idle",
+    "lastScan": "Last scan",
+    "nextScan": "Next scan",
+    "found": "papers discovered",
+    "scans": "scans",
+    "categories": "Monitoring",
+    "recentDiscoveries": "Recent Discoveries",
+    "score": "Relevance",
+    "noDiscoveries": "No papers discovered yet. The radar scans arXiv every hour.",
+    "scanNow": "Scan Now"
+  },
   "reader": {
     "docReader": "Document Reader",
     "back": "Back",

@@ -44,6 +44,20 @@
     "extractionStarted": "知识提取已开始！",
     "extractionFailed": "知识提取启动失败。"
   },
+  "radar": {
+    "title": "论文雷达",
+    "scanning": "正在扫描 arXiv...",
+    "idle": "雷达待机中",
+    "lastScan": "上次扫描",
+    "nextScan": "下次扫描",
+    "found": "篇论文已发现",
+    "scans": "次扫描",
+    "categories": "监控类目",
+    "recentDiscoveries": "最近发现",
+    "score": "相关度",
+    "noDiscoveries": "尚未发现论文。雷达每小时扫描一次 arXiv。",
+    "scanNow": "立即扫描"
+  },
   "reader": {
     "docReader": "文档阅读器",
     "back": "返回",
