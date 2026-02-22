@@ -215,6 +215,9 @@ const Dashboard = () => {
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             {radarStatus.last_scan && <span>{t("radar.lastScan")}: {new Date(radarStatus.last_scan).toLocaleTimeString()}</span>}
                             <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full">{radarStatus.categories?.join(", ")}</span>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => navigate("/radar")}>
+                                {t("radar.title")} →
+                            </Button>
                         </div>
                     </div>
                     {radarStatus.recent_papers?.length > 0 && (
@@ -230,7 +233,10 @@ const Dashboard = () => {
                                         )}>{Math.round(p.score * 100)}%</span>
                                         <div className="min-w-0">
                                             <p className="text-xs font-medium leading-tight line-clamp-2">{p.title}</p>
-                                            <p className="text-[10px] text-muted-foreground mt-0.5">{p.authors?.slice(0, 2).join(", ")}</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                                                {p.authors?.slice(0, 2).join(", ")}
+                                                {p.source && <span className="ml-1.5 bg-muted px-1 py-0.5 rounded text-[9px]">{p.source}</span>}
+                                            </p>
                                         </div>
                                     </div>
                                 ))}
