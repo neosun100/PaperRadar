@@ -135,7 +135,7 @@ class RadarEngine:
         return [p for p in candidates if p["arxiv_id"] not in existing_ids]
 
     async def _auto_process(self, papers: list[dict]) -> None:
-        """自动下载并处理论文"""
+        """自动下载并处理论文（串行，避免资源冲突）"""
         for p in papers:
             try:
                 pdf_url = p.get("pdf_url", "")
@@ -145,12 +145,11 @@ class RadarEngine:
                 filename = f"radar_{p['arxiv_id']}.pdf"
                 logger.info("Radar auto-processing: %s", title)
 
-                # Download PDF
                 pdf_bytes = await self._download_pdf(pdf_url)
                 if not pdf_bytes:
+                    logger.warning("Skipping %s: PDF download failed", p["arxiv_id"])
                     continue
 
-                # Create task and process
                 task = self._task_manager.create_task(filename, mode="translate", highlight=True)
                 dest = Path(self._task_manager.config.storage.temp_dir) / f"{task.task_id}_original.pdf"
                 dest.write_bytes(pdf_bytes)
@@ -161,11 +160,15 @@ class RadarEngine:
                     "api_key": self.config.llm.api_key,
                     "model": self.config.llm.model,
                 }
-                asyncio.create_task(
-                    self._processor.process(task.task_id, pdf_bytes, filename, mode="translate", highlight=True, llm_config=llm_cfg)
-                )
-                p["task_id"] = task.task_id
-                p["status"] = "processing"
+                # Process synchronously to avoid font download race conditions
+                try:
+                    await self._processor.process(task.task_id, pdf_bytes, filename, mode="translate", highlight=True, llm_config=llm_cfg)
+                    p["task_id"] = task.task_id
+                    p["status"] = "completed"
+                    logger.info("Radar processed: %s", title)
+                except Exception:
+                    logger.exception("Radar processing failed for %s, continuing", p["arxiv_id"])
+                    p["status"] = "error"
             except Exception:
                 logger.exception("Failed to auto-process paper %s", p.get("arxiv_id"))
 
