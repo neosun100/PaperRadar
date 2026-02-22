@@ -1,17 +1,28 @@
 # PaperRadar Changelog
 
-## v0.8.1 (2026-02-22)
-- Radar paper preview: click to expand abstract
+## v0.9.2 (2026-02-22)
+- Expanded keyword matching with AI/ML abbreviations
+- Source diversity guarantee: at least 1 paper from each source
+- Multi-source results: HuggingFace + arXiv + Semantic Scholar
+
+## v0.9.1 (2026-02-22)
+- Async radar processing: non-blocking scan loop
+- Papers process in background while radar continues scanning
+
+## v0.9.0 (2026-02-22)
+- HuggingFace upvote-based ranking (≥30⬆=98%, ≥10⬆=95%)
+- Fetch 50 HF papers sorted by community upvotes
+- Show upvote counts on paper cards
+
+## v0.8.x (2026-02-22)
+- Radar page: next scan countdown, paper abstract preview on click
+- Health endpoint with total_tasks/total_papers stats
 - Improved deduplication: checks both KB and task queue
 - Task filename shows real paper title
-
-## v0.8.0 (2026-02-22)
-- Radar page: next scan countdown, paper status badges
-- Health endpoint: total_tasks and total_papers stats
 - Dashboard radar panel: "View All →" link
 
 ## v0.7.x (2026-02-22)
-- Smart hybrid scoring: HF=95%, S2 high-cite=90%, keyword pre-filter
+- Smart hybrid scoring: HF upvotes, S2 citations, keyword pre-filter
 - Reduced LLM API calls by ~80%
 - Source tags on paper cards
 
