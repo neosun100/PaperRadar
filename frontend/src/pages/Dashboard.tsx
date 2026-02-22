@@ -34,6 +34,8 @@ const Dashboard = () => {
     const [queueInfo, setQueueInfo] = useState<{ processing: number; queued: number } | null>(null);
     const [radarStatus, setRadarStatus] = useState<any>(null);
     const [urlInput, setUrlInput] = useState("");
+    const [kbSearch, setKbSearch] = useState("");
+    const [kbResults, setKbResults] = useState<any[]>([]);
     const navigate = useNavigate();
     const abortRef = useRef<AbortController | null>(null);
     const pollIntervalRef = useRef<number>(2000);
@@ -318,6 +320,33 @@ const Dashboard = () => {
                                 <LinkIcon className="h-3.5 w-3.5" /> {t("dashboard.fetchPdf")}
                             </Button>
                         </div>
+                        {/* Knowledge Search */}
+                        <div className="flex items-center gap-2 w-full max-w-md">
+                            <Input
+                                placeholder="🔍 Search knowledge base... (semantic)"
+                                value={kbSearch}
+                                onChange={(e) => setKbSearch(e.target.value)}
+                                onKeyDown={async (e) => {
+                                    if (e.key === "Enter" && kbSearch.trim()) {
+                                        try {
+                                            const r = await api.get(`/api/knowledge/search?q=${encodeURIComponent(kbSearch)}&n=5`);
+                                            setKbResults(r.data.results);
+                                        } catch { setKbResults([]); }
+                                    }
+                                }}
+                                className="h-9 text-sm"
+                            />
+                        </div>
+                        {kbResults.length > 0 && (
+                            <div className="w-full max-w-md space-y-1.5 text-left">
+                                {kbResults.map((r: any, i: number) => (
+                                    <div key={i} className="flex items-start gap-2 rounded-lg bg-white/60 dark:bg-white/5 border p-2 text-xs">
+                                        <span className="shrink-0 text-emerald-600 font-mono">{(r.score * 100).toFixed(0)}%</span>
+                                        <span className="line-clamp-2">{r.text}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                         {uploadProgress !== null && (
                             <div className="w-full max-w-xs space-y-1">
                                 <div className="flex justify-between text-xs text-muted-foreground">

@@ -143,7 +143,7 @@ async def on_startup() -> None:
     if pending_tasks:
         logger.info("Re-queuing %d pending tasks for processing", len(pending_tasks))
         requeued = set()
-        for t in pending_tasks[:3]:  # Process max 3 at startup
+        for t in pending_tasks[:1]:  # Process max 1 at startup to avoid duplicates
             if t.filename in requeued:
                 continue
             requeued.add(t.filename)
