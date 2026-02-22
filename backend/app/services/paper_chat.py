@@ -43,6 +43,10 @@ class PaperChatService:
         context = "\n".join(context_parts)
         return await self._call_llm(context, message, history)
 
+    async def chat_with_context(self, rag_context: str, message: str, history: list[dict] | None = None) -> str:
+        """RAG mode: use vector-retrieved context"""
+        return await self._call_llm(rag_context, message, history)
+
     async def _call_llm(self, context: str, message: str, history: list[dict] | None) -> str:
         # Truncate context to ~12k chars to leave room for response
         if len(context) > 12000:

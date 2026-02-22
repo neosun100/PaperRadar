@@ -263,6 +263,36 @@ def create_knowledge_router() -> APIRouter:
         return _insights_cache["latest"]
 
     # ------------------------------------------------------------------
+    # 语义搜索（向量）
+    # ------------------------------------------------------------------
+
+    @router.get("/search")
+    async def semantic_search(q: str, n: int = 10, type: str = "") -> dict[str, Any]:
+        from ..services.vector_search import get_vector_service
+        vs = get_vector_service()
+        if not vs:
+            raise HTTPException(400, "Vector search not configured (set embedding_model in config)")
+        hits = await vs.search(q, n_results=n, filter_type=type or None)
+        return {"query": q, "results": hits, "total": len(hits)}
+
+    @router.get("/search/papers")
+    async def search_papers_semantic(q: str, n: int = 5) -> dict[str, Any]:
+        from ..services.vector_search import get_vector_service
+        vs = get_vector_service()
+        if not vs:
+            raise HTTPException(400, "Vector search not configured")
+        hits = await vs.search_papers(q, n_results=n)
+        return {"query": q, "results": hits, "total": len(hits)}
+
+    @router.get("/vector/stats")
+    async def vector_stats() -> dict[str, Any]:
+        from ..services.vector_search import get_vector_service
+        vs = get_vector_service()
+        if not vs:
+            return {"configured": False}
+        return {"configured": True, **vs.stats}
+
+    # ------------------------------------------------------------------
     # 文献综述生成
     # ------------------------------------------------------------------
 
@@ -366,8 +396,9 @@ def create_knowledge_router() -> APIRouter:
 
     @router.post("/chat")
     async def chat_cross_papers(request: Request) -> dict[str, Any]:
-        """跨论文对话 — 在整个知识库上提问"""
+        """跨论文对话 — RAG 增强，用向量检索最相关内容"""
         from ..services.paper_chat import PaperChatService
+        from ..services.vector_search import get_vector_service
         llm_config = get_llm_config(request)
         body = await request.json()
         message = body.get("message", "")
@@ -375,17 +406,29 @@ def create_knowledge_router() -> APIRouter:
         if not message:
             raise HTTPException(400, "message is required")
 
-        papers_json = _get_completed_papers_json()
-        if not papers_json:
-            raise HTTPException(400, "No papers in knowledge base")
+        # Try RAG first
+        vs = get_vector_service()
+        rag_context = ""
+        if vs:
+            rag_context = await vs.get_context_for_chat(message, n_results=15)
 
         svc = PaperChatService(
             api_key=llm_config["api_key"],
             model=llm_config.get("model", ""),
             base_url=llm_config.get("base_url", ""),
         )
-        reply = await svc.chat_multi(papers_json, message, history)
-        return {"reply": reply}
+
+        if rag_context:
+            # RAG mode: use retrieved context
+            reply = await svc.chat_with_context(rag_context, message, history)
+        else:
+            # Fallback: use all papers
+            papers_json = _get_completed_papers_json()
+            if not papers_json:
+                raise HTTPException(400, "No papers in knowledge base")
+            reply = await svc.chat_multi(papers_json, message, history)
+
+        return {"reply": reply, "mode": "rag" if rag_context else "full"}
 
     @router.post("/compare")
     async def compare_papers(request: Request) -> dict[str, Any]:

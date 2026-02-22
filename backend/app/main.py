@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import time
 from pathlib import Path
 
@@ -150,3 +151,24 @@ async def on_startup() -> None:
         radar.set_processor(task_manager, processor)
         re_mod._radar_instance = radar
         asyncio.create_task(radar.start_loop())
+
+    # Initialize vector search and index existing papers
+    if config.llm.embedding_model:
+        from .services.vector_search import get_vector_service
+        from .models.knowledge import PaperKnowledge as PK_model
+        vs = get_vector_service()
+
+        async def _init_vector():
+            if vs and vs.stats["chunks"] == 0:
+                with Session(db_eng) as session:
+                    completed = session.exec(
+                        select(PK_model).where(PK_model.extraction_status == "completed")
+                    ).all()
+                for p in completed:
+                    if p.knowledge_json:
+                        try:
+                            await vs.index_paper(p.id, json.loads(p.knowledge_json))
+                        except Exception:
+                            logger.warning("Failed to index paper %s", p.id)
+                logger.info("Vector index initialized: %s", vs.stats)
+        asyncio.create_task(_init_vector())

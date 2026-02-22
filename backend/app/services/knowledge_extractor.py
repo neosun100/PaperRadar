@@ -179,7 +179,18 @@ class KnowledgeExtractor:
             paper.extraction_status = "completed"
             paper.updated_at = datetime.utcnow()
             self._save_paper(paper)
-            logger.info("知识提取完成: %s - %s", paper_id, paper.title)
+            logger.info("Knowledge extraction completed: %s - %s", paper_id, paper.title)
+
+            # Auto-index to vector database
+            try:
+                from .vector_search import get_vector_service
+                vs = get_vector_service()
+                if vs:
+                    indexed = await vs.index_paper(paper_id, knowledge)
+                    logger.info("Vector indexed %d chunks for %s", indexed, paper_id)
+            except Exception:
+                logger.warning("Vector indexing failed for %s", paper_id)
+
             return paper
         except Exception as exc:
             logger.exception("知识提取失败: %s", exc)
