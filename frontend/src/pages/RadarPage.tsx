@@ -105,6 +105,7 @@ const RadarPage = () => {
                                             <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted-foreground">
                                                 <span>{p.authors?.slice(0, 2).join(", ")}</span>
                                                 {p.source && <span className="bg-muted px-1.5 py-0.5 rounded">{p.source}</span>}
+                                                {p.upvotes > 0 && <span className="text-amber-500 font-medium">⬆{p.upvotes}</span>}
                                             {p.pdf_url && (
                                                     <a href={p.pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 hover:text-primary" onClick={(e) => e.stopPropagation()}>
                                                         PDF <ExternalLink className="h-2.5 w-2.5" />

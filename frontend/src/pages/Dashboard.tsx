@@ -236,6 +236,7 @@ const Dashboard = () => {
                                             <p className="text-[10px] text-muted-foreground mt-0.5">
                                                 {p.authors?.slice(0, 2).join(", ")}
                                                 {p.source && <span className="ml-1.5 bg-muted px-1 py-0.5 rounded text-[9px]">{p.source}</span>}
+                                                {p.upvotes > 0 && <span className="ml-1 text-amber-500">⬆{p.upvotes}</span>}
                                             </p>
                                         </div>
                                     </div>

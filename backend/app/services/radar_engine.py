@@ -301,17 +301,21 @@ class RadarEngine:
         return papers
 
     async def _fetch_huggingface_daily(self) -> list[dict]:
-        """从 HuggingFace Daily Papers 获取社区策划的热门论文"""
+        """从 HuggingFace Daily Papers 获取社区策划的热门论文（按 upvotes 排序）"""
         papers = []
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.get("https://huggingface.co/api/daily_papers", params={"limit": 20})
+                resp = await client.get("https://huggingface.co/api/daily_papers", params={"limit": 50})
                 if resp.status_code == 200:
-                    for item in resp.json():
+                    items = resp.json()
+                    # Sort by upvotes descending
+                    items.sort(key=lambda x: x.get("paper", {}).get("upvotes", 0), reverse=True)
+                    for item in items:
                         p = item.get("paper", {})
                         arxiv_id = p.get("id", "")
                         if not arxiv_id:
                             continue
+                        upvotes = p.get("upvotes", 0)
                         papers.append({
                             "arxiv_id": arxiv_id,
                             "title": p.get("title", ""),
@@ -319,10 +323,11 @@ class RadarEngine:
                             "authors": [a.get("name", "") for a in (p.get("authors") or [])[:5]],
                             "published": p.get("publishedAt", ""),
                             "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}.pdf",
-                            "categories": [],
+                            "categories": p.get("ai_keywords", [])[:3],
                             "source": "huggingface",
-                            "upvotes": p.get("upvotes", 0),
+                            "upvotes": upvotes,
                         })
+            logger.info("HuggingFace: %d papers fetched", len(papers))
         except Exception:
             logger.exception("Failed to fetch HuggingFace Daily Papers")
         return papers
@@ -333,10 +338,18 @@ class RadarEngine:
         topics_lower = [t.strip() for t in topics_lower]
 
         for p in papers:
-            # HuggingFace papers are community-curated, give them high score directly
+            # HuggingFace papers: score by community upvotes
             if p.get("source") == "huggingface":
-                p["score"] = 0.95
-                p["reason"] = "HuggingFace community-curated trending paper"
+                upvotes = p.get("upvotes", 0)
+                if upvotes >= 30:
+                    p["score"] = 0.98
+                    p["reason"] = f"🔥 HF trending ({upvotes} upvotes)"
+                elif upvotes >= 10:
+                    p["score"] = 0.95
+                    p["reason"] = f"HF popular ({upvotes} upvotes)"
+                else:
+                    p["score"] = 0.85
+                    p["reason"] = f"HF curated ({upvotes} upvotes)"
                 continue
             # Semantic Scholar high-citation papers get a boost
             if p.get("source") == "semantic_scholar" and p.get("citations", 0) > 10:
