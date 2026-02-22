@@ -1,0 +1,42 @@
+# PaperRadar — config.yaml for Radar & Notifications
+# Mount this file to /app/config/config.yaml in the container
+
+llm:
+  api_key: "YOUR_LLM_API_KEY"
+  base_url: "https://api.openai.com/v1"
+  model: "gpt-4o"
+
+processing:
+  max_concurrent: 3
+
+radar:
+  enabled: true
+  interval_hours: 1
+  categories:
+    - cs.CL
+    - cs.AI
+    - cs.LG
+  topics: "LLM, large language model, agent, reasoning, RLHF, quantization, RAG"
+  max_papers_per_scan: 10
+  relevance_threshold: 0.7
+
+notification:
+  bark_url: ""
+  bark_key: ""
+  lark_webhook: ""
+
+security:
+  secret_key: "change-me-to-random-string"
+  api_token: ""
+  cors_origins:
+    - "*"
+
+storage:
+  temp_dir: "/app/tmp"
+
+database:
+  url: "sqlite:///./data/app.db"
+
+logging:
+  level: "INFO"
+  file: "/app/logs/app.log"
