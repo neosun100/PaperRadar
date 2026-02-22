@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-    Brain, Search, Download, Trash2, BookOpen, Network, FileJson, FileText as FileTextIcon, GraduationCap, Loader2, CheckCircle, AlertCircle, Clock, Sparkles, MessageCircle,
+    Brain, Search, Download, Trash2, BookOpen, Network, FileJson, FileText as FileTextIcon, GraduationCap, Loader2, CheckCircle, AlertCircle, Clock, Sparkles, MessageCircle, GitCompareArrows,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,9 @@ const KnowledgeBase = () => {
     const [chatInput, setChatInput] = useState("");
     const [chatHistory, setChatHistory] = useState<{ role: string; content: string }[]>([]);
     const [chatLoading, setChatLoading] = useState(false);
+    const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set());
+    const [comparison, setComparison] = useState<string | null>(null);
+    const [compareLoading, setCompareLoading] = useState(false);
     const navigate = useNavigate();
 
     const fetchPapers = useCallback(async () => {
@@ -55,6 +58,24 @@ const KnowledgeBase = () => {
             setChatHistory(prev => [...prev, { role: "assistant", content: resp.data.reply }]);
         } catch { toast.error("Chat failed"); }
         finally { setChatLoading(false); }
+    };
+
+    const handleCompare = async () => {
+        if (selectedForCompare.size < 2) return;
+        setCompareLoading(true);
+        try {
+            const resp = await api.post("/api/knowledge/compare", { paper_ids: Array.from(selectedForCompare) });
+            setComparison(resp.data.comparison);
+        } catch (e: any) { toast.error(e.response?.data?.detail || "Compare failed"); }
+        finally { setCompareLoading(false); }
+    };
+
+    const toggleCompare = (id: string) => {
+        setSelectedForCompare(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else if (next.size < 5) next.add(id);
+            return next;
+        });
     };
 
     const handleDelete = async (paperId: string) => {
@@ -158,9 +179,28 @@ const KnowledgeBase = () => {
                 </CardContent></Card>
             )}
 
+            {/* Comparison Result */}
+            {comparison && (
+                <Card><CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold flex items-center gap-2"><GitCompareArrows className="h-5 w-5" /> Paper Comparison</h2>
+                        <Button variant="ghost" size="sm" onClick={() => setComparison(null)}>✕</Button>
+                    </div>
+                    <div className="prose dark:prose-invert max-w-none text-sm whitespace-pre-wrap">{comparison}</div>
+                </CardContent></Card>
+            )}
+
             <section className="space-y-4">
                 <div className="flex items-center justify-between gap-4 px-2">
-                    <h2 className="text-2xl font-semibold tracking-tight shrink-0">{t("knowledge.papers")}</h2>
+                    <div className="flex items-center gap-3 shrink-0">
+                        <h2 className="text-2xl font-semibold tracking-tight">{t("knowledge.papers")}</h2>
+                        {selectedForCompare.size >= 2 && (
+                            <Button size="sm" onClick={handleCompare} disabled={compareLoading} className="gap-1.5">
+                                {compareLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitCompareArrows className="h-3.5 w-3.5" />}
+                                Compare ({selectedForCompare.size})
+                            </Button>
+                        )}
+                    </div>
                     {papers.length > 0 && (
                         <div className="relative max-w-xs w-full">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -171,8 +211,19 @@ const KnowledgeBase = () => {
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredPapers.map((paper) => (
-                        <Card key={paper.id} className={cn("group relative overflow-hidden transition-all hover:shadow-md border-border", paper.extraction_status === "completed" && "cursor-pointer")}
-                            onClick={() => { if (paper.extraction_status === "completed") navigate(`/knowledge/paper/${paper.id}`); }}>
+                        <Card key={paper.id} className={cn("group relative overflow-hidden transition-all hover:shadow-md border-border",
+                            paper.extraction_status === "completed" && "cursor-pointer",
+                            selectedForCompare.has(paper.id) && "ring-2 ring-primary")}
+                            onClick={() => {
+                                if (paper.extraction_status === "completed") navigate(`/knowledge/paper/${paper.id}`);
+                            }}>
+                            {paper.extraction_status === "completed" && (
+                                <button className={cn("absolute top-2 right-2 z-10 h-5 w-5 rounded border-2 flex items-center justify-center text-[10px] transition-colors",
+                                    selectedForCompare.has(paper.id) ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/30 hover:border-primary")}
+                                    onClick={(e) => { e.stopPropagation(); toggleCompare(paper.id); }}>
+                                    {selectedForCompare.has(paper.id) && "✓"}
+                                </button>
+                            )}
                             <CardHeader className="pb-3">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-3">

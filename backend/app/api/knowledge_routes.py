@@ -387,6 +387,43 @@ def create_knowledge_router() -> APIRouter:
         reply = await svc.chat_multi(papers_json, message, history)
         return {"reply": reply}
 
+    @router.post("/compare")
+    async def compare_papers(request: Request) -> dict[str, Any]:
+        """对比 2-3 篇论文"""
+        from ..services.paper_chat import PaperChatService
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        paper_ids = body.get("paper_ids", [])
+        if len(paper_ids) < 2:
+            raise HTTPException(400, "Need at least 2 paper IDs")
+
+        papers_json = []
+        with Session(engine) as session:
+            for pid in paper_ids[:5]:
+                p = session.get(PaperKnowledge, pid)
+                if p and p.knowledge_json:
+                    papers_json.append(json.loads(p.knowledge_json))
+
+        if len(papers_json) < 2:
+            raise HTTPException(400, "Need at least 2 papers with extracted knowledge")
+
+        svc = PaperChatService(
+            api_key=llm_config["api_key"],
+            model=llm_config.get("model", ""),
+            base_url=llm_config.get("base_url", ""),
+        )
+        prompt = (
+            "Compare these papers in detail. Create a structured comparison with:\n"
+            "1. **Overview** — What each paper is about (1 sentence each)\n"
+            "2. **Methods Comparison** — Table comparing approaches\n"
+            "3. **Results Comparison** — Key metrics and findings side by side\n"
+            "4. **Strengths & Weaknesses** — Of each paper\n"
+            "5. **Relationship** — How these papers relate to each other\n"
+            "Output as Markdown. Respond in the same language as this prompt."
+        )
+        reply = await svc.chat_multi(papers_json, prompt)
+        return {"comparison": reply, "paper_count": len(papers_json)}
+
     # ------------------------------------------------------------------
     # 导出
     # ------------------------------------------------------------------
