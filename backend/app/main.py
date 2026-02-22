@@ -64,7 +64,21 @@ app.include_router(create_knowledge_router())
 @app.get("/health")
 async def healthcheck() -> dict:
     uptime = int(time.time() - _start_time)
-    return {"status": "ok", "version": "3.0.0", "uptime_seconds": uptime}
+    # Count tasks by status
+    from sqlmodel import Session, select, func
+    from .core.db import engine as db_eng
+    from .models.task import Task
+    from .models.knowledge import PaperKnowledge
+    with Session(db_eng) as session:
+        total_tasks = session.exec(select(func.count(Task.task_id))).one()
+        total_papers = session.exec(select(func.count(PaperKnowledge.id))).one()
+    return {
+        "status": "ok",
+        "version": "3.0.0",
+        "uptime_seconds": uptime,
+        "total_tasks": total_tasks,
+        "total_papers": total_papers,
+    }
 
 
 @app.on_event("startup")

@@ -62,7 +62,7 @@ const RadarPage = () => {
             </section>
 
             {/* Stats */}
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-5">
                 <Card><CardContent className="p-4 text-center">
                     <p className="text-3xl font-bold text-emerald-600">{status?.scan_count || 0}</p>
                     <p className="text-xs text-muted-foreground mt-1">{t("radar.scans")}</p>
@@ -78,6 +78,10 @@ const RadarPage = () => {
                 <Card><CardContent className="p-4 text-center">
                     <p className="text-sm font-medium">{status?.last_scan ? new Date(status.last_scan).toLocaleString() : "-"}</p>
                     <p className="text-xs text-muted-foreground mt-1">{t("radar.lastScan")}</p>
+                </CardContent></Card>
+                <Card><CardContent className="p-4 text-center">
+                    <p className="text-sm font-medium">{status?.next_scan ? new Date(status.next_scan).toLocaleTimeString() : "-"}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{t("radar.nextScan")}</p>
                 </CardContent></Card>
             </div>
 
@@ -100,10 +104,18 @@ const RadarPage = () => {
                                             <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted-foreground">
                                                 <span>{p.authors?.slice(0, 2).join(", ")}</span>
                                                 {p.source && <span className="bg-muted px-1.5 py-0.5 rounded">{p.source}</span>}
-                                                {p.pdf_url && (
+                                            {p.pdf_url && (
                                                     <a href={p.pdf_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 hover:text-primary">
                                                         PDF <ExternalLink className="h-2.5 w-2.5" />
                                                     </a>
+                                                )}
+                                                {p.task_id && p.status === "completed" && (
+                                                    <button onClick={() => navigate(`/reader/${p.task_id}`)} className="inline-flex items-center gap-0.5 hover:text-primary font-medium">
+                                                        Read →
+                                                    </button>
+                                                )}
+                                                {p.status && p.status !== "completed" && (
+                                                    <span className="text-blue-500">{p.status}</span>
                                                 )}
                                             </div>
                                             {p.reason && <p className="text-[10px] text-muted-foreground mt-1 italic">{p.reason}</p>}
