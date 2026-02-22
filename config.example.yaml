@@ -5,6 +5,7 @@ llm:
   api_key: "YOUR_LLM_API_KEY"
   base_url: "https://api.openai.com/v1"
   model: "gpt-4o"
+  embedding_model: ""                        # Optional: for vector search
 
 processing:
   max_concurrent: 3

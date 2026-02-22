@@ -14,6 +14,7 @@ class LLMConfig(BaseModel):
     base_url: str = Field("https://api.openai.com/v1", alias="base_url")
     model: str = Field("gpt-4o", alias="model")
     judge_model: str = Field("gpt-4o", alias="judge_model")
+    embedding_model: str = Field("", alias="embedding_model")  # e.g. text-embedding-3-small
 
 
 class ProcessingConfig(BaseModel):

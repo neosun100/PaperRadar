@@ -5,6 +5,7 @@ llm:
   api_key: ""                                # Optional fallback — users bring their own key via UI
   base_url: "https://api.openai.com/v1"
   model: "gpt-4o"
+  embedding_model: ""                        # Optional: embedding model for vector search (e.g. text-embedding-3-small)
 
 processing:
   max_concurrent: 3       # Concurrent processing tasks per user
