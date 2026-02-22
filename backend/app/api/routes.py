@@ -295,6 +295,41 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
             return {"enabled": False, "running": False}
         return _radar_instance.status
 
+    @router.get("/radar/trending")
+    async def radar_trending(days: int = 7) -> dict[str, Any]:
+        """Get trending papers from HuggingFace over N days"""
+        from datetime import datetime, timedelta
+        papers = []
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for i in range(min(days, 30)):
+                date = (datetime.utcnow() - timedelta(days=i)).strftime("%Y-%m-%d")
+                try:
+                    resp = await client.get("https://huggingface.co/api/daily_papers", params={"date": date, "limit": 50})
+                    if resp.status_code == 200:
+                        for item in resp.json():
+                            p = item.get("paper", {})
+                            if p.get("id"):
+                                papers.append({
+                                    "arxiv_id": p["id"],
+                                    "title": p.get("title", ""),
+                                    "upvotes": p.get("upvotes", 0),
+                                    "authors": [a.get("name", "") for a in (p.get("authors") or [])[:3]],
+                                    "published": p.get("publishedAt", ""),
+                                    "pdf_url": f"https://arxiv.org/pdf/{p['id']}.pdf",
+                                    "date": date,
+                                })
+                except Exception:
+                    pass
+        # Deduplicate and sort by upvotes
+        seen = set()
+        unique = []
+        for p in papers:
+            if p["arxiv_id"] not in seen:
+                seen.add(p["arxiv_id"])
+                unique.append(p)
+        unique.sort(key=lambda x: x.get("upvotes", 0), reverse=True)
+        return {"papers": unique[:50], "days": days, "total": len(unique)}
+
     @router.post("/radar/scan")
     async def trigger_radar_scan() -> dict[str, Any]:
         from ..services.radar_engine import _radar_instance
