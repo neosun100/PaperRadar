@@ -1,8 +1,19 @@
 # PaperRadar Changelog
 
-## v0.9.2 (2026-02-22)
-- Expanded keyword matching with AI/ML abbreviations
-- Source diversity guarantee: at least 1 paper from each source
+## v1.0.0 (2026-02-22) 🎉
+- Trending Papers: HuggingFace 7d/14d/30d trending with upvote ranking
+- Radar page overhaul: Discoveries + Trending tabs, reusable PaperCard
+- GET /api/radar/trending?days=N endpoint
+
+## v0.9.x (2026-02-22)
+- v0.9.9: S2 rate limit handling, i18n fix, auto-iterate script
+- v0.9.8: Manual process button on Radar page
+- v0.9.7: Dashboard stats overview panel
+- v0.9.6: Auto-sanitize Chinese messages in API responses
+- v0.9.5: Configurable startup scan
+- v0.9.4: Robust deduplication
+- v0.9.3: Radar respects queue capacity
+- v0.9.2: Expanded keyword matching, source diversity
 - Multi-source results: HuggingFace + arXiv + Semantic Scholar
 
 ## v0.9.1 (2026-02-22)
