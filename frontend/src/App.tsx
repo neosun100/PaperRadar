@@ -7,6 +7,7 @@ import PaperDetail from "./pages/PaperDetail";
 import FlashcardReview from "./pages/FlashcardReview";
 import KnowledgeGraph from "./pages/KnowledgeGraph";
 import ResearchInsights from "./pages/ResearchInsights";
+import RadarPage from "./pages/RadarPage";
 import Layout from "./components/Layout";
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
           <Route path="/knowledge/review" element={<FlashcardReview />} />
           <Route path="/knowledge/graph" element={<KnowledgeGraph />} />
           <Route path="/knowledge/insights" element={<ResearchInsights />} />
+          <Route path="/radar" element={<RadarPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/dashboard" />} />
       </Routes>

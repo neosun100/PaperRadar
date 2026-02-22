@@ -34,6 +34,10 @@ const Layout = () => {
                             <Brain className="h-4 w-4" />
                             <span className="hidden sm:inline">{t("nav.knowledgeBase")}</span>
                         </Button>
+                        <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400" onClick={() => navigate("/radar")}>
+                            <Radar className="h-4 w-4" />
+                            <span className="hidden sm:inline">{t("radar.title")}</span>
+                        </Button>
                         <a
                             href={GITHUB_URL}
                             target="_blank"
