@@ -1,11 +1,15 @@
 # PaperRadar Changelog
 
-## v1.3.1 (2026-02-23)
-- Startup deduplication for pending tasks
+## v1.6.1 (2026-02-23)
+- Definitive fix for duplicate tasks (5-layer dedup)
+- Global semantic search on Dashboard (v1.6.0)
+- Semantic search UI in Knowledge Base (v1.5.1)
+- ChromaDB + Bedrock Embed v4 vector search (v1.5.0)
+- Paper Comparison View (v1.4.0)
 - Literature Review generation (v1.3.0)
-- Auto knowledge extraction on every paper completion (v1.2.0)
-- Fix asyncio import scope bug (v1.2.1)
-- KB paper count stats (v1.2.2)
+- Auto knowledge extraction on every paper (v1.2.0)
+- Zombie task recovery (v1.0.1)
+- Trending papers 7d/14d/30d (v1.0.0)
 
 ## v1.1.0 (2026-02-22)
 - Smart Recommendations via Semantic Scholar API
