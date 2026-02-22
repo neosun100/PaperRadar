@@ -167,8 +167,13 @@ class RadarEngine:
                     p["status"] = "completed"
                     logger.info("Radar processed: %s", title)
                 except Exception:
-                    logger.exception("Radar processing failed for %s, continuing", p["arxiv_id"])
+                    logger.exception("Radar processing failed for %s, cleaning up", p["arxiv_id"])
                     p["status"] = "error"
+                    # Auto-cleanup failed radar tasks so they don't clutter the UI
+                    try:
+                        self._task_manager.delete_task(task.task_id)
+                    except Exception:
+                        pass
             except Exception:
                 logger.exception("Failed to auto-process paper %s", p.get("arxiv_id"))
 
