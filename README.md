@@ -1,8 +1,5 @@
 [English](README.md) | [简体中文](README_zh.md) | [繁體中文](README_tw.md) | [日本語](README_jp.md)
 
-<p align="center">
-  <img src="docs/banner.png" alt="EasyPaper Banner" width="100%">
-</p>
 
 <h1 align="center">EasyPaper</h1>
 
