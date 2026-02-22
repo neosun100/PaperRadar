@@ -35,6 +35,8 @@ const KnowledgeBase = () => {
     const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set());
     const [comparison, setComparison] = useState<string | null>(null);
     const [compareLoading, setCompareLoading] = useState(false);
+    const [searchResults, setSearchResults] = useState<any[] | null>(null);
+    const [searching, setSearching] = useState(false);
     const navigate = useNavigate();
 
     const fetchPapers = useCallback(async () => {
@@ -76,6 +78,16 @@ const KnowledgeBase = () => {
             if (next.has(id)) next.delete(id); else if (next.size < 5) next.add(id);
             return next;
         });
+    };
+
+    const handleSemanticSearch = async () => {
+        if (!search.trim()) { setSearchResults(null); return; }
+        setSearching(true);
+        try {
+            const r = await api.get(`/api/knowledge/search?q=${encodeURIComponent(search)}&n=10`);
+            setSearchResults(r.data.results);
+        } catch { setSearchResults(null); }
+        finally { setSearching(false); }
     };
 
     const handleDelete = async (paperId: string) => {
@@ -202,12 +214,44 @@ const KnowledgeBase = () => {
                         )}
                     </div>
                     {papers.length > 0 && (
-                        <div className="relative max-w-xs w-full">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder={t("knowledge.searchPapers")} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
+                        <div className="relative max-w-sm w-full flex gap-1.5">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder={t("knowledge.searchPapers")} value={search}
+                                    onChange={(e) => { setSearch(e.target.value); if (!e.target.value) setSearchResults(null); }}
+                                    onKeyDown={(e) => { if (e.key === "Enter") handleSemanticSearch(); }}
+                                    className="pl-9 h-9" />
+                            </div>
+                            {search && (
+                                <Button size="sm" variant="outline" onClick={handleSemanticSearch} disabled={searching} className="h-9 shrink-0">
+                                    {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "AI"}
+                                </Button>
+                            )}
                         </div>
                     )}
                 </div>
+
+                {/* Semantic Search Results */}
+                {searchResults && searchResults.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                        <p className="text-xs text-muted-foreground px-1">AI semantic search: {searchResults.length} results</p>
+                        <div className="grid gap-2 md:grid-cols-2">
+                            {searchResults.map((r, i) => (
+                                <div key={i} className="flex items-start gap-2 rounded-lg border bg-card p-3 text-sm">
+                                    <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[10px] font-mono",
+                                        r.score >= 0.5 ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" :
+                                        r.score >= 0.3 ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300" :
+                                        "bg-muted text-muted-foreground"
+                                    )}>{(r.score * 100).toFixed(0)}%</span>
+                                    <div className="min-w-0">
+                                        <p className="text-xs leading-relaxed line-clamp-2">{r.text}</p>
+                                        <span className="text-[10px] text-muted-foreground bg-muted px-1 py-0.5 rounded mt-1 inline-block">{r.metadata?.type}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {filteredPapers.map((paper) => (
