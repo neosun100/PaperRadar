@@ -1,5 +1,17 @@
 # PaperRadar Changelog
 
+## v1.3.1 (2026-02-23)
+- Startup deduplication for pending tasks
+- Literature Review generation (v1.3.0)
+- Auto knowledge extraction on every paper completion (v1.2.0)
+- Fix asyncio import scope bug (v1.2.1)
+- KB paper count stats (v1.2.2)
+
+## v1.1.0 (2026-02-22)
+- Smart Recommendations via Semantic Scholar API
+- Radar page: "For You" tab with personalized suggestions
+- Enriched TODO roadmap with 9 design inspirations
+
 ## v1.0.0 (2026-02-22) 🎉
 - Trending Papers: HuggingFace 7d/14d/30d trending with upvote ranking
 - Radar page overhaul: Discoveries + Trending tabs, reusable PaperCard
