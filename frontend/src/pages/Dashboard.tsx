@@ -204,7 +204,7 @@ const Dashboard = () => {
                     </div>
                     <div className="rounded-xl border bg-card p-4 text-center">
                         <p className="text-2xl font-bold text-green-600">{tasks.filter(t => t.status === "completed").length}</p>
-                        <p className="text-xs text-muted-foreground">Completed</p>
+                        <p className="text-xs text-muted-foreground">{t("dashboard.completed")}</p>
                     </div>
                     <div className="rounded-xl border bg-card p-4 text-center">
                         <p className="text-2xl font-bold text-emerald-600">{radarStatus?.papers_found || 0}</p>

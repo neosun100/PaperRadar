@@ -40,6 +40,7 @@
     "processingCount": "{{count}} processing",
     "queuedCount": "{{count}} queued",
     "read": "Read",
+    "completed": "Completed",
     "taskDeleted": "Task deleted.",
     "taskDeleteFailed": "Failed to delete task.",
     "noDocsMatch": "No matching documents found.",

@@ -40,6 +40,7 @@
     "processingCount": "{{count}} 个处理中",
     "queuedCount": "{{count}} 个排队中",
     "read": "阅读",
+    "completed": "已完成",
     "taskDeleted": "任务已删除。",
     "taskDeleteFailed": "删除任务失败。",
     "noDocsMatch": "未找到匹配的文档。",

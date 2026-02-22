@@ -310,7 +310,13 @@ class RadarEngine:
                 )
                 if resp.status_code == 200:
                     data = resp.json().get("data", [])
-                    for item in data:
+                elif resp.status_code == 429:
+                    logger.info("Semantic Scholar rate limited, skipping")
+                    return papers
+                else:
+                    logger.warning("Semantic Scholar returned %d", resp.status_code)
+                    return papers
+                for item in data:
                         arxiv_id = (item.get("externalIds") or {}).get("ArXiv", "")
                         if not arxiv_id:
                             continue
