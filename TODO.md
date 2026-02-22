@@ -189,3 +189,5 @@ Key insights from the arXiv ecosystem research:
 ---
 
 *Last updated: 2026-02-22*
+
+> **Note**: Version history moved to CHANGELOG.md for cleaner separation.
