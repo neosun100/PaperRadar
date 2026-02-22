@@ -103,6 +103,9 @@ const KnowledgeBase = () => {
                 <div className="relative z-10 mx-auto max-w-2xl text-center space-y-4">
                     <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">{t("knowledge.title")}</h1>
                     <p className="text-lg text-muted-foreground">{t("knowledge.subtitle")}</p>
+                    {papers.length > 0 && (
+                        <p className="text-sm text-muted-foreground">{papers.length} {t("knowledge.papers").toLowerCase()} · {papers.filter(p => p.extraction_status === "completed").length} {t("dashboard.completed").toLowerCase()}</p>
+                    )}
                     <div className="flex flex-wrap justify-center gap-3 pt-2">
                         <Button variant="outline" className="gap-2" onClick={() => navigate("/knowledge/insights")}>
                             <Sparkles className="h-4 w-4" /> {t("insights.title")}
