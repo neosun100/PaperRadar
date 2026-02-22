@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2, MessageCircle, Send } from "lucide-react";
+import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2, MessageCircle, Send, Headphones, Play, Pause, RotateCcw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";

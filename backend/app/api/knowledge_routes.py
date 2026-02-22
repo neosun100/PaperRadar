@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,8 @@ from ..models.knowledge import (
 from ..models.task import Task, TaskStatus
 from ..services.knowledge_extractor import KnowledgeExtractor
 from .deps import get_llm_config
+
+logger = logging.getLogger(__name__)
 
 
 def create_knowledge_router() -> APIRouter:
@@ -554,6 +557,66 @@ def create_knowledge_router() -> APIRouter:
         csl_bytes = KnowledgeExporter.export_csl_json(papers_json)
         return Response(content=csl_bytes, media_type="application/json",
                         headers={"Content-Disposition": "attachment; filename=paperradar_references.json"})
+
+    # ------------------------------------------------------------------
+    # 音频摘要 (Paper Audio Summary)
+    # ------------------------------------------------------------------
+
+    @router.post("/papers/{paper_id}/audio")
+    async def generate_audio_summary(paper_id: str, request: Request) -> dict[str, Any]:
+        from ..services.audio_summary import AudioSummaryService
+        llm_config = get_llm_config(request)
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper or not paper.knowledge_json:
+            raise HTTPException(404, "Paper not found or knowledge not extracted")
+
+        svc = AudioSummaryService(
+            api_key=llm_config["api_key"],
+            model=llm_config.get("model", ""),
+            base_url=llm_config.get("base_url", ""),
+        )
+
+        # Check cache first
+        cached = svc.get_cached(paper_id)
+        if cached:
+            return {"status": "ready", "url": f"/api/knowledge/papers/{paper_id}/audio/file"}
+
+        # Generate in background
+        async def _do_generate():
+            try:
+                await svc.generate(paper_id, paper.knowledge_json)
+            except Exception as e:
+                logger.error("Audio generation failed for %s: %s", paper_id, e)
+
+        asyncio.create_task(_do_generate())
+        return {"status": "generating"}
+
+    @router.get("/papers/{paper_id}/audio/status")
+    async def audio_status(paper_id: str) -> dict[str, Any]:
+        from ..services.audio_summary import AudioSummaryService
+        svc = AudioSummaryService("", "", "")
+        cached = svc.get_cached(paper_id)
+        if cached:
+            return {"status": "ready", "url": f"/api/knowledge/papers/{paper_id}/audio/file"}
+        return {"status": "not_found"}
+
+    @router.get("/papers/{paper_id}/audio/file")
+    async def get_audio_file(paper_id: str):
+        from fastapi.responses import FileResponse as FR
+        from ..services.audio_summary import AudioSummaryService
+        svc = AudioSummaryService("", "", "")
+        cached = svc.get_cached(paper_id)
+        if not cached:
+            raise HTTPException(404, "Audio not generated yet")
+        return FR(str(cached), media_type="audio/mpeg", filename=f"{paper_id}.mp3")
+
+    @router.delete("/papers/{paper_id}/audio")
+    async def delete_audio(paper_id: str) -> dict[str, str]:
+        from ..services.audio_summary import AudioSummaryService
+        svc = AudioSummaryService("", "", "")
+        svc.delete_cached(paper_id)
+        return {"status": "deleted"}
 
     # ------------------------------------------------------------------
     # Helpers
