@@ -78,12 +78,24 @@ class RadarEngine:
             await self._scan_and_process()
 
     async def _scan_and_process(self) -> None:
-        """扫描 + 后台异步处理前 3 篇"""
+        """扫描 + 仅在队列空闲时处理新论文"""
         try:
+            # Check how many tasks are currently active
+            from ..models.task import TaskStatus
+            active_statuses = {TaskStatus.PARSING, TaskStatus.REWRITING, TaskStatus.RENDERING, TaskStatus.HIGHLIGHTING, TaskStatus.PENDING}
+            tasks = self._task_manager.list_tasks(limit=200)
+            active_count = sum(1 for t in tasks if t.status in active_statuses)
+
+            if active_count >= 3:
+                logger.info("Radar: %d tasks active, skipping auto-process (will scan only)", active_count)
+                await self.scan()  # Still scan to discover papers, just don't process
+                return
+
             papers = await self.scan()
             if papers and self._task_manager and self._processor:
-                # Process in background — don't block the radar loop
-                asyncio.create_task(self._auto_process(papers[:3]))
+                slots = max(0, 3 - active_count)
+                if slots > 0:
+                    asyncio.create_task(self._auto_process(papers[:slots]))
         except Exception:
             logger.exception("Radar scan failed")
 
