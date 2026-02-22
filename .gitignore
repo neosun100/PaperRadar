@@ -30,3 +30,6 @@ backend/models/
 # Test / debug files
 reproduce_issue.py
 *.pdf
+PROMPT.md
+ralph-progress.md
+.ralph-*

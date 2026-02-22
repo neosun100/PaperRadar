@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain } from "lucide-react";
+import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import api from "@/lib/api";
+import api, { getLLMConfig } from "@/lib/api";
+import LLMSettings from "@/components/LLMSettings";
 
 const MAX_FILE_SIZE_MB = 50;
 
@@ -33,6 +34,8 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const abortRef = useRef<AbortController | null>(null);
     const pollIntervalRef = useRef<number>(2000);
+    const [showSetup, setShowSetup] = useState(false);
+    const hasLLMConfig = !!getLLMConfig();
 
     const fetchTasks = useCallback(async () => {
         try {
@@ -174,6 +177,25 @@ const Dashboard = () => {
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
+            {/* First-use guide */}
+            {!hasLLMConfig && (
+                <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-6 text-center space-y-3">
+                    <h2 className="text-lg font-semibold">Welcome to EasyPaper! 👋</h2>
+                    <p className="text-sm text-muted-foreground">Configure your LLM API key to get started. Your key stays in your browser only.</p>
+                    <div className="flex items-center justify-center gap-3">
+                        <Button onClick={() => setShowSetup(true)} className="gap-2">
+                            <Settings className="h-4 w-4" /> Set Up API Key
+                        </Button>
+                        <a href="https://github.com/neosun100/EasyPaper" target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" className="gap-2">
+                                ⭐ Star on GitHub
+                            </Button>
+                        </a>
+                    </div>
+                </div>
+            )}
+            <LLMSettings open={showSetup} onOpenChange={setShowSetup} />
+
             {/* Hero Section with Drop Zone */}
             <section
                 onDragOver={handleDragOver}

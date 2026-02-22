@@ -16,6 +16,7 @@ engine = create_engine(config.database.url, echo=False, connect_args=connect_arg
 def init_db():
     # Import models to register them with SQLModel metadata
     from ..models import knowledge  # noqa: F401
+    from ..models import task  # noqa: F401
 
     # Ensure the database directory exists for SQLite
     from .config import get_config

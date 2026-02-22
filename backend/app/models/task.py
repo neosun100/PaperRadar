@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 
 from sqlmodel import Field, SQLModel
 
 
-class TaskStatus(StrEnum):
+class TaskStatus(str, Enum):
     PENDING = "pending"
     PARSING = "parsing"
     REWRITING = "rewriting"
@@ -19,7 +19,7 @@ class TaskStatus(StrEnum):
 class TaskProgress(SQLModel):
     status: TaskStatus = TaskStatus.PENDING
     percent: int = 0
-    message: str = "任务已排队"
+    message: str = "Task queued"
     error: str | None = None
 
 
@@ -31,14 +31,13 @@ class TaskResult(SQLModel):
 
 class Task(SQLModel, table=True):
     task_id: str = Field(primary_key=True)
-    user_id: int | None = Field(default=None, index=True)
     filename: str
-    mode: str = Field(default="translate")  # "translate" or "simplify"
+    mode: str = Field(default="translate")
 
     # Progress fields
     status: TaskStatus = Field(default=TaskStatus.PENDING)
     percent: int = Field(default=0)
-    message: str = Field(default="任务已排队")
+    message: str = Field(default="Task queued")
     error: str | None = Field(default=None)
 
     # Highlight
@@ -52,8 +51,8 @@ class Task(SQLModel, table=True):
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    # User ownership
-    user_id: int | None = Field(default=None, foreign_key="user.id")
+    # No user_id foreign key — BYOK mode, no auth
+    user_id: int | None = Field(default=None, index=True)
 
     @property
     def progress(self) -> TaskProgress:
@@ -61,5 +60,4 @@ class Task(SQLModel, table=True):
 
     @property
     def result(self) -> TaskResult:
-        # Note: pdf_bytes is None here because we don't load it from disk automatically
-        return TaskResult(pdf_bytes=None, preview_html=self.result_preview_html, filename=f"simplified_{self.filename}")
+        return TaskResult(pdf_bytes=None, preview_html=self.result_preview_html, filename=f"processed_{self.filename}")

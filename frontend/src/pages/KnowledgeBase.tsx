@@ -64,7 +64,9 @@ const KnowledgeBase = () => {
     }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchPapers();
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchDueCount();
     }, [fetchPapers, fetchDueCount]);
 

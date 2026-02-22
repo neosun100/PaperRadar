@@ -36,7 +36,8 @@ class DocumentProcessor:
         self.task_manager = task_manager
 
     async def process(
-        self, task_id: str, file_bytes: bytes, filename: str, mode: str = "translate", highlight: bool = False
+        self, task_id: str, file_bytes: bytes, filename: str, mode: str = "translate", highlight: bool = False,
+        llm_config: dict | None = None,
     ) -> None:
         """使用 pdf2zh 处理 PDF 文档"""
 
@@ -45,10 +46,15 @@ class DocumentProcessor:
         else:
             self.task_manager.update_progress(task_id, TaskStatus.PARSING, 10, "正在准备翻译...")
 
-        # 设置 pdf2zh 环境变量
-        os.environ["OPENAILIKED_BASE_URL"] = self.config.llm.base_url
-        os.environ["OPENAILIKED_API_KEY"] = self.config.llm.api_key
-        os.environ["OPENAILIKED_MODEL"] = self.config.llm.model
+        # Use per-request LLM config if provided, else fallback to config.yaml
+        cfg = llm_config or {}
+        base_url = cfg.get("base_url") or self.config.llm.base_url
+        api_key = cfg.get("api_key") or self.config.llm.api_key
+        model = cfg.get("model") or self.config.llm.model
+
+        os.environ["OPENAILIKED_BASE_URL"] = base_url
+        os.environ["OPENAILIKED_API_KEY"] = api_key
+        os.environ["OPENAILIKED_MODEL"] = model
 
         try:
             # 在线程中运行 pdf2zh（同步库）
@@ -73,9 +79,9 @@ class DocumentProcessor:
                 )
                 try:
                     highlight_service = HighlightService(
-                        api_key=self.config.llm.api_key,
-                        model=self.config.llm.model,
-                        base_url=self.config.llm.base_url,
+                        api_key=api_key,
+                        model=model,
+                        base_url=base_url,
                     )
                     async with highlight_service:
                         pdf_bytes, stats = await highlight_service.highlight_pdf(pdf_bytes)

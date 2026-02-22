@@ -30,4 +30,19 @@ def test_login_wrong_password(client):
 def test_health(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    data = response.json()
+    assert data["status"] == "ok"
+    assert "version" in data
+    assert "uptime_seconds" in data
+
+
+def test_swagger_docs(client):
+    response = client.get("/api/docs")
+    assert response.status_code == 200
+
+
+def test_openapi_json(client):
+    response = client.get("/api/openapi.json")
+    assert response.status_code == 200
+    data = response.json()
+    assert "paths" in data

@@ -10,10 +10,10 @@ from pydantic import BaseModel, Field
 
 
 class LLMConfig(BaseModel):
-    api_key: str = Field(..., alias="api_key")
-    base_url: str = Field("https://api.zhizengzeng.com/v1", alias="base_url")
-    model: str = Field("gemini-2.5-flash", alias="model")
-    judge_model: str = Field("gemini-2.5-flash", alias="judge_model")
+    api_key: str = Field("", alias="api_key")
+    base_url: str = Field("https://api.openai.com/v1", alias="base_url")
+    model: str = Field("gpt-4o", alias="model")
+    judge_model: str = Field("gpt-4o", alias="judge_model")
 
 
 class ProcessingConfig(BaseModel):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -10,34 +11,41 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from .api.auth import router as auth_router
-from .api.knowledge_routes import create_knowledge_router
 from .api.routes import create_router
+from .api.knowledge_routes import create_knowledge_router
 from .core.config import get_config
 from .core.db import init_db
 from .core.logger import setup_logging
 from .services.document_processor import DocumentProcessor
-from .services.knowledge_extractor import KnowledgeExtractor
 from .services.task_manager import TaskManager
 
 setup_logging()
 config = get_config()
 task_manager = TaskManager(ttl_minutes=config.storage.cleanup_minutes)
 processor = DocumentProcessor(config=config, task_manager=task_manager)
-knowledge_extractor = KnowledgeExtractor(
-    api_key=config.llm.api_key,
-    model=config.llm.model,
-    base_url=config.llm.base_url,
-)
+
+_start_time = time.time()
 
 limiter = Limiter(key_func=get_remote_address)
-app = FastAPI(title="PDF Simplifier", version="1.0.0")
+app = FastAPI(
+    title="EasyPaper API",
+    version="2.0.0",
+    description="Turn academic papers into knowledge you keep. BYOK edition.",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+)
 app.state.limiter = limiter
 
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    return JSONResponse(status_code=429, content={"detail": "请求过于频繁，请稍后重试"})
+    return JSONResponse(status_code=429, content={"error": "rate_limited", "detail": "Too many requests, please try again later"})
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(status_code=500, content={"error": "internal_error", "detail": "An unexpected error occurred"})
 
 
 app.add_middleware(
@@ -48,14 +56,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router, prefix="/api/auth")
+# No auth router — BYOK mode
 app.include_router(create_router(task_manager, processor))
-app.include_router(create_knowledge_router(knowledge_extractor))
+app.include_router(create_knowledge_router())
 
 
 @app.get("/health")
 async def healthcheck() -> dict:
-    return {"status": "ok"}
+    uptime = int(time.time() - _start_time)
+    return {"status": "ok", "version": "2.0.0", "uptime_seconds": uptime}
 
 
 @app.on_event("startup")
@@ -70,6 +79,5 @@ async def run_cleanup_task() -> None:
         await asyncio.sleep(60 * config.storage.cleanup_minutes)
         try:
             task_manager.cleanup()
-        except Exception as exc:  # noqa: BLE001
-            # 避免 cleanup 失败导致整个循环退出
-            print(f"Cleanup failed: {exc}")
+        except Exception:
+            pass

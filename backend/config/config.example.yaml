@@ -1,23 +1,34 @@
+# EasyPaper Configuration
+# Copy this file to config.yaml and customize as needed.
+# LLM settings are OPTIONAL here — users provide their own API key via the browser UI (BYOK).
+
 llm:
-  api_key: "YOUR_API_KEY"
-  base_url: "https://openrouter.ai/api/v1"
-  model: "gemini-2.5-flash"
-  judge_model: "gemini-2.5-flash"
+  api_key: ""                                # Optional fallback — users bring their own key via UI
+  base_url: "https://api.openai.com/v1"      # Optional fallback API base URL
+  model: "gpt-4o"                            # Optional fallback model
+  judge_model: "gpt-4o"                      # Optional fallback judge model
+
 processing:
-  max_pages: 100
-  max_upload_mb: 50
-  max_concurrent: 3
-  preview_html: true
+  max_pages: 100          # Maximum pages per PDF
+  max_upload_mb: 50       # Maximum upload file size in MB
+  max_concurrent: 3       # Concurrent processing tasks
+  preview_html: true      # Generate HTML preview
+
 security:
-  secret_key: "CHANGE_THIS_TO_A_SECURE_SECRET_KEY"
+  secret_key: "not-used-in-byok-mode"
   cors_origins:
     - "http://localhost:5173"
     - "http://127.0.0.1:5173"
+    - "http://localhost:9201"
+    - "http://127.0.0.1:9201"
+
 storage:
   cleanup_minutes: 30
-  temp_dir: "./backend/tmp"
+  temp_dir: "./tmp"
+
 database:
-  url: "sqlite:///./backend/data/app.db"
+  url: "sqlite:///./data/app.db"
+
 logging:
   level: "INFO"
-  file: "./backend/logs/app.log"
+  file: "./logs/app.log"

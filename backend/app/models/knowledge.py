@@ -8,24 +8,19 @@ from sqlmodel import Field, SQLModel
 
 
 class PaperKnowledge(SQLModel, table=True):
-    """论文知识根表，knowledge_json 存储完整可迁移 JSON 文档。"""
-
     id: str = Field(primary_key=True)
     task_id: str | None = Field(default=None, index=True)
-    user_id: int = Field(foreign_key="user.id", index=True)
+    user_id: int = Field(default=0, index=True)
 
-    # 元数据（索引用）
     title: str = Field(default="")
     doi: str | None = Field(default=None, index=True)
     arxiv_id: str | None = Field(default=None)
     year: int | None = Field(default=None)
     venue: str | None = Field(default=None)
 
-    # 完整可迁移 JSON 文档
     knowledge_json: str | None = Field(default=None)
 
-    # 提取状态
-    extraction_status: str = Field(default="pending")  # pending|extracting|completed|error
+    extraction_status: str = Field(default="pending")
     extraction_model: str | None = Field(default=None)
     extraction_error: str | None = Field(default=None)
 
@@ -34,46 +29,39 @@ class PaperKnowledge(SQLModel, table=True):
 
 
 class KnowledgeEntity(SQLModel, table=True):
-    """实体索引表，支持图谱查询和跨论文去重。"""
-
     id: str = Field(primary_key=True)
     paper_id: str = Field(foreign_key="paperknowledge.id", index=True)
-    user_id: int = Field(foreign_key="user.id", index=True)
+    user_id: int = Field(default=0, index=True)
 
     name: str = Field(index=True)
-    type: str  # method|model|dataset|metric|concept|task|person|organization
+    type: str
     aliases_json: str | None = Field(default=None)
     definition: str | None = Field(default=None)
     importance: float = Field(default=0.5)
 
 
 class KnowledgeRelationship(SQLModel, table=True):
-    """实体间关系索引表。"""
-
     id: str = Field(primary_key=True)
     paper_id: str = Field(foreign_key="paperknowledge.id", index=True)
-    user_id: int = Field(foreign_key="user.id", index=True)
+    user_id: int = Field(default=0, index=True)
 
     source_entity_id: str = Field(index=True)
     target_entity_id: str = Field(index=True)
-    type: str  # extends|uses|evaluates_on|outperforms|similar_to|contradicts|part_of|requires
+    type: str
     description: str | None = Field(default=None)
     confidence: float = Field(default=0.5)
 
 
 class Flashcard(SQLModel, table=True):
-    """间隔重复闪卡，SM-2 算法字段。"""
-
     id: str = Field(primary_key=True)
     paper_id: str = Field(foreign_key="paperknowledge.id", index=True)
-    user_id: int = Field(foreign_key="user.id", index=True)
+    user_id: int = Field(default=0, index=True)
 
     front: str
     back: str
     tags_json: str | None = Field(default=None)
     difficulty: int = Field(default=3)
 
-    # SM-2 SRS 字段
     interval_days: float = Field(default=1.0)
     ease_factor: float = Field(default=2.5)
     repetitions: int = Field(default=0)
@@ -82,15 +70,13 @@ class Flashcard(SQLModel, table=True):
 
 
 class UserAnnotation(SQLModel, table=True):
-    """用户笔记/标注。"""
-
     id: str = Field(primary_key=True)
     paper_id: str = Field(foreign_key="paperknowledge.id", index=True)
-    user_id: int = Field(foreign_key="user.id", index=True)
+    user_id: int = Field(default=0, index=True)
 
-    type: str  # note|highlight|question|todo
+    type: str
     content: str
-    target_type: str = Field(default="paper")  # paper|section|entity|finding
+    target_type: str = Field(default="paper")
     target_id: str = Field(default="")
     tags_json: str | None = Field(default=None)
 
