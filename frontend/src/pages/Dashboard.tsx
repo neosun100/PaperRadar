@@ -429,6 +429,9 @@ const Dashboard = () => {
                                             </Button>
                                         </div>
                                     )}
+                                    {task.status === "pending" && (
+                                        <p className="text-xs text-muted-foreground">{task.message || "Queued for processing..."}</p>
+                                    )}
                                     {task.status === "failed" && (
                                         <p className="text-xs text-red-500">{task.message || "Processing failed"}</p>
                                     )}
