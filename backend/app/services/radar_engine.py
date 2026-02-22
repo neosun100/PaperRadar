@@ -64,8 +64,11 @@ class RadarEngine:
             return
         logger.info("Radar engine started — categories: %s", self.radar_cfg.categories)
 
-        # 启动立即扫描
-        await self._scan_and_process()
+        # 启动时扫描（可配置）
+        if self.radar_cfg.scan_on_startup:
+            await self._scan_and_process()
+        else:
+            logger.info("Radar: skip startup scan (scan_on_startup=false)")
 
         # 然后等到下一个整点
         while True:

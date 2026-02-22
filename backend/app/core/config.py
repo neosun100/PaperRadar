@@ -23,6 +23,7 @@ class ProcessingConfig(BaseModel):
 class RadarConfig(BaseModel):
     enabled: bool = Field(False, alias="enabled")
     interval_hours: int = Field(1, alias="interval_hours")
+    scan_on_startup: bool = Field(True, alias="scan_on_startup")
     categories: list[str] = Field(default=["cs.CL", "cs.AI", "cs.LG"], alias="categories")
     topics: str = Field("LLM, large language model, agent, reasoning, RLHF, quantization, RAG", alias="topics")
     max_papers_per_scan: int = Field(10, alias="max_papers_per_scan")
