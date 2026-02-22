@@ -78,13 +78,14 @@ class RadarEngine:
             await self._scan_and_process()
 
     async def _scan_and_process(self) -> None:
-        """扫描 + 自动处理前 3 篇"""
+        """扫描 + 后台异步处理前 3 篇"""
         try:
             papers = await self.scan()
             if papers and self._task_manager and self._processor:
-                await self._auto_process(papers[:3])
+                # Process in background — don't block the radar loop
+                asyncio.create_task(self._auto_process(papers[:3]))
         except Exception:
-            logger.exception("Radar scan+process failed")
+            logger.exception("Radar scan failed")
 
     async def scan(self) -> list[dict]:
         """执行一次扫描：arXiv + Semantic Scholar → LLM 评分 → 去重 → 返回高相关论文"""
