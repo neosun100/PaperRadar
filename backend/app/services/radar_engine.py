@@ -318,15 +318,57 @@ class RadarEngine:
 
     async def _score_papers(self, papers: list[dict]) -> list[dict]:
         cfg = self.config.llm
-        if not cfg.api_key:
-            for p in papers:
-                p["score"] = 1.0
-            return papers
+        topics_lower = self.radar_cfg.topics.lower().split(",")
+        topics_lower = [t.strip() for t in topics_lower]
 
-        async with httpx.AsyncClient(base_url=cfg.base_url, timeout=60.0) as client:
-            sem = asyncio.Semaphore(5)
+        for p in papers:
+            # HuggingFace papers are community-curated, give them high score directly
+            if p.get("source") == "huggingface":
+                p["score"] = 0.95
+                p["reason"] = "HuggingFace community-curated trending paper"
+                continue
+            # Semantic Scholar high-citation papers get a boost
+            if p.get("source") == "semantic_scholar" and p.get("citations", 0) > 10:
+                p["score"] = 0.9
+                p["reason"] = f"High citations ({p.get('citations', 0)})"
+                continue
+            # Quick keyword pre-filter for arXiv papers
+            title_lower = p.get("title", "").lower()
+            abstract_lower = p.get("abstract", "").lower()
+            text = title_lower + " " + abstract_lower
+            keyword_hits = sum(1 for t in topics_lower if t in text)
+            if keyword_hits == 0:
+                p["score"] = 0.3
+                p["reason"] = "No keyword match"
+                continue
+            if keyword_hits >= 2:
+                p["score"] = 0.85
+                p["reason"] = f"Multiple keyword matches ({keyword_hits})"
+                continue
+            # Single keyword match — use LLM for precise scoring if available
+            p["_needs_llm"] = True
 
-            async def score_one(paper: dict) -> dict:
+        # LLM scoring only for papers that need it
+        needs_llm = [p for p in papers if p.get("_needs_llm")]
+        if needs_llm and cfg.api_key:
+            await self._llm_score_batch(needs_llm, cfg)
+        else:
+            for p in needs_llm:
+                p["score"] = 0.75
+                p["reason"] = "Single keyword match"
+
+        # Cleanup temp flag
+        for p in papers:
+            p.pop("_needs_llm", None)
+
+        return papers
+
+    async def _llm_score_batch(self, papers: list[dict], cfg) -> None:
+        """LLM 评分（仅对需要精确评分的论文）"""
+        async with httpx.AsyncClient(base_url=cfg.base_url, timeout=90.0) as client:
+            sem = asyncio.Semaphore(2)
+
+            async def score_one(paper: dict) -> None:
                 async with sem:
                     try:
                         prompt = RELEVANCE_PROMPT.format(topics=self.radar_cfg.topics)
@@ -340,17 +382,12 @@ class RadarEngine:
                             headers={"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"},
                         )
                         resp.raise_for_status()
-                        raw = resp.json()["choices"][0]["message"]["content"]
-                        # Handle thinking models that may have empty content
+                        raw = resp.json()["choices"][0]["message"].get("content", "")
                         if not raw or not raw.strip():
-                            paper["score"] = 0.8
-                            paper["reason"] = "model returned empty, included by default"
-                            return paper
+                            paper["score"] = 0.75
+                            paper["reason"] = "LLM returned empty"
+                            return
                         content = raw.strip()
-                        if content.startswith("```"):
-                            lines = content.split("\n")
-                            content = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-                        # Try to find JSON in response
                         start = content.find("{")
                         end = content.rfind("}")
                         if start != -1 and end != -1:
@@ -361,11 +398,10 @@ class RadarEngine:
                         paper["reason"] = data.get("reason", "")
                     except Exception as e:
                         logger.warning("Score failed for %s: %s", paper["arxiv_id"], e)
-                        paper["score"] = 0.8
-                        paper["reason"] = "scoring failed, included by default"
-                    return paper
+                        paper["score"] = 0.75
+                        paper["reason"] = "scoring failed"
 
-            return await asyncio.gather(*[score_one(p) for p in papers])
+            await asyncio.gather(*[score_one(p) for p in papers])
 
     async def _notify(self, papers: list[dict]) -> None:
         try:
