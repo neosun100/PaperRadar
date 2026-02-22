@@ -110,11 +110,24 @@ async def on_startup() -> None:
             session.commit()
             logger.info("Reset %d zombie tasks after restart", len(stuck))
 
-    # Re-process pending tasks that have original PDFs
+    # Re-process pending tasks that have original PDFs (deduplicated)
     pending_tasks = []
     with Session(db_eng) as session:
         pending_tasks = session.exec(select(Task).where(Task.status == TaskStatus.PENDING)).all()
         pending_tasks = [t for t in pending_tasks if t.original_pdf_path and Path(t.original_pdf_path).exists()]
+        # Deduplicate by filename — keep newest, delete rest
+        seen_names = {}
+        dedup_tasks = []
+        for t in sorted(pending_tasks, key=lambda x: x.created_at or "", reverse=True):
+            if t.filename not in seen_names:
+                seen_names[t.filename] = t
+                dedup_tasks.append(t)
+            else:
+                session.delete(t)
+        if len(dedup_tasks) < len(pending_tasks):
+            session.commit()
+            logger.info("Removed %d duplicate pending tasks", len(pending_tasks) - len(dedup_tasks))
+        pending_tasks = dedup_tasks
 
     if pending_tasks:
         logger.info("Re-queuing %d pending tasks for processing", len(pending_tasks))
