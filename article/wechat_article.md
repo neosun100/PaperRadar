@@ -1,173 +1,99 @@
-# EasyPaper：让英文论文阅读效率翻倍的 AI 工具，一键部署指南
+>微信公众号：**[AI健自习室]**
+>关注Crypto与LLM技术、关注`AI-StudyLab`。问题或建议，请公众号留言。
 
-> 一键部署系列 | 项目难度：⭐⭐ | 部署时间：5 分钟
+# 【一键部署系列】｜｜Paper｜EasyPaper 让英文论文不再难读，自带翻译+AI高亮+知识库
 
----
+>[!info]
+>**原项目**: [CzsGit/EasyPaper](https://github.com/CzsGit/EasyPaper)
+>**增强版**: [neosun100/EasyPaper](https://github.com/neosun100/EasyPaper)
+>**在线体验**: [https://easypaper.aws.xin](https://easypaper.aws.xin)
 
-## 📖 前言
+> 读英文论文最痛苦的不是理解不了内容——而是读了三遍才发现自己一直在查单词，根本没进入深度思考。EasyPaper 就是为了解决这个问题：上传 PDF，拿回一份翻译好的、重点高亮好的、知识结构化好的论文。你自带 API Key，数据不离开你的浏览器。
 
-读英文论文是每个科研人、技术人的日常，但这个过程往往痛苦而低效：
-
-- 专业词汇太多，一边读一边查词典
-- 读完就忘，知识留不住
-- 论文之间的关联理不清
-- 笔记散落各处，无法系统化
-
-如果有一个工具，能帮你**翻译论文**、**简化英文**、**自动高亮重点**、**提取知识图谱**、**生成闪卡复习**，而且**数据完全自主**——那就是今天介绍的 EasyPaper。
-
-**在线体验：** https://easypaper.aws.xin
-
-**测试账号：** neo@test.com / test123456
+![EasyPaper 宣传图](https://zfile.aws.xin/directlink/1/easypaper/banner.png)
 
 ---
 
-## 🔍 项目介绍
+## 🤔 为什么做这个？
 
-EasyPaper 是一个开源的学术论文辅助阅读工具，支持自部署。核心理念是：**把论文变成带得走的知识**。
+每个搞 AI 的人都有同一个痛点：**论文读不完，读不快，读不透。**
 
-上传一篇 PDF 论文，EasyPaper 会帮你完成从「读」到「记」的全流程：
+我试过很多工具：
+- **Google 翻译** — 翻译质量勉强，但排版全毁了，公式变乱码
+- **ChatGPT 直接扔 PDF** — 回答挺好，但我想要的是一份完整的翻译版 PDF，不是问答
+- **各种论文阅读器** — 要么收费，要么数据上传到别人服务器，隐私堪忧
 
-![项目截图](imgs/img-0.png)
+我想要的很简单：**一个自部署的工具，用我自己的 API Key，翻译完保持原始排版，顺便帮我高亮重点、提取知识。**
 
-**GitHub：** https://github.com/neosun100/EasyPaper
+于是有了 EasyPaper。
 
----
+### 现有方案 vs EasyPaper
 
-## 🎯 六大核心功能
-
-### 1️⃣ 论文翻译（英 → 中）
-
-基于 pdf2zh（PDFMathTranslate）引擎，翻译后**完整保留原始排版**——图表、公式、页眉页脚都不会乱。
-
-![翻译效果](imgs/img-0.png)
-
-这不是简单的文字替换，而是真正理解 PDF 结构后的版面级翻译。
-
-### 2️⃣ 英文简化
-
-如果你更想练英文阅读能力，EasyPaper 支持将学术英语简化为 CEFR A2/B1 级别（约 2000 常用词），降低阅读门槛的同时保留原文含义。
-
-![简化效果](imgs/img-1.png)
-
-### 3️⃣ AI 智能高亮
-
-上传论文后，AI 自动识别三类关键信息，用颜色标注：
-
-| 颜色 | 含义 | 标注内容 |
-|------|------|---------|
-| 🟡 黄色 | 核心结论 | 主要发现和研究成果 |
-| 🔵 蓝色 | 方法创新 | 新颖方法和技术贡献 |
-| 🟢 绿色 | 关键数据 | 定量结果、指标、实验数据 |
-
-![AI高亮效果](imgs/img-5.png)
-
-再也不用满篇论文找重点了！
-
-### 4️⃣ 便携知识库
-
-通过 LLM 从论文中提取结构化知识，以 JSON 格式存储：
-
-- **实体提取**：方法、模型、数据集、指标、概念、人物、机构
-- **关系推理**：扩展、使用、优于、类似、矛盾等
-- **发现归纳**：结果、局限性、贡献，附带证据引用
-
-![知识库](imgs/img-2.png)
-
-![研究发现](imgs/img-3.png)
-
-最重要的是——**你的知识不被锁定**。支持导出为 Obsidian Vault、BibTeX、CSL-JSON、CSV 等多种格式。
-
-### 5️⃣ 知识图谱
-
-跨论文的实体与关系自动构建为**交互式力导向图谱**：
-
-- 按实体类型着色
-- 按重要性调整节点大小
-- 支持搜索和缩放
-- 一眼看清研究脉络
-
-论文读多了，知识图谱的价值就越大。
-
-### 6️⃣ 闪卡复习
-
-内置 SM-2 间隔重复系统，自动从论文中生成闪卡。按 0-5 评分记忆效果，系统自动安排最优复习间隔。
-
-![闪卡复习](imgs/img-4.png)
-
-「艾宾浩斯遗忘曲线」告诉我们，不复习就会忘。EasyPaper 帮你把论文知识真正记住。
+| 特性 | Google 翻译 | ChatGPT | Kimi/通义 | **EasyPaper** |
+|------|-----------|---------|----------|--------------|
+| PDF 翻译保留排版 | ❌ 全毁 | ❌ 纯文本 | ⚠️ 部分 | ✅ 完整保留 |
+| 公式/图片保留 | ❌ | ❌ | ⚠️ | ✅ |
+| AI 重点高亮 | ❌ | ❌ | ❌ | ✅ 三色分类 |
+| 知识库提取 | ❌ | ⚠️ 手动 | ❌ | ✅ 自动结构化 |
+| 知识图谱 | ❌ | ❌ | ❌ | ✅ |
+| 闪卡复习 | ❌ | ❌ | ❌ | ✅ SM-2 算法 |
+| 自部署 | - | - | - | ✅ Docker |
+| 数据隐私 | ❌ 上传 Google | ❌ 上传 OpenAI | ❌ 上传云端 | ✅ 自带 Key |
 
 ---
 
-## 🐳 一键部署
-
-### 环境要求
-
-- Docker + Docker Compose
-- 一个 OpenAI 兼容的 LLM API Key（支持 GPT、Claude、Gemini 等）
-
-### 部署步骤
+## 🚀 30 秒部署
 
 ```bash
-# 1. 克隆项目
 git clone https://github.com/neosun100/EasyPaper.git
 cd EasyPaper
-
-# 2. 配置 API Key
-cp backend/config/config.example.yaml backend/config/config.yaml
-```
-
-编辑 `backend/config/config.yaml`，填入你的 API Key：
-
-```yaml
-llm:
-  api_key: "YOUR_API_KEY"
-  base_url: "https://api.example.com/v1"
-  model: "gemini-2.5-flash"
-```
-
-```bash
-# 3. 一键启动
 docker compose up --build -d
 ```
 
-启动后访问 **http://localhost:9201** 即可使用。
+打开 `http://localhost:9201` —— 搞定。不需要注册，不需要登录，打开就用。
 
-### 端口说明
+第一次使用时，点右上角 ⚙️ 配置你的 API Key（支持 OpenAI / Anthropic / OpenRouter 等任何 OpenAI 兼容 API）。
 
-| 服务 | 端口 | 说明 |
-|------|------|------|
-| 前端 | 9201 | Web 界面 |
-| 后端 | 9200 | API 服务 |
+> 🔒 你的 API Key 只存在浏览器的 localStorage 中，永远不会上传到服务器。
 
 ---
 
-## 📱 使用演示
+## ✨ 核心功能
 
-### 第一步：注册登录
+### 1. 翻译 & 简化
 
-打开浏览器访问部署地址，注册一个账号。
+- **英→中翻译**：保留 PDF 原始排版、图片、公式（基于 [pdf2zh](https://github.com/Byaidu/PDFMathTranslate)）
+- **英→简单英语**：CEFR A2/B1 级别词汇替换，适合非母语读者
+- PDF 进，PDF 出 —— 图表、公式、格式完整保留
 
-### 第二步：上传论文
+![EasyPaper UI](https://zfile.aws.xin/directlink/1/easypaper/screenshot_ui.png)
 
-点击上传，选择一篇英文 PDF 论文。可以选择：
-- **翻译模式**：英文 → 中文
-- **简化模式**：学术英语 → 简单英语
-- **AI 高亮**：自动标注重点（可与上述模式叠加）
+### 2. AI 智能高亮
 
-### 第三步：查看结果
+自动识别论文关键句子，三色分类：
 
-处理完成后，下载翻译/简化后的 PDF，重点句子已用颜色标注。
+| 颜色 | 类别 | 高亮内容 |
+|------|------|---------|
+| 🟡 黄色 | 核心结论 | 主要发现和研究成果 |
+| 🔵 蓝色 | 方法创新 | 新方法和技术贡献 |
+| 🟢 绿色 | 关键数据 | 定量结果、指标、实验数据 |
 
-### 第四步：探索知识库
+省去你满篇找重点的时间 —— AI 帮你标好了。
 
-进入知识库页面，查看从论文中提取的：
-- 结构化实体与关系
-- 研究发现与证据
-- 自动生成的闪卡
+### 3. 知识库（可导出）
 
-### 第五步：知识图谱
+通过 LLM 从论文中自动提取结构化知识：
 
-随着论文数量增加，知识图谱会越来越丰富，帮你建立系统化的学科认知。
+- **实体**：方法、模型、数据集、指标、概念
+- **关系**：extends、uses、outperforms、contradicts
+- **发现**：结果、局限性、贡献
+- **闪卡**：自动生成学习卡片，SM-2 间隔重复
+
+知识以 JSON 存储，支持导出为 **Obsidian 笔记库** 或 **BibTeX**，不锁定在任何平台。
+
+### 4. 知识图谱
+
+所有论文的实体和关系，以交互式图谱展示。节点可点击，关系可过滤。帮你看清论文之间的知识网络。
 
 ---
 
@@ -176,38 +102,75 @@ docker compose up --build -d
 | 组件 | 技术 |
 |------|------|
 | 后端 | FastAPI, PyMuPDF, pdf2zh, httpx |
-| 前端 | React 18, TypeScript, Vite, Tailwind CSS |
-| 数据库 | SQLite (SQLModel) |
-| AI | 任意 OpenAI 兼容 API |
-| 部署 | Docker Compose |
+| 前端 | React 18, TypeScript, Tailwind, Radix UI |
+| 数据库 | SQLite（零配置） |
+| AI | 任何 OpenAI 兼容 API（你自带 Key） |
+| 部署 | Docker Compose（两个容器：后端 + 前端） |
+
+### BYOK（Bring Your Own Key）架构
+
+这是 EasyPaper 最核心的设计决策：**工具是壳子，AI 是你的。**
+
+- API Key 存在浏览器 localStorage，不上传
+- 每个 API 请求通过 HTTP Header 传递你的 Key
+- 后端不存储任何凭证
+- 你可以随时换模型（GPT-4o → Claude → Gemini）
 
 ---
 
-## 💡 总结
+## ⚙️ 配置
 
-EasyPaper 解决了英文论文阅读的四大痛点：
+打开右上角 ⚙️，三个字段：
 
-1. **读不懂** → 翻译 + 简化，双管齐下
-2. **找不到重点** → AI 三色高亮，一目了然
-3. **记不住** → 闪卡 + 间隔重复，科学记忆
-4. **理不清** → 知识图谱，构建认知网络
+| 字段 | 示例 | 说明 |
+|------|------|------|
+| API Endpoint | `https://api.openai.com/v1` | 提供预设下拉 |
+| API Key | `sk-xxx...` | 你自己的 Key |
+| Model | `gpt-4o` | 推荐 gpt-4o 或 claude-3.5-sonnet |
 
-而且所有数据都在你自己的服务器上，知识不被任何平台锁定。
-
-**在线体验：** https://easypaper.aws.xin
-
-**GitHub：** https://github.com/neosun100/EasyPaper
-
-**Docker 一键部署：**
-
-```bash
-git clone https://github.com/neosun100/EasyPaper.git
-cd EasyPaper
-cp backend/config/config.example.yaml backend/config/config.yaml
-# 编辑 config.yaml 填入 API Key
-docker compose up --build -d
-```
+内置预设：OpenAI / Anthropic / OpenRouter / 自定义。
 
 ---
 
-> 本文是「一键部署系列」的一篇。关注我，每期带你用 Docker 部署一个实用 AI 工具。
+## 📚 API 接口
+
+| 端点 | 说明 |
+|------|------|
+| `POST /api/upload` | 上传 PDF（翻译/简化/高亮） |
+| `GET /api/status/{id}` | 处理进度（支持 SSE 实时推送） |
+| `GET /api/result/{id}/pdf` | 下载处理后的 PDF |
+| `POST /api/knowledge/extract/{id}` | 触发知识提取 |
+| `GET /api/knowledge/graph` | 获取知识图谱 |
+| `GET /api/knowledge/flashcards/due` | 获取待复习闪卡 |
+| `GET /api/knowledge/export/json` | 导出完整知识库 |
+| `GET /api/knowledge/export/obsidian` | 导出为 Obsidian |
+
+完整 Swagger 文档：`/api/docs`
+
+---
+
+## 💡 坦诚说不足
+
+1. **翻译速度**：取决于你用的 LLM API 速度，长论文（50+ 页）可能需要几分钟
+2. **公式翻译**：极复杂的 LaTeX 公式偶尔会有排版偏差
+3. **中文生成质量**：依赖底层模型能力，GPT-4o 效果最好
+4. **暂无批量处理**：目前一次上传一篇
+5. **知识图谱**：节点多时渲染可能略卡
+
+---
+
+## 📚 参考资料
+
+1. [pdf2zh - PDFMathTranslate](https://github.com/Byaidu/PDFMathTranslate) — PDF 翻译引擎
+2. [PyMuPDF](https://pymupdf.readthedocs.io/) — PDF 解析库
+3. [FastAPI](https://fastapi.tiangolo.com/) — 后端框架
+4. [SM-2 Algorithm](https://en.wikipedia.org/wiki/SuperMemo#Description_of_SM-2_algorithm) — 间隔重复算法
+
+---
+
+💬 **互动时间**：
+对本文有任何想法或疑问？欢迎在评论区留言讨论！
+如果觉得有帮助，别忘了点个"在看"并分享给需要的朋友～
+
+![扫码_搜索联合传播样式-标准色版](https://img.aws.xin/uPic/扫码_搜索联合传播样式-标准色版.png)
+👆 扫码关注，获取更多精彩内容

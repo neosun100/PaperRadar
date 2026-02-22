@@ -1,113 +1,112 @@
 [English](README.md) | [简体中文](README_zh.md) | [繁體中文](README_tw.md) | [日本語](README_jp.md)
 
-# EasyPaper
+<p align="center">
+  <img src="docs/banner.png" alt="EasyPaper Banner" width="100%">
+</p>
 
-**Turn academic papers into knowledge you keep.**
+<h1 align="center">EasyPaper</h1>
 
-🌐 **Live Demo:** [https://easypaper.aws.xin](https://easypaper.aws.xin) (Test account: `neo@test.com` / `test123456`)
+<p align="center">
+  <strong>Turn academic papers into knowledge you keep.</strong>
+</p>
 
-### 🐳 Docker Quick Start
-
-```bash
-git clone https://github.com/neosun100/EasyPaper.git
-cd EasyPaper
-cp backend/config/config.example.yaml backend/config/config.yaml
-# Edit config.yaml — add your API key and choose your model
-docker compose up --build
-```
-
-Open http://localhost:9201 in your browser. That's it!
+<p align="center">
+  <a href="https://github.com/neosun100/EasyPaper/stargazers"><img src="https://img.shields.io/github/stars/neosun100/EasyPaper?style=social" alt="Stars"></a>
+  <a href="https://github.com/neosun100/EasyPaper/blob/main/LICENSE"><img src="https://img.shields.io/github/license/neosun100/EasyPaper" alt="License"></a>
+  <a href="https://github.com/neosun100/EasyPaper/actions"><img src="https://img.shields.io/github/actions/workflow/status/neosun100/EasyPaper/ci.yml?branch=main&label=CI" alt="CI"></a>
+</p>
 
 ---
 
-EasyPaper is a self-hosted web app that helps you read, understand, and retain knowledge from English academic papers. Upload a PDF — get back a translated or simplified version with layout intact, AI-highlighted key sentences, and a portable knowledge base you can export anywhere.
+EasyPaper is a **self-hosted** web app that helps you read, understand, and retain knowledge from English academic papers. Upload a PDF — get back a translated or simplified version with layout intact, AI-highlighted key sentences, and a portable knowledge base you can export anywhere.
 
----
+> **BYOK (Bring Your Own Key)** — all LLM credentials stay in your browser's localStorage. The server never stores your API keys.
 
-## What It Does
+## ✨ Features
 
-### 1. Translate & Simplify
+### 📖 Translate & Simplify
 
-- **English → Chinese** translation preserving layout, images, and formulas (powered by [pdf2zh](https://github.com/Byaidu/PDFMathTranslate))
-- **English → Simple English** vocabulary simplification (CEFR A2/B1, ~2000 common words)
-- PDF-in, PDF-out — figures, equations, and formatting stay intact
+Translate English papers to Chinese or simplify to plain English (CEFR A2/B1), preserving layout, images, and formulas. Powered by [pdf2zh](https://github.com/Byaidu/PDFMathTranslate).
 
-### 2. AI Highlighting
+<p align="center">
+  <img src="docs/screenshot-reader.png" alt="Reader — dual-pane translated view" width="90%">
+</p>
+
+### 🎨 AI Highlighting
 
 Automatically identifies and color-codes key sentences in the processed PDF:
 
 | Color | Category | What It Highlights |
 |-------|----------|-------------------|
-| Yellow | Core Conclusions | Main findings and research outcomes |
-| Blue | Method Innovations | Novel approaches and technical contributions |
-| Green | Key Data | Quantitative results, metrics, experimental data |
+| 🟡 Yellow | Core Conclusions | Main findings and research outcomes |
+| 🔵 Blue | Method Innovations | Novel approaches and technical contributions |
+| 🟢 Green | Key Data | Quantitative results, metrics, experimental data |
 
-![AI Highlighting](imgs/img-5.png)
+### 🧠 Knowledge Base
 
-### 3. Knowledge Base (Portable)
+Extract structured knowledge from papers via LLM — entities, relationships, findings, and flashcards — stored as portable JSON.
 
-Extract structured knowledge from papers via LLM — stored as portable JSON, never locked to this app:
+<p align="center">
+  <img src="docs/screenshot-knowledge-base-data.png" alt="Knowledge Base" width="90%">
+</p>
 
-- **Entities**: methods, models, datasets, metrics, concepts, tasks, people, organizations
-- **Relationships**: extends, uses, evaluates_on, outperforms, similar_to, contradicts, part_of, requires
-- **Findings**: results, limitations, contributions with evidence references
-- **Flashcards**: auto-generated study cards with SM-2 spaced repetition scheduling
+<p align="center">
+  <img src="docs/screenshot-paper-detail.png" alt="Paper Detail — entities, findings, flashcards" width="90%">
+</p>
 
-![Knowledge Base — Paper Detail](imgs/img-2.png)
+### 🕸️ Knowledge Graph
 
-![Knowledge Base — Findings](imgs/img-3.png)
+Interactive force-directed graph visualization of entities and relationships across all your papers.
 
-### 4. Knowledge Graph
+<p align="center">
+  <img src="docs/screenshot-knowledge-graph-data.png" alt="Knowledge Graph" width="90%">
+</p>
 
-Interactive force-directed graph visualization of entities and relationships across all your papers. Color-coded by entity type, sized by importance, with search and zoom.
+### 🃏 Flashcard Review
 
-### 5. Multi-Format Export
+Built-in spaced repetition (SM-2 algorithm) for reviewing auto-generated flashcards.
 
-Your knowledge is yours. Export it in any format:
+<p align="center">
+  <img src="docs/screenshot-flashcard-review-data.png" alt="Flashcard Review" width="90%">
+</p>
 
-| Format | Extension | Use Case |
-|--------|-----------|----------|
-| EasyPaper JSON | `.epaper.json` | Complete portable knowledge (primary format) |
-| Obsidian Vault | `.zip` | Markdown notes with wikilinks for Obsidian |
-| BibTeX | `.bib` | LaTeX citation management |
-| CSL-JSON | `.json` | Zotero / Mendeley compatible |
-| CSV | `.zip` | Spreadsheet analysis (entities + relationships) |
+### 📦 Multi-Format Export
 
-### 6. Flashcard Review
+| Format | Use Case |
+|--------|----------|
+| EasyPaper JSON | Complete portable knowledge (primary format) |
+| Obsidian Vault | Markdown notes with wikilinks |
+| BibTeX | LaTeX citation management |
+| CSL-JSON | Zotero / Mendeley compatible |
+| CSV | Spreadsheet analysis |
 
-Built-in spaced repetition system (SM-2 algorithm) for reviewing auto-generated flashcards. Rate your recall from 0-5, and the system schedules optimal review intervals.
+### 🌙 Dark Mode
 
-![Flashcard Review](imgs/img-4.png)
+Full dark mode support across the entire UI.
 
----
-
-## Screenshots
-
-### Translate to Chinese
-![Translate to Chinese](imgs/img-0.png)
-
-### Simplify English
-![Simplify English](imgs/img-1.png)
-
-### Layout-Preserving Technology
-![Layout analysis](imgs/test.png)
+<p align="center">
+  <img src="docs/screenshot-dashboard-data.png" alt="Dashboard" width="90%">
+</p>
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
-### Option 1: Docker (Recommended)
+### Docker (Recommended)
 
 ```bash
-cp backend/config/config.example.yaml backend/config/config.yaml
-# Edit config.yaml — add your API key and choose your model
-
+git clone https://github.com/neosun100/EasyPaper.git
+cd EasyPaper
 docker compose up --build
 ```
 
-Open http://localhost in your browser.
+Open **http://localhost:9201**, configure your LLM API key in Settings, and start uploading papers.
 
-### Option 2: Local Development
+<p align="center">
+  <img src="docs/screenshot-llm-settings.png" alt="LLM Settings" width="50%">
+</p>
+
+### Local Development
 
 **Prerequisites:** Python 3.10+, Node.js 18+, an OpenAI-compatible LLM API key
 
@@ -115,13 +114,8 @@ Open http://localhost in your browser.
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-cp config/config.example.yaml config/config.yaml
-# Edit config.yaml — add your API key
-
 uvicorn app.main:app --reload
 ```
 
@@ -129,93 +123,56 @@ uvicorn app.main:app --reload
 
 ```bash
 cd frontend
-npm install
-npm run dev
+npm install && npm run dev
 ```
 
-Open http://localhost:5173.
+Open **http://localhost:5173**.
 
 ---
 
-## Configuration
-
-Edit `backend/config/config.yaml`:
-
-```yaml
-llm:
-  api_key: "YOUR_API_KEY"             # Required — any OpenAI-compatible API
-  base_url: "https://api.example.com/v1"
-  model: "gemini-2.5-flash"           # Model for translation/simplification/extraction
-  judge_model: "gemini-2.5-flash"
-
-processing:
-  max_pages: 100
-  max_upload_mb: 50
-  max_concurrent: 3                   # Concurrent processing tasks
-
-storage:
-  cleanup_minutes: 30                 # TTL for temporary files
-  temp_dir: "./backend/tmp"
-
-database:
-  url: "sqlite:///./data/app.db"
-
-security:
-  secret_key: "CHANGE_THIS"           # JWT signing key — must change in production
-  cors_origins:
-    - "http://localhost:5173"
-```
-
----
-
-## Tech Stack
+## 🏗️ Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| Backend | FastAPI, PyMuPDF, pdf2zh (PDFMathTranslate), httpx |
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, Radix UI |
+| Backend | FastAPI, Python 3.11, pdf2zh, PyMuPDF, httpx |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui |
 | Database | SQLite via SQLModel |
-| Auth | JWT (python-jose), bcrypt, OAuth2 bearer |
-| AI/LLM | Any OpenAI-compatible API (configurable) |
-| DevOps | Docker Compose, GitHub Actions, ruff, ESLint |
+| AI/LLM | Any OpenAI-compatible API (BYOK) |
+| Infra | Docker Compose, nginx, GitHub Actions CI |
 
 ---
 
-## API Overview
+## 📡 API Reference
 
 | Endpoint | Description |
 |----------|-------------|
-| `POST /api/upload` | Upload PDF (translate/simplify, optional highlight) |
+| `POST /api/upload` | Upload PDF (translate / simplify, optional highlight) |
 | `GET /api/status/{id}` | Processing status & progress |
 | `GET /api/result/{id}/pdf` | Download processed PDF |
 | `POST /api/knowledge/extract/{id}` | Trigger knowledge extraction |
 | `GET /api/knowledge/papers` | List knowledge base papers |
-| `GET /api/knowledge/graph` | Knowledge graph (entities + relationships) |
+| `GET /api/knowledge/papers/{id}` | Paper detail (entities, findings, flashcards) |
+| `GET /api/knowledge/graph` | Knowledge graph data |
 | `GET /api/knowledge/flashcards/due` | Due flashcards for review |
-| `POST /api/knowledge/flashcards/{id}/review` | Submit review result |
-| `GET /api/knowledge/export/json` | Export full knowledge base |
-| `GET /api/knowledge/export/obsidian` | Export as Obsidian vault |
-| `GET /api/knowledge/export/bibtex` | Export as BibTeX |
+| `POST /api/knowledge/flashcards/{id}/review` | Submit review (quality 0-5) |
+| `GET /api/knowledge/export/{format}` | Export (json, bibtex, csl-json, obsidian, csv) |
+
+All LLM-dependent endpoints require headers: `X-LLM-API-Key`, `X-LLM-Base-URL`, `X-LLM-Model`.
 
 ---
 
-## Development
+## 🛠️ Development
 
 ```bash
-# Backend
-cd backend
-ruff check app/
-pytest
+# Backend lint & test
+cd backend && ruff check app/ && pytest
 
-# Frontend
-cd frontend
-npm run lint
-npm run type-check
-npm test
+# Frontend lint & type-check
+cd frontend && npm run lint && npm run type-check
 ```
 
 ---
 
-## License
+## 📄 License
 
 MIT

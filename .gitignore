@@ -33,3 +33,6 @@ reproduce_issue.py
 PROMPT.md
 ralph-progress.md
 .ralph-*
+
+# Test artifacts
+test_paper.pdf

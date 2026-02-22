@@ -143,10 +143,17 @@ class DocumentProcessor:
             logger.info(f"开始处理: {input_path} (mode={mode}, lang_out={lang_out})")
 
             # 更新进度
-            if mode == "simplify":
-                self.task_manager.update_progress(task_id, TaskStatus.REWRITING, 30, "正在使用 AI 简化...")
-            else:
-                self.task_manager.update_progress(task_id, TaskStatus.REWRITING, 30, "正在使用 AI 翻译...")
+            action = "简化" if mode == "simplify" else "翻译"
+            self.task_manager.update_progress(task_id, TaskStatus.REWRITING, 30, f"正在使用 AI {action}...")
+
+            # Progress callback: map pdf2zh page progress to 30%–80%
+            def _on_page_progress(tqdm_bar):
+                if tqdm_bar.total and tqdm_bar.total > 0:
+                    pct = 30 + int(50 * tqdm_bar.n / tqdm_bar.total)
+                    self.task_manager.update_progress(
+                        task_id, TaskStatus.REWRITING, pct,
+                        f"正在使用 AI {action}... ({tqdm_bar.n}/{tqdm_bar.total} 页)",
+                    )
 
             try:
                 # 调用 pdf2zh
@@ -160,6 +167,7 @@ class DocumentProcessor:
                     model=model,
                     prompt=SIMPLIFY_PROMPT if mode == "simplify" else None,
                     ignore_cache=mode == "simplify",
+                    callback=_on_page_progress,
                 )
 
                 if not results or len(results) == 0:
