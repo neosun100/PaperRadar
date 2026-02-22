@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-    Brain, Search, Download, Trash2, BookOpen, Network, FileJson, FileText as FileTextIcon, GraduationCap, Loader2, CheckCircle, AlertCircle, Clock, Sparkles,
+    Brain, Search, Download, Trash2, BookOpen, Network, FileJson, FileText as FileTextIcon, GraduationCap, Loader2, CheckCircle, AlertCircle, Clock, Sparkles, MessageCircle,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,10 @@ const KnowledgeBase = () => {
     const [papers, setPapers] = useState<Paper[]>([]);
     const [search, setSearch] = useState("");
     const [dueCount, setDueCount] = useState(0);
+    const [showChat, setShowChat] = useState(false);
+    const [chatInput, setChatInput] = useState("");
+    const [chatHistory, setChatHistory] = useState<{ role: string; content: string }[]>([]);
+    const [chatLoading, setChatLoading] = useState(false);
     const navigate = useNavigate();
 
     const fetchPapers = useCallback(async () => {
@@ -39,6 +43,19 @@ const KnowledgeBase = () => {
     }, []);
 
     useEffect(() => { fetchPapers(); fetchDueCount(); }, [fetchPapers, fetchDueCount]);
+
+    const handleCrossChat = async () => {
+        if (!chatInput.trim()) return;
+        const msg = chatInput.trim();
+        setChatInput("");
+        setChatHistory(prev => [...prev, { role: "user", content: msg }]);
+        setChatLoading(true);
+        try {
+            const resp = await api.post("/api/knowledge/chat", { message: msg, history: chatHistory });
+            setChatHistory(prev => [...prev, { role: "assistant", content: resp.data.reply }]);
+        } catch { toast.error("Chat failed"); }
+        finally { setChatLoading(false); }
+    };
 
     const handleDelete = async (paperId: string) => {
         try { await api.delete(`/api/knowledge/papers/${paperId}`); setPapers((prev) => prev.filter((p) => p.id !== paperId)); toast.success(t("knowledge.paperDeleted")); }
@@ -90,6 +107,9 @@ const KnowledgeBase = () => {
                         <Button variant="outline" className="gap-2" onClick={() => navigate("/knowledge/insights")}>
                             <Sparkles className="h-4 w-4" /> {t("insights.title")}
                         </Button>
+                        <Button variant="outline" className="gap-2" onClick={() => setShowChat(!showChat)}>
+                            <MessageCircle className="h-4 w-4" /> {t("knowledge.askAll")}
+                        </Button>
                         <Button variant="outline" className="gap-2" onClick={() => navigate("/knowledge/graph")}>
                             <Network className="h-4 w-4" /> {t("knowledge.knowledgeGraph")}
                         </Button>
@@ -114,6 +134,26 @@ const KnowledgeBase = () => {
                 <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-violet-200/30 dark:bg-violet-500/10 blur-3xl" />
                 <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 h-64 w-64 rounded-full bg-purple-200/30 dark:bg-purple-500/10 blur-3xl" />
             </section>
+
+            {/* Cross-Paper Chat */}
+            {showChat && (
+                <Card><CardContent className="p-4 space-y-3">
+                    <div className="max-h-[300px] overflow-y-auto space-y-3">
+                        {chatHistory.map((msg, i) => (
+                            <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                                <div className={cn("rounded-xl px-4 py-2 max-w-[80%] text-sm whitespace-pre-wrap",
+                                    msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted")}>{msg.content}</div>
+                            </div>
+                        ))}
+                        {chatLoading && <div className="flex justify-start"><div className="bg-muted rounded-xl px-4 py-2 text-sm"><Loader2 className="h-4 w-4 animate-spin" /></div></div>}
+                    </div>
+                    <div className="flex gap-2">
+                        <Input placeholder={t("knowledge.chatPlaceholder")} value={chatInput} onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleCrossChat(); } }} />
+                        <Button size="sm" onClick={handleCrossChat} disabled={chatLoading || !chatInput.trim()} className="shrink-0">{t("knowledge.send")}</Button>
+                    </div>
+                </CardContent></Card>
+            )}
 
             <section className="space-y-4">
                 <div className="flex items-center justify-between gap-4 px-2">

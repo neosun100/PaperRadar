@@ -341,6 +341,29 @@ def create_knowledge_router() -> APIRouter:
         reply = await svc.chat(paper.knowledge_json, message, history)
         return {"reply": reply}
 
+    @router.post("/chat")
+    async def chat_cross_papers(request: Request) -> dict[str, Any]:
+        """跨论文对话 — 在整个知识库上提问"""
+        from ..services.paper_chat import PaperChatService
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        message = body.get("message", "")
+        history = body.get("history", [])
+        if not message:
+            raise HTTPException(400, "message is required")
+
+        papers_json = _get_completed_papers_json()
+        if not papers_json:
+            raise HTTPException(400, "No papers in knowledge base")
+
+        svc = PaperChatService(
+            api_key=llm_config["api_key"],
+            model=llm_config.get("model", ""),
+            base_url=llm_config.get("base_url", ""),
+        )
+        reply = await svc.chat_multi(papers_json, message, history)
+        return {"reply": reply}
+
     # ------------------------------------------------------------------
     # 导出
     # ------------------------------------------------------------------

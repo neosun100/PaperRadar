@@ -101,7 +101,10 @@
     "paperDeleted": "论文已从知识库中移除。",
     "paperDeleteFailed": "删除论文失败。",
     "noPapersMatch": "未找到匹配的论文。",
-    "noPapers": "知识库中暂无论文。从已处理的文档中提取知识以开始使用。"
+    "noPapers": "知识库中暂无论文。从已处理的文档中提取知识以开始使用。",
+    "askAll": "跨论文提问",
+    "chatPlaceholder": "跨论文提问...（如：比较所有 RLHF 方法）",
+    "send": "发送"
   },
   "paperDetail": {
     "knowledgeBase": "知识库",

@@ -101,7 +101,10 @@
     "paperDeleted": "Paper removed from knowledge base.",
     "paperDeleteFailed": "Failed to delete paper.",
     "noPapersMatch": "No matching papers found.",
-    "noPapers": "No papers in your knowledge base yet. Extract knowledge from a processed document to get started."
+    "noPapers": "No papers in your knowledge base yet. Extract knowledge from a processed document to get started.",
+    "askAll": "Ask All Papers",
+    "chatPlaceholder": "Ask across all papers... (e.g. Compare RLHF methods)",
+    "send": "Send"
   },
   "paperDetail": {
     "knowledgeBase": "Knowledge Base",

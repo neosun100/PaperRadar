@@ -94,17 +94,19 @@ class RadarEngine:
             # Fetch from multiple sources
             arxiv_papers = await asyncio.to_thread(self._fetch_arxiv)
             s2_papers = await self._fetch_semantic_scholar()
+            hf_papers = await self._fetch_huggingface_daily()
             
             # Merge and deduplicate by arxiv_id
             seen = set()
             candidates = []
-            for p in arxiv_papers + s2_papers:
+            for p in arxiv_papers + s2_papers + hf_papers:
                 aid = p.get("arxiv_id", "")
                 if aid and aid not in seen:
                     seen.add(aid)
                     candidates.append(p)
             
-            logger.info("Sources: arXiv=%d, S2=%d, merged=%d", len(arxiv_papers), len(s2_papers), len(candidates))
+            logger.info("Sources: arXiv=%d, S2=%d, HF=%d, merged=%d",
+                        len(arxiv_papers), len(s2_papers), len(hf_papers), len(candidates))
             if not candidates:
                 self._last_scan = datetime.utcnow()
                 self._scan_count += 1
@@ -285,6 +287,33 @@ class RadarEngine:
                         })
         except Exception:
             logger.exception("Failed to fetch Semantic Scholar papers")
+        return papers
+
+    async def _fetch_huggingface_daily(self) -> list[dict]:
+        """从 HuggingFace Daily Papers 获取社区策划的热门论文"""
+        papers = []
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get("https://huggingface.co/api/daily_papers", params={"limit": 20})
+                if resp.status_code == 200:
+                    for item in resp.json():
+                        p = item.get("paper", {})
+                        arxiv_id = p.get("id", "")
+                        if not arxiv_id:
+                            continue
+                        papers.append({
+                            "arxiv_id": arxiv_id,
+                            "title": p.get("title", ""),
+                            "abstract": (p.get("summary") or "")[:500],
+                            "authors": [a.get("name", "") for a in (p.get("authors") or [])[:5]],
+                            "published": p.get("publishedAt", ""),
+                            "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}.pdf",
+                            "categories": [],
+                            "source": "huggingface",
+                            "upvotes": p.get("upvotes", 0),
+                        })
+        except Exception:
+            logger.exception("Failed to fetch HuggingFace Daily Papers")
         return papers
 
     async def _score_papers(self, papers: list[dict]) -> list[dict]:
