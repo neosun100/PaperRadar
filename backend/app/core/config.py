@@ -20,6 +20,21 @@ class ProcessingConfig(BaseModel):
     max_concurrent: int = Field(3, alias="max_concurrent")
 
 
+class RadarConfig(BaseModel):
+    enabled: bool = Field(False, alias="enabled")
+    interval_hours: int = Field(1, alias="interval_hours")
+    categories: list[str] = Field(default=["cs.CL", "cs.AI", "cs.LG"], alias="categories")
+    topics: str = Field("LLM, large language model, agent, reasoning, RLHF, quantization, RAG", alias="topics")
+    max_papers_per_scan: int = Field(10, alias="max_papers_per_scan")
+    relevance_threshold: float = Field(0.7, alias="relevance_threshold")
+
+
+class NotificationConfig(BaseModel):
+    bark_url: str = Field("", alias="bark_url")
+    bark_key: str = Field("", alias="bark_key")
+    lark_webhook: str = Field("", alias="lark_webhook")
+
+
 class StorageConfig(BaseModel):
     cleanup_minutes: int = Field(30, alias="cleanup_minutes")
     temp_dir: str = Field("./backend/tmp", alias="temp_dir")
@@ -46,6 +61,8 @@ class SecurityConfig(BaseModel):
 class AppConfig(BaseModel):
     llm: LLMConfig
     processing: ProcessingConfig = ProcessingConfig()
+    radar: RadarConfig = RadarConfig()
+    notification: NotificationConfig = NotificationConfig()
     storage: StorageConfig = StorageConfig()
     logging: LoggingConfig = LoggingConfig()
     database: DatabaseConfig = DatabaseConfig()
@@ -62,27 +79,22 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 @lru_cache
 def get_config() -> AppConfig:
-    # Try multiple paths
     candidates = [
         Path(os.getenv("APP_CONFIG_PATH", "")),
         Path("config/config.yaml"),
         Path("backend/config/config.yaml"),
     ]
-
     config_path = None
     for path in candidates:
         if path and path.exists() and path.is_file():
             config_path = path
             break
-
     if not config_path:
-        # Fallback to example if exists, or raise error
         if Path("config/config.example.yaml").exists():
             config_path = Path("config/config.example.yaml")
         elif Path("backend/config/config.example.yaml").exists():
             config_path = Path("backend/config/config.example.yaml")
         else:
-            raise FileNotFoundError("Config file not found in config/config.yaml or backend/config/config.yaml")
-
+            raise FileNotFoundError("Config file not found")
     raw = _load_yaml(config_path)
     return AppConfig(**raw)

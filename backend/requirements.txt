@@ -17,3 +17,4 @@ opencv-python-headless>=4.9.0.80
 huggingface_hub>=0.23.2
 pdf2zh>=1.9.0
 slowapi>=0.1.9
+arxiv>=2.1.0

@@ -93,6 +93,8 @@
     "cards": "Cards",
     "relations": "Relations",
     "notes": "Notes",
+    "chat": "Chat",
+    "chatPlaceholder": "Ask a question about this paper...",
     "addNote": "Add a note...",
     "add": "Add",
     "noNotes": "No notes yet. Add one above.",

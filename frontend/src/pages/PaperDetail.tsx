@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2, MessageCircle, Send } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -42,6 +42,9 @@ const PaperDetail = () => {
     const [paper, setPaper] = useState<PaperKnowledge | null>(null);
     const [loading, setLoading] = useState(true);
     const [newNote, setNewNote] = useState("");
+    const [chatInput, setChatInput] = useState("");
+    const [chatHistory, setChatHistory] = useState<{ role: string; content: string }[]>([]);
+    const [chatLoading, setChatLoading] = useState(false);
     // Force re-render on language change
     const [, setLang] = useState(i18n.language);
     useEffect(() => {
@@ -84,6 +87,19 @@ const PaperDetail = () => {
         } catch { toast.error(t("paperDetail.noteAddFailed")); }
     };
 
+    const handleChat = async () => {
+        if (!chatInput.trim()) return;
+        const msg = chatInput.trim();
+        setChatInput("");
+        setChatHistory(prev => [...prev, { role: "user", content: msg }]);
+        setChatLoading(true);
+        try {
+            const resp = await api.post(`/api/knowledge/papers/${paperId}/chat`, { message: msg, history: chatHistory });
+            setChatHistory(prev => [...prev, { role: "assistant", content: resp.data.reply }]);
+        } catch { toast.error("Chat failed"); }
+        finally { setChatLoading(false); }
+    };
+
     if (loading) return <div className="flex h-[calc(100vh-8rem)] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
     if (!paper) return (
@@ -124,14 +140,39 @@ const PaperDetail = () => {
                 </Card>
             )}
 
-            <Tabs defaultValue="entities" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+            <Tabs defaultValue="chat" className="space-y-4">
+                <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+                    <TabsTrigger value="chat" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.chat")}</span></TabsTrigger>
                     <TabsTrigger value="entities" className="gap-1.5"><Brain className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.entities")} ({entities.length})</span><span className="sm:hidden">{entities.length}</span></TabsTrigger>
                     <TabsTrigger value="findings" className="gap-1.5"><Lightbulb className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.findings")} ({findings.length})</span><span className="sm:hidden">{findings.length}</span></TabsTrigger>
-                    <TabsTrigger value="flashcards" className="gap-1.5"><GraduationCap className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.cards")} ({flashcards.length})</span><span className="sm:hidden">{flashcards.length}</span></TabsTrigger>
                     <TabsTrigger value="relations" className="gap-1.5"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.relations")} ({relationships.length})</span><span className="sm:hidden">{relationships.length}</span></TabsTrigger>
+                    <TabsTrigger value="flashcards" className="gap-1.5"><GraduationCap className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.cards")} ({flashcards.length})</span><span className="sm:hidden">{flashcards.length}</span></TabsTrigger>
                     <TabsTrigger value="notes" className="gap-1.5"><StickyNote className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.notes")}</span></TabsTrigger>
                 </TabsList>
+
+                {/* Chat Tab */}
+                <TabsContent value="chat" className="space-y-3">
+                    <Card><CardContent className="p-4 space-y-3">
+                        <div className="max-h-[400px] overflow-y-auto space-y-3">
+                            {chatHistory.map((msg, i) => (
+                                <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+                                    <div className={cn("rounded-xl px-4 py-2 max-w-[80%] text-sm whitespace-pre-wrap",
+                                        msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted")}>
+                                        {msg.content}
+                                    </div>
+                                </div>
+                            ))}
+                            {chatLoading && <div className="flex justify-start"><div className="bg-muted rounded-xl px-4 py-2 text-sm"><Loader2 className="h-4 w-4 animate-spin" /></div></div>}
+                        </div>
+                        <div className="flex gap-2">
+                            <Input placeholder={t("paperDetail.chatPlaceholder")} value={chatInput} onChange={(e) => setChatInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChat(); } }} />
+                            <Button size="sm" onClick={handleChat} disabled={chatLoading || !chatInput.trim()} className="shrink-0">
+                                <Send className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </CardContent></Card>
+                </TabsContent>
 
                 <TabsContent value="entities" className="space-y-3">
                     <div className="grid gap-3 md:grid-cols-2">

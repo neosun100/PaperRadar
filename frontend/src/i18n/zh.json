@@ -93,6 +93,8 @@
     "cards": "闪卡",
     "relations": "关系",
     "notes": "笔记",
+    "chat": "对话",
+    "chatPlaceholder": "问一个关于这篇论文的问题...",
     "addNote": "添加笔记...",
     "add": "添加",
     "noNotes": "暂无笔记。在上方添加一条。",

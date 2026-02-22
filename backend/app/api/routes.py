@@ -218,4 +218,23 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         except Exception as e:
             return {"status": "error", "detail": str(e)[:200]}
 
+    # ------------------------------------------------------------------
+    # Radar
+    # ------------------------------------------------------------------
+
+    @router.get("/radar/status")
+    async def radar_status() -> dict[str, Any]:
+        from ..services.radar_engine import _radar_instance
+        if _radar_instance is None:
+            return {"enabled": False, "running": False}
+        return _radar_instance.status
+
+    @router.post("/radar/scan")
+    async def trigger_radar_scan() -> dict[str, Any]:
+        from ..services.radar_engine import _radar_instance
+        if _radar_instance is None:
+            raise HTTPException(400, "Radar engine not enabled")
+        papers = await _radar_instance.scan()
+        return {"found": len(papers), "papers": papers}
+
     return router

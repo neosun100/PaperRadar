@@ -315,6 +315,33 @@ def create_knowledge_router() -> APIRouter:
         return {"status": "deleted"}
 
     # ------------------------------------------------------------------
+    # 论文对话
+    # ------------------------------------------------------------------
+
+    @router.post("/papers/{paper_id}/chat")
+    async def chat_with_paper(paper_id: str, request: Request) -> dict[str, Any]:
+        from ..services.paper_chat import PaperChatService
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        message = body.get("message", "")
+        history = body.get("history", [])
+        if not message:
+            raise HTTPException(400, "message is required")
+
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper or not paper.knowledge_json:
+            raise HTTPException(404, "Paper not found or knowledge not extracted")
+
+        svc = PaperChatService(
+            api_key=llm_config["api_key"],
+            model=llm_config.get("model", ""),
+            base_url=llm_config.get("base_url", ""),
+        )
+        reply = await svc.chat(paper.knowledge_json, message, history)
+        return {"reply": reply}
+
+    # ------------------------------------------------------------------
     # 导出
     # ------------------------------------------------------------------
 

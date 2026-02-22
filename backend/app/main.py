@@ -71,3 +71,10 @@ async def healthcheck() -> dict:
 async def on_startup() -> None:
     init_db()
     Path(config.storage.temp_dir).mkdir(parents=True, exist_ok=True)
+    # Start radar engine if enabled
+    if config.radar.enabled:
+        from .services.radar_engine import RadarEngine, _radar_instance
+        from .services import radar_engine as re_mod
+        radar = RadarEngine(config)
+        re_mod._radar_instance = radar
+        asyncio.create_task(radar.start_loop())

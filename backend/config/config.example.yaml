@@ -1,29 +1,39 @@
 # PaperRadar Configuration
 # Copy this file to config.yaml and customize as needed.
-# LLM settings are OPTIONAL here — users provide their own API key via the browser UI (BYOK).
 
 llm:
   api_key: ""                                # Optional fallback — users bring their own key via UI
-  base_url: "https://api.openai.com/v1"      # Optional fallback API base URL
-  model: "gpt-4o"                            # Optional fallback model
-  judge_model: "gpt-4o"                      # Optional fallback judge model
+  base_url: "https://api.openai.com/v1"
+  model: "gpt-4o"
 
 processing:
   max_concurrent: 3       # Concurrent processing tasks per user
 
+radar:
+  enabled: false                             # Enable automatic paper discovery
+  interval_hours: 1                          # Scan interval
+  categories:                                # arXiv categories to monitor
+    - cs.CL
+    - cs.AI
+    - cs.LG
+  topics: "LLM, large language model, agent, reasoning, RLHF, quantization, RAG"
+  max_papers_per_scan: 10
+  relevance_threshold: 0.7                   # 0.0-1.0, higher = stricter
+
+notification:
+  bark_url: ""                               # Bark server URL (default: https://api.day.app)
+  bark_key: ""                               # Bark device key
+  lark_webhook: ""                           # Lark/Feishu bot webhook URL
+
 security:
-  secret_key: "not-used-in-byok-mode"
-  api_token: ""                              # Optional: API token for programmatic access (scripts, MCP)
-                                             # When set, callers can use "Authorization: Bearer <token>"
-                                             # and the server's LLM config above will be used automatically.
+  secret_key: "change-me"
+  api_token: ""                              # API token for programmatic access
   cors_origins:
     - "http://localhost:5173"
     - "http://127.0.0.1:5173"
     - "http://localhost:9201"
-    - "http://127.0.0.1:9201"
 
 storage:
-  cleanup_minutes: 30
   temp_dir: "./tmp"
 
 database:
