@@ -129,7 +129,6 @@ class DocumentProcessor:
                                 await extractor.extract(original_bytes, task_id, user_id=0)
                             logger.info(f"Auto knowledge extraction completed for {task_id}")
 
-                        import asyncio
                         asyncio.create_task(_extract())
                     except Exception:
                         logger.warning("Auto knowledge extraction failed to start for %s", task_id)
