@@ -1,38 +1,21 @@
 services:
-  backend:
-    build: ./backend
-    working_dir: /app
-    volumes:
-      - ./backend/config:/app/config
-      - backend-data:/app/data
-      - backend-tmp:/app/tmp
-    environment:
-      - APP_CONFIG_PATH=/app/config/config.yaml
+  paperradar:
+    image: neosun/paperradar:latest
     ports:
+      - "9201:80"
       - "9200:8000"
+    volumes:
+      - ./config.yaml:/app/config/config.yaml:ro
+      - paperradar-data:/app/data
+      - paperradar-tmp:/app/tmp
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
     restart: unless-stopped
 
-  frontend:
-    build: ./frontend
-    ports:
-      - "9201:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    restart: unless-stopped
-
 volumes:
-  backend-data:
-  backend-tmp:
+  paperradar-data:
+  paperradar-tmp:
