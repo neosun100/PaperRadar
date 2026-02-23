@@ -183,7 +183,7 @@
   - Auto-download PDFs and queue for processing
   - Drag-and-drop BibTeX file support
 
-- [ ] **Paper Summary Cards on Dashboard**
+- [x] **Paper Summary Cards on Dashboard**
   - Show AI-generated 1-sentence summary for each paper
   - Quick-glance view without opening paper detail
   - Generated during knowledge extraction
@@ -198,7 +198,7 @@
 
 ### Phase 4B: Intelligence (Medium Priority)
 
-- [ ] **Daily Briefing / Auto-Digest**
+- [x] **Daily Briefing / Auto-Digest**
   - Scheduled daily summary of new radar discoveries
   - Push via configured notification channels (Bark/Lark/Webhook)
   - Configurable schedule in config.yaml

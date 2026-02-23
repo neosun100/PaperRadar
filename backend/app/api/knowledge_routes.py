@@ -100,19 +100,27 @@ def create_knowledge_router() -> APIRouter:
             papers = session.exec(
                 select(PaperKnowledge).order_by(PaperKnowledge.created_at.desc())
             ).all()
-        return [
-            {
-                "id": p.id,
-                "task_id": p.task_id,
-                "title": p.title,
-                "doi": p.doi,
-                "year": p.year,
-                "venue": p.venue,
+        result = []
+        for p in papers:
+            summary = ""
+            if p.knowledge_json and p.extraction_status == "completed":
+                try:
+                    kj = json.loads(p.knowledge_json)
+                    meta = kj.get("metadata", {})
+                    abstract = meta.get("abstract", "")
+                    if isinstance(abstract, dict):
+                        abstract = abstract.get("en", abstract.get("zh", ""))
+                    summary = str(abstract)[:200] if abstract else ""
+                except Exception:
+                    pass
+            result.append({
+                "id": p.id, "task_id": p.task_id, "title": p.title,
+                "doi": p.doi, "year": p.year, "venue": p.venue,
                 "extraction_status": p.extraction_status,
+                "summary": summary,
                 "created_at": p.created_at.isoformat() if p.created_at else None,
-            }
-            for p in papers
-        ]
+            })
+        return result
 
     @router.get("/papers/{paper_id}")
     async def get_paper(paper_id: str) -> dict[str, Any]:

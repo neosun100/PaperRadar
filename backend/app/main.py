@@ -33,7 +33,7 @@ _start_time = time.time()
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(
     title="PaperRadar API",
-    version="2.5.0",
+    version="2.6.0",
     description="Discover, understand, and connect cutting-edge research — automatically.",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -49,7 +49,17 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     return JSONResponse(status_code=500, content={"error": "internal_error", "detail": "An unexpected error occurred"})
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 
 app.add_middleware(
@@ -87,7 +97,7 @@ async def healthcheck() -> dict:
         pass
     return {
         "status": "ok",
-        "version": "2.5.0",
+        "version": "2.6.0",
         "uptime_seconds": uptime,
         "total_tasks": total_tasks,
         "total_papers": total_papers,
@@ -182,3 +192,33 @@ async def on_startup() -> None:
                             logger.warning("Failed to index paper %s", p.id)
                 logger.info("Vector index initialized: %s", vs.stats)
         asyncio.create_task(_init_vector())
+
+    # Start daily digest scheduler
+    if config.notification.digest_hour >= 0:
+        async def _digest_loop():
+            import datetime
+            from .services.notification import NotificationService
+            notif = NotificationService(config.notification)
+            while True:
+                now = datetime.datetime.utcnow()
+                target = now.replace(hour=config.notification.digest_hour, minute=0, second=0, microsecond=0)
+                if target <= now:
+                    target += datetime.timedelta(days=1)
+                wait_secs = (target - now).total_seconds()
+                logger.info("Daily digest scheduled in %.0f seconds (UTC %02d:00)", wait_secs, config.notification.digest_hour)
+                await asyncio.sleep(wait_secs)
+                # Generate and send digest
+                try:
+                    from .models.knowledge import PaperKnowledge as PK_model
+                    cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+                    with Session(db_eng) as session:
+                        new_papers = session.exec(
+                            select(PK_model).where(PK_model.created_at >= cutoff)
+                        ).all()
+                    if new_papers:
+                        papers_for_notif = [{"title": p.title, "score": 0, "pdf_url": "", "authors": []} for p in new_papers[:10]]
+                        await notif.notify_new_papers(papers_for_notif)
+                        logger.info("Daily digest sent: %d papers", len(new_papers))
+                except Exception:
+                    logger.exception("Daily digest failed")
+        asyncio.create_task(_digest_loop())

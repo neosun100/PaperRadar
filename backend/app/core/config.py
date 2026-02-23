@@ -36,6 +36,7 @@ class NotificationConfig(BaseModel):
     bark_key: str = Field("", alias="bark_key")
     lark_webhook: str = Field("", alias="lark_webhook")
     webhook_url: str = Field("", alias="webhook_url")  # Generic webhook (Slack, Discord, etc.)
+    digest_hour: int = Field(-1, alias="digest_hour")  # Hour (0-23) to send daily digest, -1 = disabled
 
 
 class StorageConfig(BaseModel):

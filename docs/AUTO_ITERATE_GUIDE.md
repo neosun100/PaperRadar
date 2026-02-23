@@ -125,7 +125,7 @@ tmux new -s paperradar
 ```bash
 # 检查是否有密钥泄露到 Git
 cd /home/neo/upload/EasyPaper
-grep -rn "sk-y7wO\|litellm.aws\|cohere.embed" --include='*.py' --include='*.ts' --include='*.yaml' . | grep -v node_modules
+grep -rn "sk-\|api_key.*=.*sk" --include='*.py' --include='*.ts' --include='*.yaml' . | grep -v node_modules | grep -v example | grep -v placeholder
 
 # 检查 Docker 镜像是否干净
 docker run --rm neosun/paperradar:latest cat /app/config/config.yaml | grep api_key

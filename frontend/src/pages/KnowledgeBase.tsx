@@ -20,6 +20,7 @@ interface Paper {
     year: number | null;
     venue: string | null;
     extraction_status: string;
+    summary: string;
     created_at: string | null;
 }
 
@@ -509,7 +510,8 @@ const KnowledgeBase = () => {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                {paper.doi && <p className="text-xs text-muted-foreground truncate">DOI: {paper.doi}</p>}
+                                {paper.summary && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{paper.summary}</p>}
+                                {paper.doi && <p className="text-[10px] text-muted-foreground/60 truncate mt-1">DOI: {paper.doi}</p>}
                             </CardContent>
                         </Card>
                     ))}

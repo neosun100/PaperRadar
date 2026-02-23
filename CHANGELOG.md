@@ -1,5 +1,18 @@
 # PaperRadar Changelog
 
+## v2.6.0 (2026-02-23)
+- **Paper Summary Cards**
+  - Knowledge Base paper cards now show abstract preview (first 200 chars)
+  - Quick-glance view without opening paper detail
+- **Daily Briefing / Auto-Digest**
+  - Scheduled daily digest via Bark/Lark/Webhook
+  - Configure `digest_hour` in config.yaml (UTC hour, -1 to disable)
+- **Security Hardening**
+  - Added security headers: X-Content-Type-Options, X-Frame-Options, Referrer-Policy
+  - Improved error logging (no internal details leaked to clients)
+  - Removed partial API key from docs (privacy fix)
+- **Privacy Audit** — verified no secrets in codebase, Docker image, or docs
+
 ## v2.5.0 (2026-02-23)
 - **Batch Import**
   - Import multiple papers via arXiv IDs, DOIs, or BibTeX
