@@ -1,5 +1,29 @@
 # PaperRadar Changelog
 
+## v2.0.0 (2026-02-23) 🎉
+- **Paper Annotation & Highlighting in Reader**
+  - Annotation sidebar in Reader page with note/highlight/question types
+  - Color-coded annotations (yellow/blue/green/pink)
+  - Annotations saved to DB, persistent across sessions
+  - Ctrl+Enter to quickly save annotations
+- **AI Inline Explanations**
+  - New "AI Explain" panel in Reader
+  - Paste any sentence → get CEFR A2/B1 simplified explanation
+  - Powered by LLM with academic context awareness
+- **Smart Citations (scite.ai-style)**
+  - Citation contexts showing HOW this paper is cited
+  - Intent classification (methodology/result/background)
+  - Blockquote display of actual citation sentences
+  - Integrated into Citations tab on Paper Detail
+- **Mobile Responsive**
+  - Hamburger menu for mobile navigation
+  - Active route highlighting
+  - Responsive padding and layout adjustments
+- **CI/CD Pipeline**
+  - GitHub Actions: Docker build+push on tag (docker.yml)
+- **MCP Server** (already existed, now documented as complete)
+  - 8 tools: search, list, get, chat, trending, radar, process, review
+
 ## v1.8.0 (2026-02-23)
 - Citation Network Visualization (Connected Papers-style)
   - New "Citations" tab on Paper Detail page

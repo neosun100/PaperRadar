@@ -81,7 +81,24 @@
     "processingFailedDesc": "处理此文档时出现问题。",
     "backToDashboard": "返回仪表盘",
     "extractionStarted": "知识提取已开始！",
-    "extractionFailed": "知识提取启动失败。"
+    "extractionFailed": "知识提取启动失败.",
+    "annotations": "批注",
+    "addAnnotation": "添加笔记或高亮...",
+    "annotationAdded": "批注已保存。",
+    "annotationFailed": "保存批注失败。",
+    "annotationDeleted": "批注已删除。",
+    "noAnnotations": "暂无批注。阅读时添加笔记吧。",
+    "highlight": "高亮",
+    "note": "笔记",
+    "question": "问题",
+    "aiExplain": "AI 解释",
+    "aiExplainPlaceholder": "粘贴或输入论文中的句子，获取简单解释...",
+    "explaining": "正在解释...",
+    "explainFailed": "获取解释失败。",
+    "colorYellow": "黄色",
+    "colorBlue": "蓝色",
+    "colorGreen": "绿色",
+    "colorPink": "粉色"
   },
   "knowledge": {
     "title": "知识库",
@@ -149,7 +166,8 @@
     "noCitations": "暂无引用数据。该论文可能没有 arXiv ID 或 Semantic Scholar 数据。",
     "citationCount": "次引用",
     "centerPaper": "当前论文",
-    "openOnS2": "在 Semantic Scholar 查看"
+    "openOnS2": "在 Semantic Scholar 查看",
+    "smartCitations": "引用上下文"
   },
   "flashcard": {
     "knowledgeBase": "知识库",

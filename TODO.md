@@ -85,18 +85,18 @@
 
 ### Phase 2: Enhanced Reading & Understanding (Medium Priority)
 
-- [ ] **Paper Annotation & Highlighting in Reader**
+- [x] **Paper Annotation & Highlighting in Reader**
   - User can highlight text in the PDF reader
   - Add notes to specific passages
   - Annotations saved and searchable
   - Inspired by: Hypothesis, Readwise
 
-- [ ] **AI Inline Explanations**
+- [x] **AI Inline Explanations**
   - Click any sentence in the reader to get simplified explanation
   - "Explain this to me like I'm a beginner"
   - Context-aware using paper's knowledge
 
-- [ ] **Smart Citations (scite.ai-style)**
+- [x] **Smart Citations (scite.ai-style)**
   - Show how a paper is cited: supporting, contrasting, or mentioning
   - Help users understand citation context
   - Use Semantic Scholar citation context API
@@ -114,7 +114,7 @@
 
 ### Phase 3: Platform & Integration (Lower Priority)
 
-- [ ] **MCP Server**
+- [x] **MCP Server**
   - Expose PaperRadar as MCP server for Claude/Cursor
   - Tools: search KB, ask questions, trigger scans, get trending
   - Inspired by: blazickjp/arxiv-mcp-server (⭐2.2k), alphaXiv MCP
@@ -145,10 +145,10 @@
   - Slack / Discord / Telegram integration
   - Email digest (daily/weekly)
 
-- [ ] **CI/CD Pipeline**
+- [x] **CI/CD Pipeline**
   - GitHub Actions: TypeScript check, Python lint, Docker build+push on tag
 
-- [ ] **Mobile Responsive**
+- [x] **Mobile Responsive**
   - Optimize for mobile/tablet viewing
 
 ---

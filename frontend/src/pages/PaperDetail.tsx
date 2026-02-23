@@ -58,6 +58,8 @@ const PaperDetail = () => {
     const citationCanvasRef = useRef<HTMLCanvasElement>(null);
     const citationPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
     const citationAnimRef = useRef<number>(0);
+    // Smart citation contexts
+    const [citationContexts, setCitationContexts] = useState<{ title: string; year?: number; authors: string[]; citations: number; arxiv_id?: string; s2_id: string; contexts: string[]; intents: string[] }[]>([]);
     // Force re-render on language change
     const [, setLang] = useState(i18n.language);
     useEffect(() => {
@@ -120,9 +122,13 @@ const PaperDetail = () => {
         if (citationLoaded || citationLoading) return;
         setCitationLoading(true);
         try {
-            const r = await api.get(`/api/knowledge/papers/${paperId}/citations`);
+            const [r, r2] = await Promise.all([
+                api.get(`/api/knowledge/papers/${paperId}/citations`),
+                api.get(`/api/knowledge/papers/${paperId}/citation-contexts`).catch(() => ({ data: { contexts: [] } })),
+            ]);
             setCitationNodes(r.data.nodes || []);
             setCitationEdges(r.data.edges || []);
+            setCitationContexts(r2.data.contexts || []);
         } catch { /* ignore */ }
         finally { setCitationLoading(false); setCitationLoaded(true); }
     }, [paperId, citationLoaded, citationLoading]);
@@ -435,6 +441,45 @@ const PaperDetail = () => {
                                 </CardContent>
                             </Card>
                         </>
+                    )}
+                    {/* Smart Citation Contexts */}
+                    {citationContexts.length > 0 && (
+                        <div className="space-y-3 pt-2">
+                            <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                <MessageCircle className="h-4 w-4" /> {t("paperDetail.smartCitations")} ({citationContexts.length})
+                            </h3>
+                            {citationContexts.map((ctx, i) => (
+                                <Card key={i} className="border-border">
+                                    <CardContent className="p-4 space-y-2">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div>
+                                                <p className="text-sm font-medium leading-snug">{ctx.title}</p>
+                                                <p className="text-xs text-muted-foreground">{ctx.authors.join(", ")}{ctx.year ? ` (${ctx.year})` : ""}</p>
+                                            </div>
+                                            <div className="flex gap-1 shrink-0">
+                                                {ctx.intents.map((intent) => (
+                                                    <span key={intent} className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium",
+                                                        intent === "methodology" ? "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300" :
+                                                        intent === "result" ? "bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-300" :
+                                                        intent === "background" ? "bg-muted text-muted-foreground" :
+                                                        "bg-amber-100 text-amber-700"
+                                                    )}>{intent}</span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {ctx.contexts.map((c, j) => (
+                                            <blockquote key={j} className="border-l-2 border-muted-foreground/30 pl-3 text-xs text-muted-foreground italic leading-relaxed">
+                                                {c}
+                                            </blockquote>
+                                        ))}
+                                        <div className="flex gap-2 pt-1">
+                                            {ctx.arxiv_id && <a href={`https://arxiv.org/abs/${ctx.arxiv_id}`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">arXiv</a>}
+                                            <a href={`https://www.semanticscholar.org/paper/${ctx.s2_id}`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">{t("paperDetail.openOnS2")}</a>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
                     )}
                 </TabsContent>
 

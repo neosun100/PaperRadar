@@ -81,7 +81,24 @@
     "processingFailedDesc": "Something went wrong while processing this document.",
     "backToDashboard": "Back to Dashboard",
     "extractionStarted": "Knowledge extraction started!",
-    "extractionFailed": "Failed to start extraction."
+    "extractionFailed": "Failed to start extraction.",
+    "annotations": "Annotations",
+    "addAnnotation": "Add a note or highlight...",
+    "annotationAdded": "Annotation saved.",
+    "annotationFailed": "Failed to save annotation.",
+    "annotationDeleted": "Annotation deleted.",
+    "noAnnotations": "No annotations yet. Add notes while reading.",
+    "highlight": "Highlight",
+    "note": "Note",
+    "question": "Question",
+    "aiExplain": "AI Explain",
+    "aiExplainPlaceholder": "Paste or type a sentence from the paper to get a simple explanation...",
+    "explaining": "Explaining...",
+    "explainFailed": "Failed to get explanation.",
+    "colorYellow": "Yellow",
+    "colorBlue": "Blue",
+    "colorGreen": "Green",
+    "colorPink": "Pink"
   },
   "knowledge": {
     "title": "Knowledge Base",
@@ -149,7 +166,8 @@
     "noCitations": "No citation data available. The paper may not have an arXiv ID or Semantic Scholar data.",
     "citationCount": "citations",
     "centerPaper": "This paper",
-    "openOnS2": "Open on Semantic Scholar"
+    "openOnS2": "Open on Semantic Scholar",
+    "smartCitations": "How This Paper Is Cited"
   },
   "flashcard": {
     "knowledgeBase": "Knowledge Base",

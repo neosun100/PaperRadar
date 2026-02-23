@@ -331,16 +331,38 @@ def create_knowledge_router() -> APIRouter:
                 .where(UserAnnotation.paper_id == paper_id)
                 .order_by(UserAnnotation.created_at.desc())
             ).all()
-        return [
-            {"id": a.id, "type": a.type, "content": a.content, "target_type": a.target_type, "target_id": a.target_id,
-             "tags": json.loads(a.tags_json) if a.tags_json else [], "created_at": a.created_at.isoformat() if a.created_at else None}
-            for a in anns
-        ]
+        result = []
+        for a in anns:
+            meta = {}
+            if a.tags_json:
+                try:
+                    meta = json.loads(a.tags_json)
+                    if isinstance(meta, list):
+                        meta = {"tags": meta}
+                except Exception:
+                    meta = {}
+            result.append({
+                "id": a.id, "type": a.type, "content": a.content,
+                "target_type": a.target_type, "target_id": a.target_id,
+                "color": meta.get("color", ""),
+                "tags": meta.get("tags", []),
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+            })
+        return result
 
     @router.post("/papers/{paper_id}/annotations")
-    async def create_annotation(paper_id: str, type: str, content: str, target_type: str = "paper", target_id: str = "", tags: str = "") -> dict[str, Any]:
+    async def create_annotation(paper_id: str, request: Request) -> dict[str, Any]:
         import uuid
         from datetime import datetime
+        body = await request.json()
+        ann_type = body.get("type", "note")
+        content = body.get("content", "")
+        target_type = body.get("target_type", "paper")
+        target_id = body.get("target_id", "")
+        tags = body.get("tags", [])
+        color = body.get("color", "")
+        if not content:
+            raise HTTPException(400, "content is required")
         with Session(engine) as session:
             paper = session.get(PaperKnowledge, paper_id)
             if not paper:
@@ -349,17 +371,20 @@ def create_knowledge_router() -> APIRouter:
                 id=f"ann_{uuid.uuid4().hex[:12]}",
                 paper_id=paper_id,
                 user_id=0,
-                type=type,
+                type=ann_type,
                 content=content,
                 target_type=target_type,
                 target_id=target_id,
-                tags_json=json.dumps(tags.split(",") if tags else []),
+                tags_json=json.dumps({"tags": tags if isinstance(tags, list) else [], "color": color}),
                 created_at=datetime.utcnow(),
             )
             session.add(ann)
             session.commit()
             session.refresh(ann)
-        return {"id": ann.id, "type": ann.type, "content": ann.content, "created_at": ann.created_at.isoformat() if ann.created_at else None}
+        meta = json.loads(ann.tags_json) if ann.tags_json else {}
+        return {"id": ann.id, "type": ann.type, "content": ann.content, "target_type": ann.target_type,
+                "target_id": ann.target_id, "color": meta.get("color", ""), "tags": meta.get("tags", []),
+                "created_at": ann.created_at.isoformat() if ann.created_at else None}
 
     @router.delete("/annotations/{ann_id}")
     async def delete_annotation(ann_id: str) -> dict[str, str]:
@@ -686,6 +711,113 @@ def create_knowledge_router() -> APIRouter:
                     continue
 
         return {"nodes": list(nodes.values()), "edges": edges}
+
+    # ------------------------------------------------------------------
+    # Smart Citations (scite.ai-style citation contexts)
+    # ------------------------------------------------------------------
+
+    @router.get("/papers/{paper_id}/citation-contexts")
+    async def get_citation_contexts(paper_id: str) -> dict[str, Any]:
+        """Fetch citation contexts showing how this paper is cited (supporting/contrasting/mentioning)."""
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper:
+            raise HTTPException(404, "Paper not found")
+        if not paper.arxiv_id:
+            return {"contexts": [], "message": "No arXiv ID available"}
+
+        base = "https://api.semanticscholar.org/graph/v1/paper"
+        contexts: list[dict] = []
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            try:
+                r = await client.get(f"{base}/ArXiv:{paper.arxiv_id}", params={"fields": "paperId"})
+                if r.status_code != 200:
+                    return {"contexts": [], "message": "Paper not found on Semantic Scholar"}
+                s2id = r.json().get("paperId", "")
+            except Exception:
+                return {"contexts": [], "message": "Semantic Scholar API unavailable"}
+
+            # Fetch citations with contexts
+            try:
+                r2 = await client.get(
+                    f"{base}/{s2id}/citations",
+                    params={"fields": "contexts,intents,title,year,authors,citationCount,externalIds", "limit": 30},
+                )
+                if r2.status_code == 200:
+                    for item in r2.json().get("data", []):
+                        cp = item.get("citingPaper", {})
+                        if not cp.get("title"):
+                            continue
+                        ctxs = item.get("contexts") or []
+                        intents = item.get("intents") or []
+                        if not ctxs:
+                            continue
+                        contexts.append({
+                            "title": cp.get("title", ""),
+                            "year": cp.get("year"),
+                            "authors": [a.get("name", "") for a in (cp.get("authors") or [])[:3]],
+                            "citations": cp.get("citationCount", 0),
+                            "arxiv_id": (cp.get("externalIds") or {}).get("ArXiv", ""),
+                            "s2_id": cp.get("paperId", ""),
+                            "contexts": ctxs[:3],
+                            "intents": intents,
+                        })
+            except Exception:
+                pass
+
+        return {"contexts": contexts}
+
+    # ------------------------------------------------------------------
+    # Paper lookup by task_id (for Reader annotations)
+    # ------------------------------------------------------------------
+
+    @router.get("/paper-by-task/{task_id}")
+    async def get_paper_by_task(task_id: str) -> dict[str, Any]:
+        with Session(engine) as session:
+            paper = session.exec(
+                select(PaperKnowledge).where(PaperKnowledge.task_id == task_id)
+            ).first()
+        if not paper:
+            raise HTTPException(status_code=404, detail="No paper found for this task")
+        return {"paper_id": paper.id, "title": paper.title}
+
+    # ------------------------------------------------------------------
+    # AI Inline Explanation
+    # ------------------------------------------------------------------
+
+    @router.post("/explain")
+    async def explain_text(request: Request) -> dict[str, str]:
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        text = body.get("text", "").strip()
+        context = body.get("context", "")
+        if not text:
+            raise HTTPException(400, "text is required")
+
+        import httpx as hx
+        prompt = (
+            "You are a helpful research assistant. Explain the following academic text "
+            "in simple, easy-to-understand language (CEFR A2/B1 level). "
+            "Be concise (2-4 sentences). If the text contains technical terms, define them briefly.\n\n"
+        )
+        if context:
+            prompt += f"Paper context: {context}\n\n"
+        prompt += f"Text to explain:\n\"{text}\""
+
+        async with hx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{llm_config['base_url']}/chat/completions",
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"},
+                json={
+                    "model": llm_config.get("model", "gpt-4o"),
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": 300,
+                },
+            )
+            resp.raise_for_status()
+            reply = resp.json()["choices"][0]["message"]["content"]
+        return {"explanation": reply}
 
     # ------------------------------------------------------------------
     # Helpers

@@ -4,7 +4,7 @@
 - **Project**: PaperRadar (formerly EasyPaper)
 - **GitHub**: https://github.com/neosun100/PaperRadar
 - **Docker Hub**: neosun/paperradar
-- **Current Version**: 1.9.1
+- **Current Version**: 2.0.0
 - **Kiro Model**: claude-opus-4.6-1m
 
 ## Architecture
@@ -107,7 +107,8 @@ git add -A && git commit -m "message" && git push origin main
 12. Vector index papers automatically on knowledge extraction completion
 
 ## TODO Priority (next items)
-1. Paper Annotation & Highlighting in Reader
-2. AI Inline Explanations (click sentence → simplified explanation)
-3. MCP Server (expose PaperRadar to Claude/Cursor)
-4. More data sources (Papers with Code, alphaXiv)
+1. Chirpz-style Paper Prioritization (AI learns your research context)
+2. Multi-Language Paper Support (Chinese papers → English)
+3. Collaborative Features (shared reading lists)
+4. Paper Writing Assistant (auto-generate related work sections)
+5. Webhook / API Notifications (Slack, Discord, Telegram, Email)
