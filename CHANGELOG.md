@@ -1,5 +1,20 @@
 # PaperRadar Changelog
 
+## v2.2.0 (2026-02-23)
+- **OpenAlex Integration**
+  - One-click paper enrichment from OpenAlex (250M+ works)
+  - Shows citation count, open access status, topics, institutions
+  - Auto-fills missing DOI, year, venue from OpenAlex data
+  - "Enrich" button on Paper Detail page
+- **Reading History / Timeline**
+  - Auto-tracks paper views and reads
+  - Reading events API with daily aggregation
+  - Stats: total events, unique papers read
+- **JSON Repair for Knowledge Extraction**
+  - Robust repair of malformed LLM JSON responses
+  - Handles trailing commas, truncated output, unescaped characters
+  - Significantly reduces extraction failures
+
 ## v2.1.0 (2026-02-23)
 - **Paper Collections** (ResearchRabbit-style)
   - Create, rename, delete collections

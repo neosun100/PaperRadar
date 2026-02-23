@@ -69,12 +69,15 @@ const Reader = () => {
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
-    // Fetch paper_id from task_id
+    // Fetch paper_id from task_id + record reading event
     useEffect(() => {
         if (!taskId) return;
         api.get(`/api/knowledge/paper-by-task/${taskId}`)
-            .then((r) => setPaperId(r.data.paper_id))
-            .catch(() => {}); // paper may not exist yet
+            .then((r) => {
+                setPaperId(r.data.paper_id);
+                api.post("/api/knowledge/reading-events", { paper_id: r.data.paper_id, task_id: taskId, event_type: "read" }).catch(() => {});
+            })
+            .catch(() => {});
     }, [taskId]);
 
     // Load annotations when paperId is available and panel is open

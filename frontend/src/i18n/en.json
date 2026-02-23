@@ -188,7 +188,9 @@
     "citationCount": "citations",
     "centerPaper": "This paper",
     "openOnS2": "Open on Semantic Scholar",
-    "smartCitations": "How This Paper Is Cited"
+    "smartCitations": "How This Paper Is Cited",
+    "enrichPaper": "Enrich from OpenAlex",
+    "enriched": "Enriched with OpenAlex data"
   },
   "flashcard": {
     "knowledgeBase": "Knowledge Base",

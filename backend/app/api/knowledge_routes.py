@@ -20,6 +20,7 @@ from ..models.knowledge import (
     KnowledgeRelationship,
     PaperCollection,
     PaperKnowledge,
+    ReadingEvent,
     UserAnnotation,
 )
 from ..models.task import Task, TaskStatus
@@ -819,6 +820,122 @@ def create_knowledge_router() -> APIRouter:
             resp.raise_for_status()
             reply = resp.json()["choices"][0]["message"]["content"]
         return {"explanation": reply}
+
+    # ------------------------------------------------------------------
+    # Reading History / Timeline
+    # ------------------------------------------------------------------
+
+    @router.post("/reading-events")
+    async def record_reading_event(request: Request) -> dict[str, str]:
+        import uuid
+        from datetime import datetime
+        body = await request.json()
+        event = ReadingEvent(
+            id=f"re_{uuid.uuid4().hex[:12]}",
+            paper_id=body.get("paper_id", ""),
+            task_id=body.get("task_id", ""),
+            event_type=body.get("event_type", "view"),
+            created_at=datetime.utcnow(),
+        )
+        with Session(engine) as session:
+            session.add(event)
+            session.commit()
+        return {"status": "recorded"}
+
+    @router.get("/reading-history")
+    async def get_reading_history(days: int = 30) -> dict[str, Any]:
+        from datetime import datetime, timedelta
+        from sqlmodel import func
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        with Session(engine) as session:
+            # Recent events
+            events = session.exec(
+                select(ReadingEvent)
+                .where(ReadingEvent.created_at >= cutoff)
+                .order_by(ReadingEvent.created_at.desc())
+            ).all()
+            # Stats
+            total_events = session.exec(select(func.count(ReadingEvent.id))).one()
+            unique_papers = session.exec(
+                select(func.count(func.distinct(ReadingEvent.paper_id)))
+                .where(ReadingEvent.paper_id != "")
+            ).one()
+            # Daily counts for chart
+            daily: dict[str, int] = {}
+            for e in events:
+                day = e.created_at.strftime("%Y-%m-%d") if e.created_at else ""
+                if day:
+                    daily[day] = daily.get(day, 0) + 1
+
+        return {
+            "events": [
+                {"id": e.id, "paper_id": e.paper_id, "task_id": e.task_id,
+                 "event_type": e.event_type, "created_at": e.created_at.isoformat() if e.created_at else None}
+                for e in events[:100]
+            ],
+            "stats": {"total_events": total_events, "unique_papers": unique_papers},
+            "daily": daily,
+        }
+
+    # ------------------------------------------------------------------
+    # OpenAlex Enrichment
+    # ------------------------------------------------------------------
+
+    @router.post("/papers/{paper_id}/enrich")
+    async def enrich_paper_openalex(paper_id: str) -> dict[str, Any]:
+        """Enrich paper metadata from OpenAlex (free, open API)."""
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper:
+            raise HTTPException(404, "Paper not found")
+
+        # Try DOI first, then title search
+        query = None
+        if paper.doi:
+            query = f"https://api.openalex.org/works/doi:{paper.doi}"
+        elif paper.title:
+            query = f"https://api.openalex.org/works?filter=title.search:{paper.title[:100]}&per_page=1"
+
+        if not query:
+            return {"enriched": False, "reason": "No DOI or title available"}
+
+        enriched_data = {}
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            try:
+                r = await client.get(query, headers={"User-Agent": "PaperRadar/2.1 (mailto:contact@paperradar.dev)"})
+                if r.status_code != 200:
+                    return {"enriched": False, "reason": "OpenAlex API error"}
+                data = r.json()
+                # Handle search results vs direct lookup
+                work = data if "id" in data else (data.get("results", [{}])[0] if data.get("results") else {})
+                if not work.get("id"):
+                    return {"enriched": False, "reason": "Paper not found in OpenAlex"}
+
+                enriched_data = {
+                    "openalex_id": work.get("id", ""),
+                    "cited_by_count": work.get("cited_by_count", 0),
+                    "type": work.get("type", ""),
+                    "open_access": work.get("open_access", {}).get("is_oa", False),
+                    "concepts": [c.get("display_name", "") for c in (work.get("concepts") or [])[:5]],
+                    "topics": [t.get("display_name", "") for t in (work.get("topics") or [])[:3]],
+                    "institutions": list({i.get("display_name", "") for a in (work.get("authorships") or []) for i in (a.get("institutions") or []) if i.get("display_name")}),
+                }
+                # Update paper fields if missing
+                with Session(engine) as session:
+                    p = session.get(PaperKnowledge, paper_id)
+                    if p:
+                        if not p.doi and work.get("doi"):
+                            p.doi = work["doi"].replace("https://doi.org/", "")
+                        if not p.year and work.get("publication_year"):
+                            p.year = work["publication_year"]
+                        if not p.venue and work.get("primary_location", {}).get("source", {}).get("display_name"):
+                            p.venue = work["primary_location"]["source"]["display_name"]
+                        session.add(p)
+                        session.commit()
+            except Exception as exc:
+                return {"enriched": False, "reason": str(exc)[:100]}
+
+        return {"enriched": True, "data": enriched_data}
 
     # ------------------------------------------------------------------
     # Paper Collections (ResearchRabbit-style)

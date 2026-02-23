@@ -126,6 +126,55 @@ def _bi_text(val: any) -> str:
     return str(val) if val else ""
 
 
+import re as _re
+
+def _repair_json(raw: str) -> dict:
+    """Attempt to repair common LLM JSON issues: trailing commas, unescaped quotes, truncation."""
+    s = raw
+    # Remove trailing commas before } or ]
+    s = _re.sub(r',\s*([}\]])', r'\1', s)
+    # Fix unescaped newlines inside strings
+    s = _re.sub(r'(?<!\\)\n', r'\\n', s)
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        pass
+    # Try truncation repair: close all open brackets/braces
+    brackets = []
+    in_str = False
+    escape = False
+    for ch in s:
+        if escape:
+            escape = False
+            continue
+        if ch == '\\':
+            escape = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch in '{[':
+            brackets.append('}' if ch == '{' else ']')
+        elif ch in '}]' and brackets:
+            brackets.pop()
+    # Close unclosed brackets
+    if brackets:
+        # Remove trailing partial content after last complete value
+        last_comma = s.rfind(',')
+        last_brace = max(s.rfind('}'), s.rfind(']'))
+        if last_comma > last_brace:
+            s = s[:last_comma]
+        s += ''.join(reversed(brackets))
+        s = _re.sub(r',\s*([}\]])', r'\1', s)
+        try:
+            return json.loads(s)
+        except json.JSONDecodeError:
+            pass
+    raise json.JSONDecodeError("Cannot repair JSON", raw, 0)
+
+
 class KnowledgeExtractor:
     """从学术论文 PDF 中提取结构化知识（双语输出）。"""
 
@@ -384,7 +433,12 @@ class KnowledgeExtractor:
             start = content.find("{")
             end = content.rfind("}")
             if start != -1 and end != -1:
-                return json.loads(content[start : end + 1])
+                raw = content[start : end + 1]
+                try:
+                    return json.loads(raw)
+                except json.JSONDecodeError:
+                    # Try to repair common LLM JSON issues
+                    return _repair_json(raw)
             raise
 
     # ------------------------------------------------------------------

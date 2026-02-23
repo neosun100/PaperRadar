@@ -130,7 +130,7 @@
   - Support papers in other languages
   - Bidirectional translation
 
-- [ ] **OpenAlex Integration**
+- [x] **OpenAlex Integration**
   - Free open-access metadata for 250M+ works
   - Replace Papers with Code (shut down 2025)
   - Author profiles, institution data, topic classification
@@ -142,7 +142,7 @@
   - Export as CSV/spreadsheet
   - Inspired by: Elicit's data extraction feature
 
-- [ ] **Paper Timeline / Reading History**
+- [x] **Paper Timeline / Reading History**
   - Track which papers you've read and when
   - Visual timeline of your research journey
   - Reading statistics and streaks
@@ -184,7 +184,7 @@
 | **ChromaDB** | Vector search, semantic retrieval | ✅ Integrated |
 | **scite.ai-style** | Smart citation context (via S2 API) | ✅ Integrated |
 | **Connected Papers-style** | Citation graph visualization (via S2 API) | ✅ Integrated |
-| **OpenAlex** | Open metadata, author profiles, topics | 🔲 Planned |
+| **OpenAlex** | Open metadata, author profiles, topics | ✅ Integrated |
 | **Papers with Code** | SOTA results, code repos | ❌ Shut down (2025) |
 | **alphaXiv** | Community discussions, hot papers | 🔲 Planned |
 

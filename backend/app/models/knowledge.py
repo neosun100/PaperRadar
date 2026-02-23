@@ -92,3 +92,12 @@ class PaperCollection(SQLModel, table=True):
     paper_ids_json: str = Field(default="[]")  # JSON array of paper_id strings
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ReadingEvent(SQLModel, table=True):
+    id: str = Field(primary_key=True)
+    user_id: int = Field(default=0, index=True)
+    paper_id: str = Field(default="", index=True)
+    task_id: str = Field(default="", index=True)
+    event_type: str = Field(default="view")  # view, read, annotate, chat, export
+    created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -188,7 +188,9 @@
     "citationCount": "次引用",
     "centerPaper": "当前论文",
     "openOnS2": "在 Semantic Scholar 查看",
-    "smartCitations": "引用上下文"
+    "smartCitations": "引用上下文",
+    "enrichPaper": "从 OpenAlex 补充信息",
+    "enriched": "已从 OpenAlex 补充数据"
   },
   "flashcard": {
     "knowledgeBase": "知识库",

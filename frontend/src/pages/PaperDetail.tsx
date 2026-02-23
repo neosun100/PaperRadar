@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2, MessageCircle, Send, Headphones, Play, Pause, RotateCcw, GitFork } from "lucide-react";
+import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2, MessageCircle, Send, Headphones, Play, Pause, RotateCcw, GitFork, Globe } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -75,6 +75,8 @@ const PaperDetail = () => {
             finally { setLoading(false); }
         };
         fetchPaper();
+        // Record reading event
+        api.post("/api/knowledge/reading-events", { paper_id: paperId, event_type: "view" }).catch(() => {});
     }, [paperId, t]);
 
     // Check audio status on mount
@@ -251,6 +253,18 @@ const PaperDetail = () => {
         setSelectedCitationNode(clicked || null);
     };
 
+    const [enrichData, setEnrichData] = useState<any>(null);
+    const [enriching, setEnriching] = useState(false);
+
+    const handleEnrich = async () => {
+        setEnriching(true);
+        try {
+            const r = await api.post(`/api/knowledge/papers/${paperId}/enrich`);
+            if (r.data.enriched) setEnrichData(r.data.data);
+        } catch {}
+        finally { setEnriching(false); }
+    };
+
     const handleExport = async () => {
         try {
             const response = await api.get(`/api/knowledge/export/paper/${paperId}`, { responseType: "blob" });
@@ -318,8 +332,21 @@ const PaperDetail = () => {
                             {metadata.keywords.map((kw, i) => <span key={i} className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{biText(kw)}</span>)}
                         </div>
                     )}
+                    {enrichData && (
+                        <div className="flex flex-wrap gap-1.5 pt-1 text-xs text-muted-foreground">
+                            {enrichData.cited_by_count > 0 && <span className="bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">📊 {enrichData.cited_by_count} citations</span>}
+                            {enrichData.open_access && <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">🔓 Open Access</span>}
+                            {enrichData.topics?.map((t: string, i: number) => <span key={i} className="bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">{t}</span>)}
+                            {enrichData.institutions?.slice(0, 3).map((inst: string, i: number) => <span key={i} className="bg-muted px-2 py-0.5 rounded-full">🏛️ {inst}</span>)}
+                        </div>
+                    )}
                 </div>
-                <Button variant="outline" size="sm" className="gap-2 shrink-0" onClick={handleExport}><Download className="h-4 w-4" />.epaper.json</Button>
+                <div className="flex gap-2 shrink-0">
+                    <Button variant="outline" size="sm" className="gap-2" onClick={handleEnrich} disabled={enriching}>
+                        {enriching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}OpenAlex
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}><Download className="h-4 w-4" />.epaper.json</Button>
+                </div>
             </div>
 
             {metadata.abstract && (
