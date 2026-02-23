@@ -115,5 +115,22 @@ def generate_literature_review(topic: str = "") -> str:
     return data.get("review", "No review generated")
 
 
+@mcp.tool()
+def list_collections() -> str:
+    """List all paper collections in the knowledge base."""
+    cols = _api("get", "/api/knowledge/collections")
+    lines = [f"Collections: {len(cols)}\n"]
+    for c in cols:
+        lines.append(f"  [{c['id']}] {c['name']} ({c['paper_count']} papers) — {c.get('description', '')}")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def generate_related_work(paper_ids: list[str], topic: str = "", style: str = "ieee") -> str:
+    """Generate a 'Related Work' section from selected papers. Style: ieee, acm, or apa."""
+    data = _api("post", "/api/knowledge/writing/related-work", json={"paper_ids": paper_ids, "topic": topic, "style": style})
+    return data.get("related_work", "No content generated")
+
+
 if __name__ == "__main__":
     mcp.run()

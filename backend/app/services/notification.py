@@ -28,6 +28,8 @@ class NotificationService:
             await self._send_bark(count, titles)
         if self.config.lark_webhook:
             await self._send_lark(count, papers)
+        if self.config.webhook_url:
+            await self._send_webhook(count, papers)
 
     async def _send_bark(self, count: int, titles: str) -> None:
         """Bark iOS 推送"""
@@ -81,3 +83,35 @@ class NotificationService:
             logger.info("Lark notification sent: %d papers", count)
         except Exception:
             logger.exception("Lark notification failed")
+
+    async def _send_webhook(self, count: int, papers: list[dict]) -> None:
+        """Generic webhook — works with Slack, Discord, Telegram bots, n8n, etc."""
+        payload = {
+            "event": "new_papers",
+            "count": count,
+            "papers": [
+                {
+                    "title": p.get("title", "")[:120],
+                    "authors": p.get("authors", [])[:3],
+                    "score": p.get("score", 0),
+                    "source": p.get("source", ""),
+                    "pdf_url": p.get("pdf_url", ""),
+                    "arxiv_id": p.get("arxiv_id", ""),
+                }
+                for p in papers[:10]
+            ],
+            "source": "PaperRadar",
+        }
+        # Detect Slack/Discord format
+        url = self.config.webhook_url
+        if "hooks.slack.com" in url or "discord.com/api/webhooks" in url:
+            titles = "\n".join(f"• {p.get('title', '')[:80]}" for p in papers[:5])
+            payload = {"text": f"🛰️ PaperRadar: {count} new papers discovered\n{titles}"}
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.post(url, json=payload)
+                resp.raise_for_status()
+            logger.info("Webhook notification sent: %d papers to %s", count, url[:50])
+        except Exception:
+            logger.exception("Webhook notification failed")

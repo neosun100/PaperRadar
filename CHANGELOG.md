@@ -1,5 +1,22 @@
 # PaperRadar Changelog
 
+## v2.1.0 (2026-02-23)
+- **Paper Collections** (ResearchRabbit-style)
+  - Create, rename, delete collections
+  - Add/remove papers to collections
+  - Filter Knowledge Base by collection
+  - Collection bar with paper counts
+- **Paper Writing Assistant**
+  - Generate "Related Work" sections from selected papers
+  - Supports IEEE, ACM, APA citation styles
+  - Topic-focused generation
+  - Copy to clipboard
+- **Generic Webhook Notifications**
+  - Webhook URL support for Slack, Discord, n8n, etc.
+  - Auto-detects Slack/Discord format
+  - Configurable via config.yaml
+- **MCP Server expanded** — 10 tools (added list_collections, generate_related_work)
+
 ## v2.0.0 (2026-02-23) 🎉
 - **Paper Annotation & Highlighting in Reader**
   - Annotation sidebar in Reader page with note/highlight/question types

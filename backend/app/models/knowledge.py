@@ -81,3 +81,14 @@ class UserAnnotation(SQLModel, table=True):
     tags_json: str | None = Field(default=None)
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PaperCollection(SQLModel, table=True):
+    id: str = Field(primary_key=True)
+    user_id: int = Field(default=0, index=True)
+    name: str = Field(index=True)
+    description: str = Field(default="")
+    color: str = Field(default="blue")
+    paper_ids_json: str = Field(default="[]")  # JSON array of paper_id strings
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

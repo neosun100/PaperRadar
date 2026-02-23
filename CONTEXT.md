@@ -4,7 +4,7 @@
 - **Project**: PaperRadar (formerly EasyPaper)
 - **GitHub**: https://github.com/neosun100/PaperRadar
 - **Docker Hub**: neosun/paperradar
-- **Current Version**: 2.0.0
+- **Current Version**: 2.1.0
 - **Kiro Model**: claude-opus-4.6-1m
 
 ## Architecture
@@ -107,8 +107,9 @@ git add -A && git commit -m "message" && git push origin main
 12. Vector index papers automatically on knowledge extraction completion
 
 ## TODO Priority (next items)
-1. Chirpz-style Paper Prioritization (AI learns your research context)
-2. Multi-Language Paper Support (Chinese papers → English)
-3. Collaborative Features (shared reading lists)
-4. Paper Writing Assistant (auto-generate related work sections)
-5. Webhook / API Notifications (Slack, Discord, Telegram, Email)
+1. OpenAlex Integration (free metadata for 250M+ works)
+2. Elicit-style Data Extraction Tables
+3. Chirpz-style Paper Prioritization
+4. Multi-Language Paper Support
+5. Paper Timeline / Reading History
+6. Email Digest

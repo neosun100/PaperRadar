@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-    Brain, Search, Download, Trash2, BookOpen, Network, FileJson, FileText as FileTextIcon, GraduationCap, Loader2, CheckCircle, AlertCircle, Clock, Sparkles, MessageCircle, GitCompareArrows,
+    Brain, Search, Download, Trash2, BookOpen, Network, FileJson, FileText as FileTextIcon, GraduationCap, Loader2, CheckCircle, AlertCircle, Clock, Sparkles, MessageCircle, GitCompareArrows, FolderPlus, Folder, PenTool, Copy, X, Plus,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,15 @@ interface Paper {
     created_at: string | null;
 }
 
+interface Collection {
+    id: string;
+    name: string;
+    description: string;
+    color: string;
+    paper_ids: string[];
+    paper_count: number;
+}
+
 const KnowledgeBase = () => {
     const { t } = useTranslation();
     const [papers, setPapers] = useState<Paper[]>([]);
@@ -37,6 +46,17 @@ const KnowledgeBase = () => {
     const [compareLoading, setCompareLoading] = useState(false);
     const [searchResults, setSearchResults] = useState<any[] | null>(null);
     const [searching, setSearching] = useState(false);
+    // Collections
+    const [collections, setCollections] = useState<Collection[]>([]);
+    const [activeCollection, setActiveCollection] = useState<string | null>(null);
+    const [showNewCollection, setShowNewCollection] = useState(false);
+    const [newColName, setNewColName] = useState("");
+    // Writing Assistant
+    const [showWriting, setShowWriting] = useState(false);
+    const [writingTopic, setWritingTopic] = useState("");
+    const [writingStyle, setWritingStyle] = useState("ieee");
+    const [writingResult, setWritingResult] = useState("");
+    const [writingLoading, setWritingLoading] = useState(false);
     const navigate = useNavigate();
 
     const fetchPapers = useCallback(async () => {
@@ -47,7 +67,45 @@ const KnowledgeBase = () => {
         try { const response = await api.get("/api/knowledge/flashcards/due?limit=100"); setDueCount(response.data.length); } catch { /* silently fail */ }
     }, []);
 
-    useEffect(() => { fetchPapers(); fetchDueCount(); }, [fetchPapers, fetchDueCount]);
+    useEffect(() => { fetchPapers(); fetchDueCount(); fetchCollections(); }, [fetchPapers, fetchDueCount]);
+
+    const fetchCollections = async () => {
+        try { const r = await api.get("/api/knowledge/collections"); setCollections(r.data); } catch {}
+    };
+
+    const handleCreateCollection = async () => {
+        if (!newColName.trim()) return;
+        try {
+            await api.post("/api/knowledge/collections", { name: newColName.trim() });
+            toast.success(t("knowledge.collectionCreated"));
+            setNewColName(""); setShowNewCollection(false);
+            fetchCollections();
+        } catch {}
+    };
+
+    const handleDeleteCollection = async (colId: string) => {
+        try { await api.delete(`/api/knowledge/collections/${colId}`); toast.success(t("knowledge.collectionDeleted")); fetchCollections(); if (activeCollection === colId) setActiveCollection(null); } catch {}
+    };
+
+    const handleAddToCollection = async (colId: string, paperId: string) => {
+        try { await api.post(`/api/knowledge/collections/${colId}/papers`, { paper_id: paperId }); toast.success(t("knowledge.paperAdded")); fetchCollections(); } catch {}
+    };
+
+    const handleRemoveFromCollection = async (colId: string, paperId: string) => {
+        try { await api.delete(`/api/knowledge/collections/${colId}/papers/${paperId}`); fetchCollections(); } catch {}
+    };
+
+    const handleGenerateRelatedWork = async () => {
+        const ids = selectedForCompare.size > 0 ? Array.from(selectedForCompare) : (activeCollection ? collections.find(c => c.id === activeCollection)?.paper_ids || [] : papers.filter(p => p.extraction_status === "completed").map(p => p.id));
+        if (ids.length < 2) return;
+        setWritingLoading(true);
+        try {
+            const r = await api.post("/api/knowledge/writing/related-work", { paper_ids: ids, topic: writingTopic, style: writingStyle });
+            setWritingResult(r.data.related_work);
+            toast.success(t("knowledge.relatedWorkGenerated"));
+        } catch { toast.error(t("knowledge.relatedWorkFailed")); }
+        finally { setWritingLoading(false); }
+    };
 
     const handleCrossChat = async () => {
         if (!chatInput.trim()) return;
@@ -128,7 +186,12 @@ const KnowledgeBase = () => {
         }
     };
 
-    const filteredPapers = search ? papers.filter((p) => p.title.toLowerCase().includes(search.toLowerCase())) : papers;
+    const activeColPaperIds = activeCollection ? (collections.find(c => c.id === activeCollection)?.paper_ids || []) : null;
+    const filteredPapers = papers.filter(p => {
+        if (activeColPaperIds && !activeColPaperIds.includes(p.id)) return false;
+        if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
+        return true;
+    });
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
@@ -142,6 +205,9 @@ const KnowledgeBase = () => {
                     <div className="flex flex-wrap justify-center gap-3 pt-2">
                         <Button variant="outline" className="gap-2" onClick={() => navigate("/knowledge/insights")}>
                             <Sparkles className="h-4 w-4" /> {t("insights.title")}
+                        </Button>
+                        <Button variant="outline" className="gap-2" onClick={() => setShowWriting(!showWriting)}>
+                            <PenTool className="h-4 w-4" /> {t("knowledge.writingAssistant")}
                         </Button>
                         <Button variant="outline" className="gap-2" onClick={() => setShowChat(!showChat)}>
                             <MessageCircle className="h-4 w-4" /> {t("knowledge.askAll")}
@@ -189,6 +255,78 @@ const KnowledgeBase = () => {
                         <Button size="sm" onClick={handleCrossChat} disabled={chatLoading || !chatInput.trim()} className="shrink-0">{t("knowledge.send")}</Button>
                     </div>
                 </CardContent></Card>
+            )}
+
+            {/* Writing Assistant */}
+            {showWriting && (
+                <Card><CardContent className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium flex items-center gap-2"><PenTool className="h-4 w-4" /> {t("knowledge.writingAssistant")}</h3>
+                        <Button variant="ghost" size="sm" onClick={() => setShowWriting(false)}><X className="h-4 w-4" /></Button>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                        <Input placeholder={t("knowledge.relatedWorkTopic")} value={writingTopic} onChange={(e) => setWritingTopic(e.target.value)} className="flex-1 min-w-[200px] h-9" />
+                        <select value={writingStyle} onChange={(e) => setWritingStyle(e.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm">
+                            <option value="ieee">IEEE</option>
+                            <option value="acm">ACM</option>
+                            <option value="apa">APA</option>
+                        </select>
+                        <Button size="sm" onClick={handleGenerateRelatedWork} disabled={writingLoading} className="gap-1.5 h-9">
+                            {writingLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PenTool className="h-3.5 w-3.5" />}
+                            {writingLoading ? t("knowledge.generating") : t("knowledge.generateRelatedWork")}
+                        </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        {selectedForCompare.size > 0 ? `Using ${selectedForCompare.size} selected papers` : activeCollection ? `Using collection papers` : `Using all completed papers`}
+                    </p>
+                    {writingResult && (
+                        <div className="space-y-2">
+                            <div className="flex justify-end">
+                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => { navigator.clipboard.writeText(writingResult); toast.success(t("knowledge.copied")); }}>
+                                    <Copy className="h-3 w-3" /> {t("knowledge.copyToClipboard")}
+                                </Button>
+                            </div>
+                            <div className="prose dark:prose-invert max-w-none text-sm whitespace-pre-wrap rounded-lg border bg-muted/50 p-4 max-h-[400px] overflow-y-auto">{writingResult}</div>
+                        </div>
+                    )}
+                </CardContent></Card>
+            )}
+
+            {/* Collections Bar */}
+            {collections.length > 0 || showNewCollection ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant={activeCollection === null ? "default" : "outline"} size="sm" className="gap-1.5 h-8" onClick={() => setActiveCollection(null)}>
+                        <Folder className="h-3.5 w-3.5" /> {t("knowledge.allPapers")} ({papers.length})
+                    </Button>
+                    {collections.map(col => (
+                        <div key={col.id} className="flex items-center gap-0.5">
+                            <Button variant={activeCollection === col.id ? "default" : "outline"} size="sm" className="gap-1.5 h-8" onClick={() => setActiveCollection(activeCollection === col.id ? null : col.id)}>
+                                <Folder className="h-3.5 w-3.5" /> {col.name} ({col.paper_count})
+                            </Button>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteCollection(col.id)}>
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                        </div>
+                    ))}
+                    {showNewCollection ? (
+                        <div className="flex items-center gap-1.5">
+                            <Input value={newColName} onChange={(e) => setNewColName(e.target.value)} placeholder={t("knowledge.collectionName")}
+                                className="h-8 w-40 text-sm" onKeyDown={(e) => { if (e.key === "Enter") handleCreateCollection(); }} autoFocus />
+                            <Button size="sm" className="h-8" onClick={handleCreateCollection} disabled={!newColName.trim()}>{t("knowledge.createCollection")}</Button>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowNewCollection(false)}><X className="h-3.5 w-3.5" /></Button>
+                        </div>
+                    ) : (
+                        <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-muted-foreground" onClick={() => setShowNewCollection(true)}>
+                            <FolderPlus className="h-3.5 w-3.5" /> {t("knowledge.newCollection")}
+                        </Button>
+                    )}
+                </div>
+            ) : (
+                <div className="flex justify-start">
+                    <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => setShowNewCollection(true)}>
+                        <FolderPlus className="h-3.5 w-3.5" /> {t("knowledge.newCollection")}
+                    </Button>
+                </div>
             )}
 
             {/* Comparison Result */}
@@ -282,6 +420,27 @@ const KnowledgeBase = () => {
                                     </div>
                                     <div className="flex items-center gap-1.5 shrink-0">
                                         {getStatusIcon(paper.extraction_status)}
+                                        {collections.length > 0 && paper.extraction_status === "completed" && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground"
+                                                        onClick={(e) => e.stopPropagation()}>
+                                                        <Plus className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                                    {collections.map(col => {
+                                                        const inCol = col.paper_ids.includes(paper.id);
+                                                        return (
+                                                            <DropdownMenuItem key={col.id} onClick={() => inCol ? handleRemoveFromCollection(col.id, paper.id) : handleAddToCollection(col.id, paper.id)}>
+                                                                <Folder className="mr-2 h-3.5 w-3.5" />
+                                                                {inCol ? `✓ ${col.name}` : col.name}
+                                                            </DropdownMenuItem>
+                                                        );
+                                                    })}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        )}
                                         <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-600"
                                             onClick={(e) => { e.stopPropagation(); handleDelete(paper.id); }}>
                                             <Trash2 className="h-3.5 w-3.5" />

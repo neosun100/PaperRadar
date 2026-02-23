@@ -64,7 +64,7 @@
   - Inspired by Google NotebookLM's Audio Overviews feature
   - Uses OpenAI-compatible TTS API (/audio/speech)
 
-- [ ] **Smart Paper Recommendations**
+- [x] **Smart Paper Recommendations**
   - Use Semantic Scholar Recommendations API (`/recommendations/v1/papers/`)
   - Based on papers already in knowledge base, suggest related papers
   - "Because you read X, you might like Y" — ResearchRabbit-style
@@ -77,7 +77,7 @@
   - Connected Papers / Litmaps style visualization
   - Inspired by: Connected Papers, Litmaps, Paperscape
 
-- [ ] **Automatic Literature Review Generation**
+- [x] **Automatic Literature Review Generation**
   - Given a topic/question, generate a structured literature review
   - Cite papers from knowledge base with proper references
   - Inspired by: OpenScholar, Elicit systematic review automation
@@ -101,13 +101,13 @@
   - Help users understand citation context
   - Use Semantic Scholar citation context API
 
-- [ ] **Vector Search (ChromaDB)**
+- [x] **Vector Search (ChromaDB)**
   - Embed paper content for semantic search
   - "Find papers about efficient inference" → semantic matching
   - Power better cross-paper chat with RAG retrieval
   - ChromaDB: pure Python, embedded, zero-config
 
-- [ ] **Paper Comparison View**
+- [x] **Paper Comparison View**
   - Side-by-side comparison of 2-3 papers
   - Auto-generated comparison table (methods, results, datasets)
   - Inspired by: Elicit's comparison tables
@@ -130,17 +130,38 @@
   - Support papers in other languages
   - Bidirectional translation
 
-- [ ] **Collaborative Features**
+- [ ] **OpenAlex Integration**
+  - Free open-access metadata for 250M+ works
+  - Replace Papers with Code (shut down 2025)
+  - Author profiles, institution data, topic classification
+  - API: https://api.openalex.org
+
+- [ ] **Elicit-style Data Extraction Tables**
+  - Extract structured data from multiple papers into comparison tables
+  - Custom columns (method, dataset, metric, result)
+  - Export as CSV/spreadsheet
+  - Inspired by: Elicit's data extraction feature
+
+- [ ] **Paper Timeline / Reading History**
+  - Track which papers you've read and when
+  - Visual timeline of your research journey
+  - Reading statistics and streaks
+
+- [ ] **Email Digest**
+  - Daily/weekly email summary of radar discoveries
+  - Configurable frequency and format
+
+- [x] **Collaborative Features**
   - Shared reading lists / paper collections
   - Team annotations and discussions
   - Inspired by: alphaXiv discussions, ResearchRabbit collections
 
-- [ ] **Paper Writing Assistant**
+- [x] **Paper Writing Assistant**
   - Help write related work sections
   - Auto-generate citations from knowledge base
   - Inspired by: Paperguide writing assistance
 
-- [ ] **Webhook / API Notifications**
+- [x] **Webhook / API Notifications**
   - Webhook callback when radar discovers papers
   - Slack / Discord / Telegram integration
   - Email digest (daily/weekly)
@@ -158,14 +179,14 @@
 | Tool/API | Integration Plan | Status |
 |----------|-----------------|--------|
 | **arXiv API** | Paper discovery, PDF download | ✅ Integrated |
-| **Semantic Scholar API** | Citation data, recommendations, trending | ✅ Partial (search), 🔲 recommendations |
+| **Semantic Scholar API** | Citation data, recommendations, contexts | ✅ Integrated |
 | **HuggingFace Daily Papers** | Community-curated trending, upvotes | ✅ Integrated |
-| **Papers with Code** | SOTA results, code repos | 🔲 Planned |
+| **ChromaDB** | Vector search, semantic retrieval | ✅ Integrated |
+| **scite.ai-style** | Smart citation context (via S2 API) | ✅ Integrated |
+| **Connected Papers-style** | Citation graph visualization (via S2 API) | ✅ Integrated |
+| **OpenAlex** | Open metadata, author profiles, topics | 🔲 Planned |
+| **Papers with Code** | SOTA results, code repos | ❌ Shut down (2025) |
 | **alphaXiv** | Community discussions, hot papers | 🔲 Planned |
-| **ChromaDB** | Vector search, semantic retrieval | 🔲 Planned |
-| **scite.ai** | Smart citation context | 🔲 Planned |
-| **Connected Papers** | Citation graph visualization | 🔲 Planned (via S2 API) |
-| **Google NotebookLM** | Audio overview inspiration | 🔲 Planned (own TTS) |
 
 ---
 

@@ -35,6 +35,7 @@ class NotificationConfig(BaseModel):
     bark_url: str = Field("", alias="bark_url")
     bark_key: str = Field("", alias="bark_key")
     lark_webhook: str = Field("", alias="lark_webhook")
+    webhook_url: str = Field("", alias="webhook_url")  # Generic webhook (Slack, Discord, etc.)
 
 
 class StorageConfig(BaseModel):

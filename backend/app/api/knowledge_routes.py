@@ -18,6 +18,7 @@ from ..models.knowledge import (
     Flashcard,
     KnowledgeEntity,
     KnowledgeRelationship,
+    PaperCollection,
     PaperKnowledge,
     UserAnnotation,
 )
@@ -820,8 +821,197 @@ def create_knowledge_router() -> APIRouter:
         return {"explanation": reply}
 
     # ------------------------------------------------------------------
+    # Paper Collections (ResearchRabbit-style)
+    # ------------------------------------------------------------------
+
+    @router.get("/collections")
+    async def list_collections() -> list[dict[str, Any]]:
+        with Session(engine) as session:
+            cols = session.exec(select(PaperCollection).order_by(PaperCollection.updated_at.desc())).all()
+        return [
+            {"id": c.id, "name": c.name, "description": c.description, "color": c.color,
+             "paper_ids": json.loads(c.paper_ids_json) if c.paper_ids_json else [],
+             "paper_count": len(json.loads(c.paper_ids_json)) if c.paper_ids_json else 0,
+             "created_at": c.created_at.isoformat() if c.created_at else None,
+             "updated_at": c.updated_at.isoformat() if c.updated_at else None}
+            for c in cols
+        ]
+
+    @router.post("/collections")
+    async def create_collection(request: Request) -> dict[str, Any]:
+        import uuid
+        from datetime import datetime
+        body = await request.json()
+        name = body.get("name", "").strip()
+        if not name:
+            raise HTTPException(400, "name is required")
+        cid = f"col_{uuid.uuid4().hex[:12]}"
+        with Session(engine) as session:
+            col = PaperCollection(
+                id=cid, name=name, description=body.get("description", ""),
+                color=body.get("color", "blue"), paper_ids_json="[]",
+                created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
+            )
+            session.add(col)
+            session.commit()
+        return {"id": cid, "name": name}
+
+    @router.put("/collections/{col_id}")
+    async def update_collection(col_id: str, request: Request) -> dict[str, str]:
+        from datetime import datetime
+        body = await request.json()
+        with Session(engine) as session:
+            col = session.get(PaperCollection, col_id)
+            if not col:
+                raise HTTPException(404, "Collection not found")
+            if "name" in body:
+                col.name = body["name"]
+            if "description" in body:
+                col.description = body["description"]
+            if "color" in body:
+                col.color = body["color"]
+            col.updated_at = datetime.utcnow()
+            session.add(col)
+            session.commit()
+        return {"status": "updated"}
+
+    @router.delete("/collections/{col_id}")
+    async def delete_collection(col_id: str) -> dict[str, str]:
+        with Session(engine) as session:
+            col = session.get(PaperCollection, col_id)
+            if not col:
+                raise HTTPException(404, "Collection not found")
+            session.delete(col)
+            session.commit()
+        return {"status": "deleted"}
+
+    @router.post("/collections/{col_id}/papers")
+    async def add_paper_to_collection(col_id: str, request: Request) -> dict[str, Any]:
+        from datetime import datetime
+        body = await request.json()
+        paper_id = body.get("paper_id", "")
+        if not paper_id:
+            raise HTTPException(400, "paper_id is required")
+        with Session(engine) as session:
+            col = session.get(PaperCollection, col_id)
+            if not col:
+                raise HTTPException(404, "Collection not found")
+            ids = json.loads(col.paper_ids_json) if col.paper_ids_json else []
+            if paper_id not in ids:
+                ids.append(paper_id)
+                col.paper_ids_json = json.dumps(ids)
+                col.updated_at = datetime.utcnow()
+                session.add(col)
+                session.commit()
+        return {"paper_count": len(ids)}
+
+    @router.delete("/collections/{col_id}/papers/{paper_id}")
+    async def remove_paper_from_collection(col_id: str, paper_id: str) -> dict[str, Any]:
+        from datetime import datetime
+        with Session(engine) as session:
+            col = session.get(PaperCollection, col_id)
+            if not col:
+                raise HTTPException(404, "Collection not found")
+            ids = json.loads(col.paper_ids_json) if col.paper_ids_json else []
+            ids = [pid for pid in ids if pid != paper_id]
+            col.paper_ids_json = json.dumps(ids)
+            col.updated_at = datetime.utcnow()
+            session.add(col)
+            session.commit()
+        return {"paper_count": len(ids)}
+
+    # ------------------------------------------------------------------
+    # Paper Writing Assistant
+    # ------------------------------------------------------------------
+
+    @router.post("/writing/related-work")
+    async def generate_related_work(request: Request) -> dict[str, str]:
+        """Generate a 'Related Work' section from selected papers."""
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        paper_ids = body.get("paper_ids", [])
+        topic = body.get("topic", "")
+        style = body.get("style", "ieee")  # ieee, acm, apa
+
+        if not paper_ids:
+            raise HTTPException(400, "paper_ids is required")
+
+        papers_json = []
+        with Session(engine) as session:
+            for pid in paper_ids[:20]:
+                p = session.get(PaperKnowledge, pid)
+                if p and p.knowledge_json:
+                    papers_json.append(json.loads(p.knowledge_json))
+
+        if not papers_json:
+            raise HTTPException(400, "No papers with extracted knowledge found")
+
+        context = _build_writing_context(papers_json)
+        prompt = (
+            f"You are an expert academic writer. Generate a 'Related Work' section for a research paper.\n\n"
+            f"Citation style: {style.upper()}\n"
+            f"{'Topic focus: ' + topic if topic else ''}\n\n"
+            f"Requirements:\n"
+            f"- Write in formal academic style\n"
+            f"- Organize thematically, not paper-by-paper\n"
+            f"- Cite papers as [Author et al., Year] or numbered references\n"
+            f"- Compare and contrast approaches\n"
+            f"- Identify the gap your work fills\n"
+            f"- Output as Markdown\n"
+            f"- Include a References section at the end\n\n"
+            f"Papers:\n{context}"
+        )
+
+        import httpx as hx
+        async with hx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(
+                f"{llm_config['base_url']}/chat/completions",
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"},
+                json={
+                    "model": llm_config.get("model", "gpt-4o"),
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.3,
+                    "max_tokens": 4096,
+                },
+            )
+            resp.raise_for_status()
+            text = resp.json()["choices"][0]["message"]["content"]
+        return {"related_work": text}
+
+    # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _build_writing_context(papers: list[dict]) -> str:
+        parts = []
+        for i, p in enumerate(papers):
+            meta = p.get("metadata", {})
+            title = meta.get("title", "")
+            if isinstance(title, dict):
+                title = title.get("en", "")
+            authors = ", ".join(a.get("name", "") for a in (meta.get("authors") or [])[:3])
+            year = meta.get("year", "")
+            abstract = meta.get("abstract", "")
+            if isinstance(abstract, dict):
+                abstract = abstract.get("en", "")
+            findings = []
+            for f in p.get("findings", [])[:5]:
+                s = f.get("statement", "")
+                findings.append(s.get("en", "") if isinstance(s, dict) else str(s))
+            methods = []
+            for m in p.get("methods", []):
+                n = m.get("name", "")
+                methods.append(n.get("en", "") if isinstance(n, dict) else str(n))
+
+            parts.append(f"[{i+1}] {title} ({authors}, {year})")
+            if abstract:
+                parts.append(f"  Abstract: {str(abstract)[:300]}")
+            if findings:
+                parts.append(f"  Findings: {'; '.join(findings)}")
+            if methods:
+                parts.append(f"  Methods: {', '.join(methods)}")
+            parts.append("")
+        return "\n".join(parts)
 
     def _get_completed_papers_json() -> list[dict]:
         with Session(engine) as session:

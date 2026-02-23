@@ -25,6 +25,7 @@ notification:
   bark_url: ""
   bark_key: ""
   lark_webhook: ""
+  webhook_url: ""                            # Generic webhook (Slack, Discord, n8n, etc.)
 
 security:
   secret_key: "change-me-to-random-string"
