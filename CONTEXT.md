@@ -4,7 +4,7 @@
 - **Project**: PaperRadar (formerly EasyPaper)
 - **GitHub**: https://github.com/neosun100/PaperRadar
 - **Docker Hub**: neosun/paperradar
-- **Current Version**: 1.8.0
+- **Current Version**: 1.9.1
 - **Kiro Model**: claude-opus-4.6-1m
 
 ## Architecture
