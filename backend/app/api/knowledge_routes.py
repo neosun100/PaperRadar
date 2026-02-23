@@ -1356,6 +1356,52 @@ def create_knowledge_router() -> APIRouter:
         }
 
     # ------------------------------------------------------------------
+    # Paper Similarity Map (2D embedding visualization)
+    # ------------------------------------------------------------------
+
+    @router.get("/similarity-map")
+    async def get_similarity_map() -> dict[str, Any]:
+        """Get 2D coordinates for all papers based on vector embeddings (PCA)."""
+        from ..services.vector_search import get_vector_service
+        vs = get_vector_service()
+        if not vs:
+            raise HTTPException(400, "Vector search not configured")
+        # Get all paper embeddings from ChromaDB
+        collection = vs._papers
+        count = collection.count()
+        if count < 2:
+            return {"points": [], "message": "Need at least 2 papers with embeddings"}
+        data = collection.get(include=["embeddings", "metadatas"])
+        embeddings_data = data.get("embeddings")
+        if embeddings_data is None or len(embeddings_data) < 2:
+            return {"points": [], "message": "No embeddings found"}
+        import numpy as np
+        embeddings = np.array(embeddings_data)
+        # Simple PCA to 2D
+        mean = embeddings.mean(axis=0)
+        centered = embeddings - mean
+        cov = np.cov(centered.T)
+        eigenvalues, eigenvectors = np.linalg.eigh(cov)
+        # Take top 2 eigenvectors (largest eigenvalues are last)
+        top2 = eigenvectors[:, -2:][:, ::-1]
+        projected = centered @ top2
+        # Normalize to [0, 1]
+        mins = projected.min(axis=0)
+        maxs = projected.max(axis=0)
+        ranges = maxs - mins
+        ranges[ranges == 0] = 1
+        normalized = (projected - mins) / ranges
+        points = []
+        for i, meta in enumerate(data["metadatas"]):
+            points.append({
+                "paper_id": meta.get("paper_id", ""),
+                "title": meta.get("title", "")[:100],
+                "x": float(normalized[i][0]),
+                "y": float(normalized[i][1]),
+            })
+        return {"points": points, "total": len(points)}
+
+    # ------------------------------------------------------------------
     # Figure & Table Extraction
     # ------------------------------------------------------------------
 

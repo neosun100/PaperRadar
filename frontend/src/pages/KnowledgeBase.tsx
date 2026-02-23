@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-    Brain, Search, Download, Trash2, BookOpen, Network, FileJson, FileText as FileTextIcon, GraduationCap, Loader2, CheckCircle, AlertCircle, Clock, Sparkles, MessageCircle, GitCompareArrows, FolderPlus, Folder, PenTool, Copy, X, Plus,
+    Brain, Search, Download, Trash2, BookOpen, Network, FileJson, FileText as FileTextIcon, GraduationCap, Loader2, CheckCircle, AlertCircle, Clock, Sparkles, MessageCircle, GitCompareArrows, FolderPlus, Folder, PenTool, Copy, X, Plus, Map,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -229,6 +229,9 @@ const KnowledgeBase = () => {
                         </Button>
                         <Button variant="outline" className="gap-2" onClick={() => navigate("/knowledge/graph")}>
                             <Network className="h-4 w-4" /> {t("knowledge.knowledgeGraph")}
+                        </Button>
+                        <Button variant="outline" className="gap-2" onClick={() => navigate("/knowledge/similarity")}>
+                            <Map className="h-4 w-4" /> {t("knowledge.similarityMap")}
                         </Button>
                         <Button variant="outline" className="gap-2 text-muted-foreground" onClick={() => navigate("/knowledge/review")}>
                             <GraduationCap className="h-4 w-4" /> {t("knowledge.reviewFlashcards")}

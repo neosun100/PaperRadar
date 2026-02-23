@@ -148,7 +148,8 @@
     "relatedWorkGenerated": "Related work section generated.",
     "relatedWorkFailed": "Failed to generate related work.",
     "copyToClipboard": "Copy",
-    "copied": "Copied to clipboard."
+    "copied": "Copied to clipboard.",
+    "similarityMap": "Similarity Map"
   },
   "paperDetail": {
     "knowledgeBase": "Knowledge Base",

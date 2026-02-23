@@ -148,7 +148,8 @@
     "relatedWorkGenerated": "相关工作章节已生成。",
     "relatedWorkFailed": "生成相关工作失败。",
     "copyToClipboard": "复制",
-    "copied": "已复制到剪贴板。"
+    "copied": "已复制到剪贴板。",
+    "similarityMap": "相似度地图"
   },
   "paperDetail": {
     "knowledgeBase": "知识库",

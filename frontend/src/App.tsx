@@ -14,6 +14,7 @@ const FlashcardReview = lazy(() => import("./pages/FlashcardReview"));
 const KnowledgeGraph = lazy(() => import("./pages/KnowledgeGraph"));
 const ResearchInsights = lazy(() => import("./pages/ResearchInsights"));
 const RadarPage = lazy(() => import("./pages/RadarPage"));
+const SimilarityMap = lazy(() => import("./pages/SimilarityMap"));
 
 const Loading = () => (
   <div className="flex h-[50vh] items-center justify-center">
@@ -36,6 +37,7 @@ function App() {
             <Route path="/knowledge/graph" element={<KnowledgeGraph />} />
             <Route path="/knowledge/insights" element={<ResearchInsights />} />
             <Route path="/radar" element={<RadarPage />} />
+            <Route path="/knowledge/similarity" element={<SimilarityMap />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
