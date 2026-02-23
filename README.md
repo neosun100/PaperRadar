@@ -109,6 +109,25 @@ curl -X POST http://localhost:9201/api/upload \
   -F "file=@paper.pdf" -F "mode=translate"
 ```
 
+### 🤖 MCP Server (Claude/Cursor Integration)
+
+PaperRadar exposes an MCP server so AI assistants can directly search, analyze, and process papers:
+
+```json
+{
+  "mcpServers": {
+    "paperradar": {
+      "command": "python",
+      "args": ["-m", "app.mcp_server"],
+      "cwd": "/path/to/backend",
+      "env": {"PAPERRADAR_API": "http://localhost:9200"}
+    }
+  }
+}
+```
+
+Available tools: `search_papers`, `list_papers`, `get_paper`, `chat_with_papers`, `get_trending`, `radar_status`, `process_arxiv_paper`, `generate_literature_review`
+
 ---
 
 ## 🏗️ Tech Stack
@@ -118,6 +137,7 @@ curl -X POST http://localhost:9201/api/upload \
 | Backend | FastAPI, Python 3.11, pdf2zh, PyMuPDF, httpx |
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, react-i18next |
 | Database | SQLite via SQLModel |
+| Vector DB | ChromaDB (embedded) |
 | AI/LLM | Any OpenAI-compatible API (BYOK) |
 | Radar | arXiv API, LLM-based relevance scoring |
 | Notifications | Bark (iOS), Lark (Card 2.0) |
