@@ -476,4 +476,66 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
             pass
         return {"recommendations": [], "message": "Recommendation API unavailable"}
 
+    # ------------------------------------------------------------------
+    # Backup & Restore
+    # ------------------------------------------------------------------
+
+    @router.get("/backup")
+    async def create_backup() -> FileResponse:
+        """Create a ZIP backup of the entire database and vector store."""
+        import shutil
+        import tempfile
+        from datetime import datetime
+        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        backup_name = f"paperradar_backup_{ts}"
+        with tempfile.TemporaryDirectory() as tmp:
+            backup_dir = Path(tmp) / backup_name
+            backup_dir.mkdir()
+            # Copy SQLite DB
+            db_path = Path("data/app.db")
+            if db_path.exists():
+                shutil.copy2(db_path, backup_dir / "app.db")
+            # Copy vector store
+            vec_path = Path("data/vectordb")
+            if vec_path.exists():
+                shutil.copytree(vec_path, backup_dir / "vectordb")
+            # Create ZIP
+            zip_path = shutil.make_archive(str(Path(tmp) / backup_name), "zip", tmp, backup_name)
+            # Move to temp dir for serving
+            final_path = Path(cfg.storage.temp_dir) / f"{backup_name}.zip"
+            shutil.move(zip_path, str(final_path))
+        return FileResponse(str(final_path), filename=f"{backup_name}.zip", media_type="application/zip")
+
+    @router.post("/restore")
+    async def restore_backup(file: UploadFile = File(...)) -> dict[str, str]:
+        """Restore from a backup ZIP file."""
+        import shutil
+        import tempfile
+        if not file.filename or not file.filename.endswith(".zip"):
+            raise HTTPException(400, "Must be a .zip file")
+        content = await file.read()
+        with tempfile.TemporaryDirectory() as tmp:
+            zip_path = Path(tmp) / "backup.zip"
+            zip_path.write_bytes(content)
+            import zipfile
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                zf.extractall(tmp)
+            # Find the backup directory
+            dirs = [d for d in Path(tmp).iterdir() if d.is_dir() and d.name.startswith("paperradar_backup")]
+            if not dirs:
+                raise HTTPException(400, "Invalid backup format")
+            backup_dir = dirs[0]
+            # Restore DB
+            db_src = backup_dir / "app.db"
+            if db_src.exists():
+                shutil.copy2(db_src, Path("data/app.db"))
+            # Restore vector store
+            vec_src = backup_dir / "vectordb"
+            if vec_src.exists():
+                vec_dst = Path("data/vectordb")
+                if vec_dst.exists():
+                    shutil.rmtree(vec_dst)
+                shutil.copytree(vec_src, vec_dst)
+        return {"status": "restored", "message": "Restart the container to apply changes"}
+
     return router

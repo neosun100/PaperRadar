@@ -220,7 +220,7 @@
 
 ### Phase 4C: Platform (Lower Priority)
 
-- [ ] **Public API Documentation Page**
+- [x] **Public API Documentation Page**
   - Interactive Swagger UI at /api/docs (already exists)
   - Add usage examples and rate limit info
 
@@ -230,12 +230,12 @@
   - Arrow keys: navigate papers
   - Esc: close panels
 
-- [ ] **Performance Optimization**
+- [x] **Performance Optimization**
   - Lazy-load heavy pages (KnowledgeGraph, PaperDetail)
   - Code splitting with React.lazy()
   - Reduce bundle size (currently 620KB gzipped 190KB)
 
-- [ ] **Backup & Restore**
+- [x] **Backup - [ ] **Backup & Restore Restore**
   - One-click backup of entire DB + vector store
   - Restore from backup file
   - Scheduled auto-backup

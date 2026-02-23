@@ -1,5 +1,17 @@
 # PaperRadar Changelog
 
+## v2.7.0 (2026-02-23)
+- **Backup & Restore**
+  - GET /api/backup → download ZIP of SQLite DB + ChromaDB vector store
+  - POST /api/restore → upload ZIP to restore (requires container restart)
+- **Performance Optimization**
+  - React.lazy() code splitting: main bundle 620KB → 444KB (28% smaller)
+  - 7 pages lazy-loaded on demand (Reader, KnowledgeBase, PaperDetail, etc.)
+  - Loading spinner during chunk download
+- **Public API Documentation**
+  - Swagger UI accessible at /api/docs (via nginx proxy)
+  - ReDoc at /api/redoc, OpenAPI spec at /api/openapi.json
+
 ## v2.6.0 (2026-02-23)
 - **Paper Summary Cards**
   - Knowledge Base paper cards now show abstract preview (first 200 chars)
