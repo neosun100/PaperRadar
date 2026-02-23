@@ -1,5 +1,19 @@
 # PaperRadar Changelog
 
+## v2.9.0 (2026-02-24)
+- **alphaXiv Integration**
+  - 4th radar data source: alphaXiv trending papers with community discussions
+  - Merged into radar scan loop alongside arXiv, Semantic Scholar, HuggingFace
+- **DOI Resolution for Batch Import**
+  - DOIs now resolved to arXiv IDs via OpenAlex API
+  - Supports `doi:10.xxxx/yyyy` format in batch import
+- **Research Gaps Analysis**
+  - Dedicated endpoint: POST /api/knowledge/research-gaps
+  - Identifies: open problems, contradictions, underexplored areas, future directions
+  - Downloadable as Markdown
+  - New button on Research Insights page
+- **Radar Engine**: 4 sources (arXiv + Semantic Scholar + HuggingFace + alphaXiv)
+
 ## v2.8.0 (2026-02-24)
 - **Figure & Table Extraction**
   - Extract figures/images from PDFs using PyMuPDF (auto-filters icons/logos)

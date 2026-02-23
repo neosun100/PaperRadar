@@ -18,6 +18,8 @@ const ResearchInsights = () => {
     const [generating, setGenerating] = useState(false);
     const [review, setReview] = useState<string | null>(null);
     const [reviewLoading, setReviewLoading] = useState(false);
+    const [gaps, setGaps] = useState<string | null>(null);
+    const [gapsLoading, setGapsLoading] = useState(false);
     const [, setLang] = useState(i18n.language);
     useEffect(() => { const cb = (l: string) => setLang(l); i18n.on("languageChanged", cb); return () => { i18n.off("languageChanged", cb); }; }, [i18n]);
 
@@ -65,6 +67,15 @@ const ResearchInsights = () => {
                             {reviewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                             {reviewLoading ? "Writing..." : "Literature Review"}
                         </Button>
+                        <Button variant="outline" onClick={async () => {
+                            setGapsLoading(true);
+                            try { const r = await api.post("/api/knowledge/research-gaps", {}); setGaps(r.data.gaps); }
+                            catch (e: any) { toast.error(e.response?.data?.detail || "Failed"); }
+                            finally { setGapsLoading(false); }
+                        }} disabled={gapsLoading} className="gap-2">
+                            {gapsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+                            {gapsLoading ? "Analyzing..." : "Research Gaps"}
+                        </Button>
                     </div>
                     {insights?.paper_count && <p className="text-xs text-muted-foreground">{insights.paper_count} papers analyzed</p>}
                 </div>
@@ -85,6 +96,23 @@ const ResearchInsights = () => {
                         }}>Download .md</Button>
                     </div>
                     <div className="prose dark:prose-invert max-w-none text-sm whitespace-pre-wrap">{review}</div>
+                </CardContent></Card>
+            )}
+
+            {/* Research Gaps */}
+            {gaps && (
+                <Card><CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-500" /> Research Gaps Analysis</h2>
+                        <Button variant="ghost" size="sm" onClick={() => {
+                            const blob = new Blob([gaps], { type: "text/markdown" });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement("a");
+                            a.href = url; a.download = "research_gaps.md"; a.click();
+                            URL.revokeObjectURL(url);
+                        }}>Download .md</Button>
+                    </div>
+                    <div className="prose dark:prose-invert max-w-none text-sm whitespace-pre-wrap">{gaps}</div>
                 </CardContent></Card>
             )}
 

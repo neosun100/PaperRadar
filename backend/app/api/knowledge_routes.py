@@ -1356,6 +1356,56 @@ def create_knowledge_router() -> APIRouter:
         }
 
     # ------------------------------------------------------------------
+    # Research Gaps (dedicated analysis)
+    # ------------------------------------------------------------------
+
+    @router.post("/research-gaps")
+    async def generate_research_gaps(request: Request) -> dict[str, Any]:
+        """Generate detailed research gaps analysis from knowledge base papers."""
+        llm_config = get_llm_config(request)
+        body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+        topic = body.get("topic", "")
+        papers_json = _get_completed_papers_json()
+        if len(papers_json) < 2:
+            raise HTTPException(400, "Need at least 2 papers")
+
+        # Build context from papers
+        context_parts = []
+        for p in papers_json[:15]:
+            meta = p.get("metadata", {})
+            title = meta.get("title", "")
+            if isinstance(title, dict):
+                title = title.get("en", "")
+            findings = [f.get("statement", "") for f in p.get("findings", [])[:5]]
+            findings_text = "; ".join(str(f) if not isinstance(f, dict) else f.get("en", "") for f in findings)
+            context_parts.append(f"Paper: {title}\nFindings: {findings_text}")
+
+        prompt = (
+            "You are a senior research advisor. Analyze these papers and identify:\n"
+            "1. **Open Problems** — Unsolved challenges mentioned across papers\n"
+            "2. **Contradictions** — Conflicting findings between papers\n"
+            "3. **Underexplored Areas** — Topics mentioned but not deeply studied\n"
+            "4. **Future Directions** — Explicitly suggested next steps\n"
+            "5. **Methodology Gaps** — Missing baselines, datasets, or evaluation methods\n\n"
+            f"{'Focus on: ' + topic if topic else ''}\n\n"
+            "For each gap, provide: title, description, evidence (which papers), impact (high/medium/low), "
+            "and a suggested research question.\n\n"
+            "Respond in Markdown format with clear sections.\n\n"
+            + "\n\n".join(context_parts)
+        )
+
+        async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=120.0) as client:
+            resp = await client.post(
+                "/chat/completions",
+                json={"model": llm_config.get("model", ""), "messages": [{"role": "user", "content": prompt}], "max_tokens": 4000},
+                headers={"Authorization": f"Bearer {llm_config['api_key']}", "Content-Type": "application/json"},
+            )
+            resp.raise_for_status()
+            result = resp.json()["choices"][0]["message"]["content"]
+
+        return {"gaps": result, "paper_count": len(papers_json), "topic": topic}
+
+    # ------------------------------------------------------------------
     # Zotero Import
     # ------------------------------------------------------------------
 

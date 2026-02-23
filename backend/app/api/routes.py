@@ -186,6 +186,28 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
                 if m:
                     arxiv_id = m.group(1)
 
+            # Try DOI → resolve to arXiv via OpenAlex
+            if not arxiv_id and (pid.startswith("doi:") or pid.startswith("10.")):
+                doi = pid.replace("doi:", "").strip()
+                try:
+                    async with httpx.AsyncClient(timeout=15.0) as client:
+                        resp = await client.get(f"https://api.openalex.org/works/doi:{doi}", params={"select": "ids,title"})
+                        if resp.status_code == 200:
+                            oa_data = resp.json()
+                            oa_ids = oa_data.get("ids", {})
+                            # Try to get arXiv ID from OpenAlex
+                            openalex_url = oa_ids.get("openalex", "")
+                            if "arxiv" in str(oa_ids):
+                                # OpenAlex sometimes has arxiv in ids
+                                for k, v in oa_ids.items():
+                                    if "arxiv" in str(v).lower():
+                                        m2 = re.search(r'(\d{4}\.\d{4,5})', str(v))
+                                        if m2:
+                                            arxiv_id = m2.group(1)
+                                            break
+                except Exception:
+                    pass
+
             if arxiv_id:
                 pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
                 filename = f"arxiv_{arxiv_id}.pdf"

@@ -111,18 +111,19 @@ class RadarEngine:
             arxiv_papers = await asyncio.to_thread(self._fetch_arxiv)
             s2_papers = await self._fetch_semantic_scholar()
             hf_papers = await self._fetch_huggingface_daily()
+            alpha_papers = await self._fetch_alphaxiv_trending()
             
             # Merge and deduplicate by arxiv_id
             seen = set()
             candidates = []
-            for p in arxiv_papers + s2_papers + hf_papers:
+            for p in arxiv_papers + s2_papers + hf_papers + alpha_papers:
                 aid = p.get("arxiv_id", "")
                 if aid and aid not in seen:
                     seen.add(aid)
                     candidates.append(p)
             
-            logger.info("Sources: arXiv=%d, S2=%d, HF=%d, merged=%d",
-                        len(arxiv_papers), len(s2_papers), len(hf_papers), len(candidates))
+            logger.info("Sources: arXiv=%d, S2=%d, HF=%d, αXiv=%d, merged=%d",
+                        len(arxiv_papers), len(s2_papers), len(hf_papers), len(alpha_papers), len(candidates))
             if not candidates:
                 self._last_scan = datetime.utcnow()
                 self._scan_count += 1
@@ -369,6 +370,31 @@ class RadarEngine:
             logger.info("HuggingFace: %d papers fetched", len(papers))
         except Exception:
             logger.exception("Failed to fetch HuggingFace Daily Papers")
+        return papers
+
+    async def _fetch_alphaxiv_trending(self) -> list[dict]:
+        """Fetch trending papers from alphaXiv (community discussions)."""
+        papers = []
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                # alphaXiv trending API
+                resp = await client.get("https://api.alphaxiv.org/v1/papers/trending", params={"limit": 20, "period": "week"})
+                if resp.status_code == 200:
+                    for item in resp.json().get("papers", []):
+                        arxiv_id = item.get("arxiv_id", "")
+                        if arxiv_id:
+                            papers.append({
+                                "arxiv_id": arxiv_id,
+                                "title": item.get("title", ""),
+                                "abstract": (item.get("abstract") or "")[:500],
+                                "authors": item.get("authors", [])[:5],
+                                "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}.pdf",
+                                "source": "alphaxiv",
+                                "upvotes": item.get("discussion_count", 0),
+                            })
+            logger.info("alphaXiv: %d papers fetched", len(papers))
+        except Exception:
+            logger.debug("alphaXiv fetch failed (may not be available)")
         return papers
 
     async def _score_papers(self, papers: list[dict]) -> list[dict]:
