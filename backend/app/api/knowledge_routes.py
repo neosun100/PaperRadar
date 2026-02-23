@@ -499,6 +499,77 @@ def create_knowledge_router() -> APIRouter:
         return {"comparison": reply, "paper_count": len(papers_json)}
 
     # ------------------------------------------------------------------
+    # Elicit-style Data Extraction Table
+    # ------------------------------------------------------------------
+
+    @router.post("/extract-table")
+    async def extract_data_table(request: Request) -> dict[str, Any]:
+        """Extract structured data from papers into a comparison table."""
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        paper_ids = body.get("paper_ids", [])
+        columns = body.get("columns", ["method", "dataset", "metric", "result", "limitation"])
+
+        if not paper_ids:
+            raise HTTPException(400, "paper_ids is required")
+
+        papers_json = []
+        with Session(engine) as session:
+            for pid in paper_ids[:20]:
+                p = session.get(PaperKnowledge, pid)
+                if p and p.knowledge_json:
+                    papers_json.append(json.loads(p.knowledge_json))
+
+        if not papers_json:
+            raise HTTPException(400, "No papers with extracted knowledge")
+
+        context = _build_writing_context(papers_json)
+        cols_str = ", ".join(columns)
+        cols_json = ", ".join(f'"{c}"' for c in columns)
+        prompt = (
+            f"Extract structured data from these papers into a table.\n\n"
+            f"Columns: {cols_str}\n\n"
+            f"Return a JSON object with:\n"
+            f"- \"columns\": [{cols_json}]\n"
+            f"- \"rows\": array of objects, one per paper, each with \"paper\" (title+year) and a value for each column\n\n"
+            f"If a value is not available, use \"-\".\n"
+            f"Be concise — each cell should be 1-2 sentences max.\n\n"
+            f"Papers:\n{context}\n\n"
+            f"Respond ONLY with valid JSON."
+        )
+
+        import httpx as hx
+        async with hx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(
+                f"{llm_config['base_url']}/chat/completions",
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"},
+                json={
+                    "model": llm_config.get("model", "gpt-4o"),
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.2,
+                    "max_tokens": 4096,
+                },
+            )
+            resp.raise_for_status()
+            content = resp.json()["choices"][0]["message"]["content"].strip()
+
+        # Parse JSON from response
+        try:
+            if content.startswith("```"):
+                lines = content.split("\n")
+                content = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+            start = content.find("{")
+            end = content.rfind("}")
+            if start != -1 and end != -1:
+                table_data = json.loads(content[start:end+1])
+            else:
+                table_data = json.loads(content)
+        except json.JSONDecodeError:
+            table_data = {"columns": columns, "rows": [], "error": "Failed to parse table"}
+
+        return table_data
+
+    # ------------------------------------------------------------------
     # 导出
     # ------------------------------------------------------------------
 

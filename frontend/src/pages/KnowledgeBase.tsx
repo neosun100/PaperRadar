@@ -44,6 +44,9 @@ const KnowledgeBase = () => {
     const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set());
     const [comparison, setComparison] = useState<string | null>(null);
     const [compareLoading, setCompareLoading] = useState(false);
+    // Extraction table
+    const [extractTable, setExtractTable] = useState<{ columns: string[]; rows: any[] } | null>(null);
+    const [extractLoading, setExtractLoading] = useState(false);
     const [searchResults, setSearchResults] = useState<any[] | null>(null);
     const [searching, setSearching] = useState(false);
     // Collections
@@ -128,6 +131,17 @@ const KnowledgeBase = () => {
             setComparison(resp.data.comparison);
         } catch (e: any) { toast.error(e.response?.data?.detail || "Compare failed"); }
         finally { setCompareLoading(false); }
+    };
+
+    const handleExtractTable = async () => {
+        const ids = selectedForCompare.size > 0 ? Array.from(selectedForCompare) : (activeCollection ? collections.find(c => c.id === activeCollection)?.paper_ids || [] : papers.filter(p => p.extraction_status === "completed").map(p => p.id));
+        if (ids.length < 2) return;
+        setExtractLoading(true);
+        try {
+            const r = await api.post("/api/knowledge/extract-table", { paper_ids: ids });
+            setExtractTable(r.data);
+        } catch { toast.error("Failed to extract table"); }
+        finally { setExtractLoading(false); }
     };
 
     const toggleCompare = (id: string) => {
@@ -340,6 +354,46 @@ const KnowledgeBase = () => {
                 </CardContent></Card>
             )}
 
+            {/* Extraction Table */}
+            {extractTable && extractTable.rows && extractTable.rows.length > 0 && (
+                <Card><CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-lg font-semibold flex items-center gap-2"><FileTextIcon className="h-5 w-5" /> Data Extraction Table</h2>
+                        <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => {
+                                const header = (extractTable.columns || []).join("\t");
+                                const rows = (extractTable.rows || []).map((r: any) => [r.paper, ...(extractTable.columns || []).map((c: string) => r[c] || "-")].join("\t"));
+                                navigator.clipboard.writeText([header, ...rows].join("\n"));
+                                toast.success(t("knowledge.copied"));
+                            }}><Copy className="h-3.5 w-3.5 mr-1" /> TSV</Button>
+                            <Button variant="ghost" size="sm" onClick={() => setExtractTable(null)}>✕</Button>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm border-collapse">
+                            <thead>
+                                <tr className="border-b">
+                                    <th className="text-left p-2 font-medium text-muted-foreground">Paper</th>
+                                    {(extractTable.columns || []).map((col: string) => (
+                                        <th key={col} className="text-left p-2 font-medium text-muted-foreground capitalize">{col}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(extractTable.rows || []).map((row: any, i: number) => (
+                                    <tr key={i} className="border-b last:border-0 hover:bg-muted/50">
+                                        <td className="p-2 font-medium max-w-[200px]">{row.paper}</td>
+                                        {(extractTable.columns || []).map((col: string) => (
+                                            <td key={col} className="p-2 text-muted-foreground max-w-[250px]">{row[col] || "-"}</td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent></Card>
+            )}
+
             <section className="space-y-4">
                 <div className="flex items-center justify-between gap-4 px-2">
                     <div className="flex items-center gap-3 shrink-0">
@@ -348,6 +402,12 @@ const KnowledgeBase = () => {
                             <Button size="sm" onClick={handleCompare} disabled={compareLoading} className="gap-1.5">
                                 {compareLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitCompareArrows className="h-3.5 w-3.5" />}
                                 Compare ({selectedForCompare.size})
+                            </Button>
+                        )}
+                        {selectedForCompare.size >= 2 && (
+                            <Button size="sm" variant="outline" onClick={handleExtractTable} disabled={extractLoading} className="gap-1.5">
+                                {extractLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileTextIcon className="h-3.5 w-3.5" />}
+                                Extract Table
                             </Button>
                         )}
                     </div>

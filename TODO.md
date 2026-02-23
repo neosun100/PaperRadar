@@ -136,7 +136,7 @@
   - Author profiles, institution data, topic classification
   - API: https://api.openalex.org
 
-- [ ] **Elicit-style Data Extraction Tables**
+- [x] **Elicit-style Data Extraction Tables**
   - Extract structured data from multiple papers into comparison tables
   - Custom columns (method, dataset, metric, result)
   - Export as CSV/spreadsheet

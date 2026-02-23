@@ -4,7 +4,7 @@
 - **Project**: PaperRadar (formerly EasyPaper)
 - **GitHub**: https://github.com/neosun100/PaperRadar
 - **Docker Hub**: neosun/paperradar
-- **Current Version**: 2.2.0
+- **Current Version**: 2.3.0
 - **Kiro Model**: claude-opus-4.6-1m
 
 ## Architecture
@@ -107,7 +107,6 @@ git add -A && git commit -m "message" && git push origin main
 12. Vector index papers automatically on knowledge extraction completion
 
 ## TODO Priority (next items)
-1. Elicit-style Data Extraction Tables
-2. Chirpz-style Paper Prioritization
-3. Multi-Language Paper Support
-4. Email Digest
+1. Chirpz-style Paper Prioritization
+2. Multi-Language Paper Support
+3. Email Digest

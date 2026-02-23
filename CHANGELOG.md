@@ -1,5 +1,13 @@
 # PaperRadar Changelog
 
+## v2.3.0 (2026-02-23)
+- **Elicit-style Data Extraction Tables**
+  - Select papers → extract structured data into comparison table
+  - Custom columns (method, dataset, metric, result, etc.)
+  - Copy as TSV for spreadsheet paste
+  - Interactive table display in Knowledge Base
+- Bug fix: f-string syntax error in extract-table endpoint
+
 ## v2.2.0 (2026-02-23)
 - **OpenAlex Integration**
   - One-click paper enrichment from OpenAlex (250M+ works)
