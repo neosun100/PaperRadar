@@ -139,7 +139,17 @@
     "audioGenerating": "Generating audio summary... This may take a minute.",
     "audioReady": "Audio summary ready",
     "audioFailed": "Failed to generate audio summary.",
-    "regenerateAudio": "Regenerate"
+    "regenerateAudio": "Regenerate",
+    "citations": "Citations",
+    "citationNetwork": "Citation Network",
+    "citationDesc": "Visualize how this paper connects to other research through citations.",
+    "citedBy": "Cited by",
+    "references": "References",
+    "loadingCitations": "Loading citation network...",
+    "noCitations": "No citation data available. The paper may not have an arXiv ID or Semantic Scholar data.",
+    "citationCount": "citations",
+    "centerPaper": "This paper",
+    "openOnS2": "Open on Semantic Scholar"
   },
   "flashcard": {
     "knowledgeBase": "Knowledge Base",

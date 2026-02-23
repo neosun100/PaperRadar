@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request
 from sqlmodel import Session, select
 
@@ -617,6 +618,74 @@ def create_knowledge_router() -> APIRouter:
         svc = AudioSummaryService("", "", "")
         svc.delete_cached(paper_id)
         return {"status": "deleted"}
+
+    # ------------------------------------------------------------------
+    # Citation Network
+    # ------------------------------------------------------------------
+
+    @router.get("/papers/{paper_id}/citations")
+    async def get_citation_network(paper_id: str) -> dict[str, Any]:
+        """Fetch citation network for a paper via Semantic Scholar API."""
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper:
+            raise HTTPException(404, "Paper not found")
+        if not paper.arxiv_id:
+            return {"nodes": [], "edges": [], "message": "No arXiv ID available"}
+
+        s2_fields = "paperId,externalIds,title,year,citationCount,authors"
+        base = "https://api.semanticscholar.org/graph/v1/paper"
+        nodes: dict[str, dict] = {}
+        edges: list[dict] = []
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # Resolve S2 paper ID and get basic info
+            try:
+                r = await client.get(f"{base}/ArXiv:{paper.arxiv_id}", params={"fields": s2_fields})
+                if r.status_code != 200:
+                    return {"nodes": [], "edges": [], "message": "Paper not found on Semantic Scholar"}
+                center = r.json()
+            except Exception:
+                return {"nodes": [], "edges": [], "message": "Semantic Scholar API unavailable"}
+
+            s2id = center.get("paperId", "")
+            nodes[s2id] = {
+                "id": s2id, "title": center.get("title", ""), "year": center.get("year"),
+                "citations": center.get("citationCount", 0),
+                "authors": [a.get("name", "") for a in (center.get("authors") or [])[:3]],
+                "arxiv_id": paper.arxiv_id, "is_center": True,
+            }
+
+            # Fetch references (papers this paper cites) and citations (papers citing this)
+            for rel, direction in [("references", "cites"), ("citations", "citedBy")]:
+                try:
+                    r2 = await client.get(
+                        f"{base}/{s2id}/{rel}",
+                        params={"fields": s2_fields, "limit": 20},
+                    )
+                    if r2.status_code != 200:
+                        continue
+                    for item in r2.json().get("data", []):
+                        cp = item.get("citingPaper") or item.get("citedPaper") or item
+                        cid = cp.get("paperId", "")
+                        if not cid or not cp.get("title"):
+                            continue
+                        if cid not in nodes:
+                            nodes[cid] = {
+                                "id": cid, "title": cp.get("title", ""), "year": cp.get("year"),
+                                "citations": cp.get("citationCount", 0),
+                                "authors": [a.get("name", "") for a in (cp.get("authors") or [])[:3]],
+                                "arxiv_id": (cp.get("externalIds") or {}).get("ArXiv", ""),
+                                "is_center": False,
+                            }
+                        if direction == "cites":
+                            edges.append({"source": s2id, "target": cid, "type": "cites"})
+                        else:
+                            edges.append({"source": cid, "target": s2id, "type": "cites"})
+                except Exception:
+                    continue
+
+        return {"nodes": list(nodes.values()), "edges": edges}
 
     # ------------------------------------------------------------------
     # Helpers

@@ -139,7 +139,17 @@
     "audioGenerating": "正在生成音频摘要...可能需要一分钟。",
     "audioReady": "音频摘要已就绪",
     "audioFailed": "生成音频摘要失败。",
-    "regenerateAudio": "重新生成"
+    "regenerateAudio": "重新生成",
+    "citations": "引用",
+    "citationNetwork": "引用网络",
+    "citationDesc": "可视化这篇论文与其他研究之间的引用关系。",
+    "citedBy": "被引用",
+    "references": "参考文献",
+    "loadingCitations": "正在加载引用网络...",
+    "noCitations": "暂无引用数据。该论文可能没有 arXiv ID 或 Semantic Scholar 数据。",
+    "citationCount": "次引用",
+    "centerPaper": "当前论文",
+    "openOnS2": "在 Semantic Scholar 查看"
   },
   "flashcard": {
     "knowledgeBase": "知识库",

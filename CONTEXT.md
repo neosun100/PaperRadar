@@ -4,7 +4,7 @@
 - **Project**: PaperRadar (formerly EasyPaper)
 - **GitHub**: https://github.com/neosun100/PaperRadar
 - **Docker Hub**: neosun/paperradar
-- **Current Version**: 1.7.0
+- **Current Version**: 1.8.0
 - **Kiro Model**: claude-opus-4.6-1m
 
 ## Architecture
@@ -40,7 +40,8 @@
 - `frontend/src/pages/PaperDetail.tsx` — Paper detail with chat tab (6 tabs total)
 - `frontend/src/pages/KnowledgeGraph.tsx` — Force-directed graph
 
-## Completed Features (v1.7.0)
+## Completed Features (v1.8.0)
+- Citation Network Visualization (S2 API, force-directed graph on Paper Detail)
 - Paper Audio Summary (NotebookLM-style podcast via LLM + TTS)
 - 3-source radar (arXiv + Semantic Scholar + HuggingFace Daily Papers)
 - HuggingFace upvote ranking, trending 7d/14d/30d
@@ -106,8 +107,7 @@ git add -A && git commit -m "message" && git push origin main
 12. Vector index papers automatically on knowledge extraction completion
 
 ## TODO Priority (next items)
-1. Citation Network Visualization (paper-level citation graph via S2 API)
-2. Paper Annotation & Highlighting in Reader
-3. AI Inline Explanations (click sentence → simplified explanation)
-4. MCP Server (expose PaperRadar to Claude/Cursor)
-5. More data sources (Papers with Code, alphaXiv)
+1. Paper Annotation & Highlighting in Reader
+2. AI Inline Explanations (click sentence → simplified explanation)
+3. MCP Server (expose PaperRadar to Claude/Cursor)
+4. More data sources (Papers with Code, alphaXiv)

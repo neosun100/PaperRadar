@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2, MessageCircle, Send, Headphones, Play, Pause, RotateCcw } from "lucide-react";
+import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2, MessageCircle, Send, Headphones, Play, Pause, RotateCcw, GitFork } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -49,6 +49,15 @@ const PaperDetail = () => {
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [audioRef] = useState(() => new Audio());
+    // Citation network state
+    const [citationNodes, setCitationNodes] = useState<{ id: string; title: string; year?: number; citations: number; authors: string[]; arxiv_id?: string; is_center: boolean }[]>([]);
+    const [citationEdges, setCitationEdges] = useState<{ source: string; target: string; type: string }[]>([]);
+    const [citationLoading, setCitationLoading] = useState(false);
+    const [citationLoaded, setCitationLoaded] = useState(false);
+    const [selectedCitationNode, setSelectedCitationNode] = useState<typeof citationNodes[0] | null>(null);
+    const citationCanvasRef = useRef<HTMLCanvasElement>(null);
+    const citationPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+    const citationAnimRef = useRef<number>(0);
     // Force re-render on language change
     const [, setLang] = useState(i18n.language);
     useEffect(() => {
@@ -105,6 +114,135 @@ const PaperDetail = () => {
         await api.delete(`/api/knowledge/papers/${paperId}/audio`).catch(() => {});
         setAudioStatus("idle"); setAudioUrl(null);
         handleGenerateAudio();
+    };
+
+    const loadCitations = useCallback(async () => {
+        if (citationLoaded || citationLoading) return;
+        setCitationLoading(true);
+        try {
+            const r = await api.get(`/api/knowledge/papers/${paperId}/citations`);
+            setCitationNodes(r.data.nodes || []);
+            setCitationEdges(r.data.edges || []);
+        } catch { /* ignore */ }
+        finally { setCitationLoading(false); setCitationLoaded(true); }
+    }, [paperId, citationLoaded, citationLoading]);
+
+    // Force-directed layout for citation graph
+    useEffect(() => {
+        if (citationNodes.length === 0) return;
+        const canvas = citationCanvasRef.current;
+        if (!canvas) return;
+        const w = canvas.width, h = canvas.height;
+        const positions: Record<string, { x: number; y: number; vx: number; vy: number }> = {};
+        citationNodes.forEach((n) => {
+            positions[n.id] = n.is_center
+                ? { x: w / 2, y: h / 2, vx: 0, vy: 0 }
+                : { x: w / 2 + (Math.random() - 0.5) * w * 0.6, y: h / 2 + (Math.random() - 0.5) * h * 0.6, vx: 0, vy: 0 };
+        });
+        let iter = 0;
+        const simulate = () => {
+            if (iter >= 200) {
+                const final: Record<string, { x: number; y: number }> = {};
+                Object.entries(positions).forEach(([id, p]) => { final[id] = { x: p.x, y: p.y }; });
+                citationPositionsRef.current = final;
+                drawCitationGraph();
+                return;
+            }
+            const ids = Object.keys(positions);
+            for (let i = 0; i < ids.length; i++) {
+                for (let j = i + 1; j < ids.length; j++) {
+                    const a = positions[ids[i]], b = positions[ids[j]];
+                    const dx = b.x - a.x, dy = b.y - a.y;
+                    const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+                    const force = 8000 / (dist * dist);
+                    const fx = (dx / dist) * force, fy = (dy / dist) * force;
+                    a.vx -= fx; a.vy -= fy; b.vx += fx; b.vy += fy;
+                }
+            }
+            citationEdges.forEach((e) => {
+                const a = positions[e.source], b = positions[e.target];
+                if (!a || !b) return;
+                const dx = b.x - a.x, dy = b.y - a.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const force = (dist - 150) * 0.01;
+                const fx = (dx / Math.max(dist, 1)) * force, fy = (dy / Math.max(dist, 1)) * force;
+                a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+            });
+            ids.forEach((id) => {
+                const p = positions[id];
+                p.vx += (w / 2 - p.x) * 0.001; p.vy += (h / 2 - p.y) * 0.001;
+                p.vx *= 0.9; p.vy *= 0.9; p.x += p.vx; p.y += p.vy;
+                p.x = Math.max(40, Math.min(w - 40, p.x)); p.y = Math.max(40, Math.min(h - 40, p.y));
+            });
+            iter++;
+            citationAnimRef.current = requestAnimationFrame(simulate);
+        };
+        simulate();
+        return () => cancelAnimationFrame(citationAnimRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [citationNodes, citationEdges]);
+
+    const drawCitationGraph = useCallback(() => {
+        const canvas = citationCanvasRef.current;
+        const pos = citationPositionsRef.current;
+        if (!canvas || Object.keys(pos).length === 0) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const isDark = document.documentElement.classList.contains("dark");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw edges with arrows
+        citationEdges.forEach((e) => {
+            const from = pos[e.source], to = pos[e.target];
+            if (!from || !to) return;
+            ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y);
+            ctx.strokeStyle = isDark ? "#4b5563" : "#d1d5db"; ctx.lineWidth = 1; ctx.stroke();
+            // Arrowhead
+            const angle = Math.atan2(to.y - from.y, to.x - from.x);
+            const r = 12;
+            const ax = to.x - Math.cos(angle) * 14, ay = to.y - Math.sin(angle) * 14;
+            ctx.beginPath();
+            ctx.moveTo(ax + Math.cos(angle) * r, ay + Math.sin(angle) * r);
+            ctx.lineTo(ax + Math.cos(angle + 2.5) * 5, ay + Math.sin(angle + 2.5) * 5);
+            ctx.lineTo(ax + Math.cos(angle - 2.5) * 5, ay + Math.sin(angle - 2.5) * 5);
+            ctx.fillStyle = isDark ? "#4b5563" : "#d1d5db"; ctx.fill();
+        });
+
+        // Draw nodes
+        citationNodes.forEach((n) => {
+            const p = pos[n.id];
+            if (!p) return;
+            const radius = n.is_center ? 14 : 7 + Math.min(Math.log10(Math.max(n.citations, 1)) * 3, 8);
+            const isSelected = selectedCitationNode?.id === n.id;
+            ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = n.is_center ? "#f59e0b" : (citationEdges.some(e => e.source === n.id) ? "#3b82f6" : "#22c55e");
+            ctx.fill();
+            if (isSelected) { ctx.strokeStyle = isDark ? "#fff" : "#000"; ctx.lineWidth = 2; ctx.stroke(); }
+            // Label
+            const label = n.title.length > 30 ? n.title.slice(0, 28) + "…" : n.title;
+            ctx.font = n.is_center ? "bold 10px sans-serif" : "9px sans-serif";
+            ctx.fillStyle = isDark ? "#e5e7eb" : "#374151";
+            ctx.textAlign = "center";
+            ctx.fillText(label, p.x, p.y + radius + 12);
+        });
+    }, [citationNodes, citationEdges, selectedCitationNode]);
+
+    useEffect(() => { drawCitationGraph(); }, [drawCitationGraph]);
+
+    const handleCitationCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+        const canvas = citationCanvasRef.current;
+        const pos = citationPositionsRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX, y = (e.clientY - rect.top) * scaleY;
+        const clicked = citationNodes.find((n) => {
+            const p = pos[n.id];
+            if (!p) return false;
+            const radius = n.is_center ? 14 : 10;
+            return (p.x - x) ** 2 + (p.y - y) ** 2 <= (radius + 4) ** 2;
+        });
+        setSelectedCitationNode(clicked || null);
     };
 
     const handleExport = async () => {
@@ -186,9 +324,10 @@ const PaperDetail = () => {
             )}
 
             <Tabs defaultValue="chat" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
+                <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-grid">
                     <TabsTrigger value="chat" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.chat")}</span></TabsTrigger>
                     <TabsTrigger value="audio" className="gap-1.5"><Headphones className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.audio")}</span></TabsTrigger>
+                    <TabsTrigger value="citations" className="gap-1.5" onClick={loadCitations}><GitFork className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.citations")}</span></TabsTrigger>
                     <TabsTrigger value="entities" className="gap-1.5"><Brain className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.entities")} ({entities.length})</span><span className="sm:hidden">{entities.length}</span></TabsTrigger>
                     <TabsTrigger value="findings" className="gap-1.5"><Lightbulb className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.findings")} ({findings.length})</span><span className="sm:hidden">{findings.length}</span></TabsTrigger>
                     <TabsTrigger value="relations" className="gap-1.5"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.relations")} ({relationships.length})</span><span className="sm:hidden">{relationships.length}</span></TabsTrigger>
@@ -250,6 +389,53 @@ const PaperDetail = () => {
                             </>
                         )}
                     </CardContent></Card>
+                </TabsContent>
+
+                {/* Citation Network Tab */}
+                <TabsContent value="citations" className="space-y-3">
+                    {citationLoading && (
+                        <Card><CardContent className="p-6 flex flex-col items-center gap-3">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <p className="text-sm text-muted-foreground">{t("paperDetail.loadingCitations")}</p>
+                        </CardContent></Card>
+                    )}
+                    {citationLoaded && citationNodes.length === 0 && (
+                        <Card><CardContent className="p-6 text-center">
+                            <p className="text-sm text-muted-foreground">{t("paperDetail.noCitations")}</p>
+                        </CardContent></Card>
+                    )}
+                    {citationNodes.length > 0 && (
+                        <>
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-amber-500 inline-block" />{t("paperDetail.centerPaper")}</span>
+                                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-green-500 inline-block" />{t("paperDetail.citedBy")} ({citationEdges.filter(e => e.target === citationNodes.find(n => n.is_center)?.id).length})</span>
+                                <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-full bg-blue-500 inline-block" />{t("paperDetail.references")} ({citationEdges.filter(e => e.source === citationNodes.find(n => n.is_center)?.id).length})</span>
+                            </div>
+                            <Card className="overflow-hidden">
+                                <CardContent className="p-0 relative">
+                                    <canvas ref={citationCanvasRef} width={1200} height={600} className="w-full h-[500px] cursor-pointer" onClick={handleCitationCanvasClick} />
+                                    {selectedCitationNode && (
+                                        <div className="absolute top-3 right-3 w-72 rounded-lg bg-card border shadow-lg p-4 space-y-2">
+                                            <h3 className="font-medium text-sm leading-snug">{selectedCitationNode.title}</h3>
+                                            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                                {selectedCitationNode.year && <span>{selectedCitationNode.year}</span>}
+                                                <span>{selectedCitationNode.citations} {t("paperDetail.citationCount")}</span>
+                                            </div>
+                                            {selectedCitationNode.authors.length > 0 && (
+                                                <p className="text-xs text-muted-foreground">{selectedCitationNode.authors.join(", ")}</p>
+                                            )}
+                                            <div className="flex gap-2 pt-1">
+                                                {selectedCitationNode.arxiv_id && (
+                                                    <a href={`https://arxiv.org/abs/${selectedCitationNode.arxiv_id}`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">arXiv</a>
+                                                )}
+                                                <a href={`https://www.semanticscholar.org/paper/${selectedCitationNode.id}`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">{t("paperDetail.openOnS2")}</a>
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </>
+                    )}
                 </TabsContent>
 
                 <TabsContent value="entities" className="space-y-3">

@@ -1,5 +1,16 @@
 # PaperRadar Changelog
 
+## v1.8.0 (2026-02-23)
+- Citation Network Visualization (Connected Papers-style)
+  - New "Citations" tab on Paper Detail page
+  - Fetches references and citing papers from Semantic Scholar API
+  - Interactive force-directed graph with color-coded nodes:
+    - 🟡 Amber = current paper, 🔵 Blue = references, 🟢 Green = cited by
+  - Click any node to see title, year, citation count, authors
+  - Direct links to arXiv and Semantic Scholar for each paper
+  - Arrow-directed edges showing citation direction
+  - Lazy-loaded on tab click to avoid unnecessary API calls
+
 ## v1.7.0 (2026-02-23)
 - Paper Audio Summary: NotebookLM-style podcast generation
   - LLM generates conversational podcast script (two AI hosts)

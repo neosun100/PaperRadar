@@ -70,7 +70,7 @@
   - "Because you read X, you might like Y" — ResearchRabbit-style
   - Show on Dashboard as "Recommended for You" section
 
-- [ ] **Citation Network Visualization**
+- [x] **Citation Network Visualization**
   - Paper-level citation graph (not just entity-level)
   - "Papers that cite this" and "Papers this cites"
   - Use Semantic Scholar citation data
