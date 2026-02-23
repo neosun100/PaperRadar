@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain, Settings, Radar, Link as LinkIcon } from "lucide-react";
+import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain, Settings, Radar, Link as LinkIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api, { getLLMConfig } from "@/lib/api";
@@ -34,6 +34,9 @@ const Dashboard = () => {
     const [queueInfo, setQueueInfo] = useState<{ processing: number; queued: number } | null>(null);
     const [radarStatus, setRadarStatus] = useState<any>(null);
     const [urlInput, setUrlInput] = useState("");
+    const [showBatchImport, setShowBatchImport] = useState(false);
+    const [batchInput, setBatchInput] = useState("");
+    const [batchImporting, setBatchImporting] = useState(false);
     const [kbSearch, setKbSearch] = useState("");
     const [kbResults, setKbResults] = useState<any[]>([]);
     const navigate = useNavigate();
@@ -151,6 +154,26 @@ const Dashboard = () => {
             fetchTasks();
         } catch (error: any) {
             toast.error(error.response?.data?.detail || t("dashboard.urlFetchFailed"));
+        }
+    };
+
+    const handleBatchImport = async () => {
+        if (!batchInput.trim()) return;
+        setBatchImporting(true);
+        try {
+            const isBibtex = batchInput.includes("@");
+            const payload = isBibtex
+                ? { bibtex: batchInput, mode, highlight }
+                : { ids: batchInput.split(/[\n,;]+/).map(s => s.trim()).filter(Boolean), mode, highlight };
+            const r = await api.post("/api/batch-import", payload);
+            toast.success(t("dashboard.batchImported", { count: r.data.imported, total: r.data.total }));
+            setBatchInput("");
+            setShowBatchImport(false);
+            fetchTasks();
+        } catch (e: any) {
+            toast.error(e.response?.data?.detail || t("dashboard.batchFailed"));
+        } finally {
+            setBatchImporting(false);
         }
     };
 
@@ -326,7 +349,21 @@ const Dashboard = () => {
                             <Button size="sm" onClick={handleUrlUpload} disabled={!urlInput.trim()} className="shrink-0 gap-1.5">
                                 <LinkIcon className="h-3.5 w-3.5" /> {t("dashboard.fetchPdf")}
                             </Button>
+                            <Button size="sm" variant="outline" onClick={() => setShowBatchImport(!showBatchImport)} className="shrink-0 gap-1.5">
+                                {t("dashboard.batchImport")}
+                            </Button>
                         </div>
+                        {showBatchImport && (
+                            <div className="w-full max-w-md space-y-2">
+                                <textarea value={batchInput} onChange={(e) => setBatchInput(e.target.value)}
+                                    placeholder={t("dashboard.batchPlaceholder")}
+                                    className="w-full h-24 rounded-md border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary" />
+                                <Button size="sm" onClick={handleBatchImport} disabled={!batchInput.trim() || batchImporting} className="w-full gap-1.5">
+                                    {batchImporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                                    {batchImporting ? t("dashboard.processing") : t("dashboard.batchImport")}
+                                </Button>
+                            </div>
+                        )}
                         {/* Knowledge Search */}
                         <div className="flex items-center gap-2 w-full max-w-md">
                             <Input

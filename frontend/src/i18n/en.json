@@ -48,7 +48,11 @@
     "noDocs": "No documents yet. Upload one to get started!",
     "extractKnowledge": "Extract Knowledge",
     "extractionStarted": "Knowledge extraction started!",
-    "extractionFailed": "Failed to start extraction."
+    "extractionFailed": "Failed to start extraction.",
+    "batchImport": "Batch Import",
+    "batchPlaceholder": "Paste arXiv IDs (one per line) or BibTeX entries...",
+    "batchImported": "{{count}}/{{total}} papers imported and queued.",
+    "batchFailed": "Batch import failed."
   },
   "radar": {
     "title": "Paper Radar",

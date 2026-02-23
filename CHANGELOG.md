@@ -1,5 +1,17 @@
 # PaperRadar Changelog
 
+## v2.5.0 (2026-02-23)
+- **Batch Import**
+  - Import multiple papers via arXiv IDs, DOIs, or BibTeX
+  - Paste list or BibTeX → auto-parse and queue all papers
+  - Max 20 per batch, deduplication built-in
+- **Cmd+K Global Search**
+  - Press ⌘K / Ctrl+K anywhere to open semantic search overlay
+  - Real-time results from ChromaDB vector search
+  - Click result to navigate to paper detail
+  - ESC to close
+- **Phase 4 Roadmap** defined in TODO.md (12 new items)
+
 ## v2.4.0 (2026-02-23) 🎉 ALL TODO COMPLETE
 - **Chirpz-style Paper Prioritization**
   - AI ranks papers by personal relevance based on your KB profile

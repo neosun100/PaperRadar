@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
-import { Radar, Brain, Moon, Sun, Settings, Github, Star, Globe, Menu, X, Home } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Radar, Brain, Moon, Sun, Settings, Github, Star, Globe, Menu, X, Home, Search, Loader2 } from "lucide-react";
 import LLMSettings from "@/components/LLMSettings";
 import { useTheme } from "@/lib/useTheme";
 import { cn } from "@/lib/utils";
+import api from "@/lib/api";
 
 const GITHUB_URL = "https://github.com/neosun100/PaperRadar";
 
@@ -16,6 +18,38 @@ const Layout = () => {
     const [dark, setDark] = useTheme();
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    // Cmd+K search
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [searching, setSearching] = useState(false);
+    const searchRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+                e.preventDefault();
+                setSearchOpen(prev => !prev);
+            }
+            if (e.key === "Escape") setSearchOpen(false);
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, []);
+
+    useEffect(() => {
+        if (searchOpen && searchRef.current) searchRef.current.focus();
+    }, [searchOpen]);
+
+    const doSearch = useCallback(async (q: string) => {
+        if (!q.trim()) { setSearchResults([]); return; }
+        setSearching(true);
+        try {
+            const r = await api.get(`/api/knowledge/search?q=${encodeURIComponent(q)}&n=8`);
+            setSearchResults(r.data.results || []);
+        } catch { setSearchResults([]); }
+        finally { setSearching(false); }
+    }, []);
 
     const toggleLang = () => i18n.changeLanguage(i18n.language === "zh" ? "en" : "zh");
 
@@ -91,6 +125,38 @@ const Layout = () => {
             </main>
 
             <LLMSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+            {/* Cmd+K Search Overlay */}
+            {searchOpen && (
+                <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh]" onClick={() => setSearchOpen(false)}>
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                    <div className="relative w-full max-w-lg rounded-xl border bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-3 border-b px-4 py-3">
+                            <Search className="h-5 w-5 text-muted-foreground shrink-0" />
+                            <Input ref={searchRef} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); doSearch(e.target.value); }}
+                                placeholder="Search knowledge base... (⌘K)" className="border-0 shadow-none focus-visible:ring-0 text-base h-auto p-0" />
+                            {searching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+                            <kbd className="hidden sm:inline-flex h-5 items-center rounded border bg-muted px-1.5 text-[10px] text-muted-foreground">ESC</kbd>
+                        </div>
+                        {searchResults.length > 0 && (
+                            <div className="max-h-[300px] overflow-y-auto p-2 space-y-1">
+                                {searchResults.map((r, i) => (
+                                    <button key={i} className="w-full text-left rounded-lg px-3 py-2 text-sm hover:bg-muted transition-colors"
+                                        onClick={() => {
+                                            if (r.metadata?.paper_id) { navigate(`/knowledge/paper/${r.metadata.paper_id}`); setSearchOpen(false); }
+                                        }}>
+                                        <p className="line-clamp-2 text-foreground">{r.text}</p>
+                                        <span className="text-[10px] text-muted-foreground">{r.metadata?.type} · {(r.score * 100).toFixed(0)}%</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {searchQuery && !searching && searchResults.length === 0 && (
+                            <div className="p-6 text-center text-sm text-muted-foreground">No results found</div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

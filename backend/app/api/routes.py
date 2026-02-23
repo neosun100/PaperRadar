@@ -142,6 +142,73 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         asyncio.create_task(_process())
         return {"task_id": task.task_id, "arxiv_id": arxiv_id}
 
+    @router.post("/batch-import")
+    async def batch_import(request: Request) -> dict[str, Any]:
+        """Import multiple papers by arXiv IDs, DOIs, or BibTeX."""
+        import re
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        ids = body.get("ids", [])  # list of arXiv IDs or DOIs
+        bibtex = body.get("bibtex", "")  # raw BibTeX string
+        mode = body.get("mode", "translate")
+        highlight = body.get("highlight", True)
+
+        # Parse BibTeX to extract arXiv IDs / DOIs
+        if bibtex:
+            for m in re.finditer(r'eprint\s*=\s*\{(\d{4}\.\d{4,5})\}', bibtex):
+                ids.append(m.group(1))
+            for m in re.finditer(r'doi\s*=\s*\{(10\.\d{4,}/[^\}]+)\}', bibtex):
+                ids.append(f"doi:{m.group(1)}")
+            for m in re.finditer(r'url\s*=\s*\{https?://arxiv\.org/abs/(\d{4}\.\d{4,5})', bibtex):
+                ids.append(m.group(1))
+
+        if not ids:
+            raise HTTPException(400, "No paper IDs found")
+
+        # Deduplicate
+        seen = set()
+        unique_ids = []
+        for pid in ids:
+            key = pid.strip().lower()
+            if key and key not in seen:
+                seen.add(key)
+                unique_ids.append(pid.strip())
+
+        results = []
+        for pid in unique_ids[:20]:  # max 20 per batch
+            arxiv_id = None
+            # Try arXiv ID
+            m = re.match(r'^(\d{4}\.\d{4,5}(?:v\d+)?)$', pid)
+            if m:
+                arxiv_id = m.group(1)
+            if not arxiv_id:
+                m = re.search(r'arxiv\.org/abs/(\d+\.\d+)', pid)
+                if m:
+                    arxiv_id = m.group(1)
+
+            if arxiv_id:
+                pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
+                filename = f"arxiv_{arxiv_id}.pdf"
+                try:
+                    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                        resp = await client.get(pdf_url)
+                        if resp.status_code != 200:
+                            results.append({"id": pid, "status": "failed", "reason": f"HTTP {resp.status_code}"})
+                            continue
+                        file_bytes = resp.content
+                    task = task_manager.create_task(filename, mode=mode, highlight=highlight)
+                    original_path = Path(task_manager.config.storage.temp_dir) / f"{task.task_id}_original.pdf"
+                    original_path.write_bytes(file_bytes)
+                    task_manager.update_original_path(task.task_id, str(original_path))
+                    asyncio.create_task(processor.process(task.task_id, file_bytes, filename, mode=mode, highlight=highlight, llm_config=llm_config))
+                    results.append({"id": pid, "status": "queued", "task_id": task.task_id})
+                except Exception as e:
+                    results.append({"id": pid, "status": "failed", "reason": str(e)[:100]})
+            else:
+                results.append({"id": pid, "status": "skipped", "reason": "Not a recognized arXiv ID"})
+
+        return {"imported": len([r for r in results if r["status"] == "queued"]), "total": len(unique_ids), "results": results}
+
     _CN_TO_EN = {"正在使用 AI 翻译": "AI translating", "正在使用 AI 简化": "AI simplifying",
                  "正在生成 PDF": "Generating PDF", "正在准备翻译": "Preparing to translate",
                  "正在准备简化": "Preparing to simplify", "正在使用 AI 标注关键句": "AI highlighting key sentences",

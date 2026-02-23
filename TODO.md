@@ -174,7 +174,71 @@
 
 ---
 
-## 🔍 External Tools & APIs Reference
+## 🔲 To Do — Phase 4: Production Polish & Advanced Features
+
+### Phase 4A: UX & Reliability (High Priority)
+
+- [x] **Batch Import (DOI / arXiv / BibTeX)**
+  - Import multiple papers at once via DOI list, arXiv IDs, or BibTeX file
+  - Auto-download PDFs and queue for processing
+  - Drag-and-drop BibTeX file support
+
+- [ ] **Paper Summary Cards on Dashboard**
+  - Show AI-generated 1-sentence summary for each paper
+  - Quick-glance view without opening paper detail
+  - Generated during knowledge extraction
+
+- [ ] **SSE Progress Streaming**
+  - Replace polling with Server-Sent Events for real-time progress
+  - Smoother UX for translation/extraction progress bars
+
+- [x] **Search Across Everything**
+  - Unified search: papers, annotations, flashcards, collections
+  - Keyboard shortcut (Cmd+K / Ctrl+K) to open search
+
+### Phase 4B: Intelligence (Medium Priority)
+
+- [ ] **Daily Briefing / Auto-Digest**
+  - Scheduled daily summary of new radar discoveries
+  - Push via configured notification channels (Bark/Lark/Webhook)
+  - Configurable schedule in config.yaml
+
+- [ ] **Figure & Table Extraction**
+  - Extract figures and tables from PDFs as images
+  - Display in Paper Detail alongside knowledge
+  - Inspired by: SciSpace, Paperguide
+
+- [ ] **Zotero / Mendeley Sync**
+  - Import from Zotero library via API
+  - Export collections to Zotero
+  - Two-way sync of reading status
+
+- [ ] **Paper Similarity Map**
+  - 2D embedding visualization of all KB papers
+  - Cluster papers by topic using vector embeddings
+  - Interactive: click cluster to see papers
+
+### Phase 4C: Platform (Lower Priority)
+
+- [ ] **Public API Documentation Page**
+  - Interactive Swagger UI at /api/docs (already exists)
+  - Add usage examples and rate limit info
+
+- [x] **Keyboard Shortcuts**
+  - Cmd+K: global search
+  - Cmd+N: new upload
+  - Arrow keys: navigate papers
+  - Esc: close panels
+
+- [ ] **Performance Optimization**
+  - Lazy-load heavy pages (KnowledgeGraph, PaperDetail)
+  - Code splitting with React.lazy()
+  - Reduce bundle size (currently 620KB gzipped 190KB)
+
+- [ ] **Backup & Restore**
+  - One-click backup of entire DB + vector store
+  - Restore from backup file
+  - Scheduled auto-backup
 
 | Tool/API | Integration Plan | Status |
 |----------|-----------------|--------|

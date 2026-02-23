@@ -48,7 +48,11 @@
     "noDocs": "暂无文档，上传一个开始吧！",
     "extractKnowledge": "提取知识",
     "extractionStarted": "知识提取已开始！",
-    "extractionFailed": "知识提取启动失败。"
+    "extractionFailed": "知识提取启动失败。",
+    "batchImport": "批量导入",
+    "batchPlaceholder": "粘贴 arXiv ID（每行一个）或 BibTeX 条目...",
+    "batchImported": "{{count}}/{{total}} 篇论文已导入并排队处理。",
+    "batchFailed": "批量导入失败。"
   },
   "radar": {
     "title": "论文雷达",
