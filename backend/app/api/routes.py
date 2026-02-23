@@ -338,6 +338,18 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         papers = await _radar_instance.scan()
         return {"found": len(papers), "papers": papers}
 
+    @router.post("/radar/topics")
+    async def update_radar_topics(request: Request) -> dict[str, Any]:
+        """Update radar topics at runtime (no restart needed)"""
+        from ..services.radar_engine import _radar_instance
+        if _radar_instance is None:
+            raise HTTPException(400, "Radar engine not enabled")
+        body = await request.json()
+        topics = body.get("topics", "")
+        if topics:
+            _radar_instance.radar_cfg.topics = topics
+        return {"topics": _radar_instance.radar_cfg.topics}
+
     @router.get("/radar/recommendations")
     async def get_recommendations() -> dict[str, Any]:
         """Get paper recommendations based on knowledge base papers"""
