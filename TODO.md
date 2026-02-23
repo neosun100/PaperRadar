@@ -188,7 +188,7 @@
   - Quick-glance view without opening paper detail
   - Generated during knowledge extraction
 
-- [ ] **SSE Progress Streaming**
+- [x] **SSE Progress Streaming**
   - Replace polling with Server-Sent Events for real-time progress
   - Smoother UX for translation/extraction progress bars
 

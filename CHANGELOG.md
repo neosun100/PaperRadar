@@ -8,6 +8,10 @@
   - React.lazy() code splitting: main bundle 620KB → 444KB (28% smaller)
   - 7 pages lazy-loaded on demand (Reader, KnowledgeBase, PaperDetail, etc.)
   - Loading spinner during chunk download
+- **SSE Progress Streaming**
+  - Reader uses Server-Sent Events for real-time translation progress
+  - Visual progress bar with percentage and status message
+  - Fallback to polling if SSE unavailable
 - **Public API Documentation**
   - Swagger UI accessible at /api/docs (via nginx proxy)
   - ReDoc at /api/redoc, OpenAPI spec at /api/openapi.json

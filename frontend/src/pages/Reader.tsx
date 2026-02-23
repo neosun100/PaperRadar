@@ -92,36 +92,72 @@ const Reader = () => {
         if (sidePanel === "annotations" && paperId) loadAnnotations();
     }, [sidePanel, paperId, loadAnnotations]);
 
+    const [progressMsg, setProgressMsg] = useState("");
+    const [progressPct, setProgressPct] = useState(0);
+
     useEffect(() => {
         let cancelled = false;
-        const fetchStatus = async () => {
+        let es: EventSource | null = null;
+
+        const loadPdfs = async () => {
             try {
-                const response = await api.get(`/api/status/${taskId}`);
+                const [r1, r2, r3] = await Promise.all([
+                    api.get(`/api/status/${taskId}`),
+                    api.get(`/api/original/${taskId}/pdf`, { responseType: "blob" }),
+                    api.get(`/api/result/${taskId}/pdf`, { responseType: "blob" }),
+                ]);
                 if (cancelled) return;
-                setStatus(response.data.status);
-                if (response.data.status === "completed") {
-                    if (response.data.highlight_stats) setHighlightStats(response.data.highlight_stats);
-                    const [originalResponse, resultResponse] = await Promise.all([
-                        api.get(`/api/original/${taskId}/pdf`, { responseType: "blob" }),
-                        api.get(`/api/result/${taskId}/pdf`, { responseType: "blob" }),
-                    ]);
-                    if (cancelled) return;
-                    setOriginalPdfUrl(URL.createObjectURL(new Blob([originalResponse.data], { type: "application/pdf" })));
-                    setResultPdfUrl(URL.createObjectURL(new Blob([resultResponse.data], { type: "application/pdf" })));
-                    setLoading(false);
-                } else if (response.data.status === "failed" || response.data.status === "error") {
-                    setLoading(false);
-                } else {
-                    timeoutRef.current = setTimeout(fetchStatus, 2000);
-                }
-            } catch {
-                if (cancelled) return;
+                if (r1.data.highlight_stats) setHighlightStats(r1.data.highlight_stats);
+                setOriginalPdfUrl(URL.createObjectURL(new Blob([r2.data], { type: "application/pdf" })));
+                setResultPdfUrl(URL.createObjectURL(new Blob([r3.data], { type: "application/pdf" })));
                 setLoading(false);
-                setStatus("error");
+            } catch {
+                if (!cancelled) { setLoading(false); setStatus("error"); }
             }
         };
-        fetchStatus();
-        return () => { cancelled = true; if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+
+        // Try SSE first, fallback to polling
+        const startSSE = () => {
+            es = new EventSource(`/api/status/${taskId}/stream`);
+            es.onmessage = (e) => {
+                if (cancelled) return;
+                try {
+                    const d = JSON.parse(e.data);
+                    if (d.error === "not_found") { setStatus("error"); setLoading(false); es?.close(); return; }
+                    setStatus(d.status);
+                    setProgressMsg(d.message || "");
+                    setProgressPct(d.percent || 0);
+                    if (d.status === "completed") { es?.close(); loadPdfs(); }
+                    else if (d.status === "error" || d.status === "failed") { es?.close(); setLoading(false); }
+                } catch {}
+            };
+            es.onerror = () => { es?.close(); fallbackPoll(); };
+        };
+
+        const fallbackPoll = () => {
+            const poll = async () => {
+                try {
+                    const r = await api.get(`/api/status/${taskId}`);
+                    if (cancelled) return;
+                    setStatus(r.data.status);
+                    if (r.data.status === "completed") { loadPdfs(); }
+                    else if (r.data.status === "failed" || r.data.status === "error") { setLoading(false); }
+                    else { timeoutRef.current = setTimeout(poll, 2000); }
+                } catch { if (!cancelled) { setLoading(false); setStatus("error"); } }
+            };
+            poll();
+        };
+
+        // Check initial status
+        api.get(`/api/status/${taskId}`).then(r => {
+            if (cancelled) return;
+            setStatus(r.data.status);
+            if (r.data.status === "completed") { loadPdfs(); }
+            else if (r.data.status === "failed" || r.data.status === "error") { setLoading(false); }
+            else { startSSE(); }
+        }).catch(() => { if (!cancelled) { setLoading(false); setStatus("error"); } });
+
+        return () => { cancelled = true; es?.close(); if (timeoutRef.current) clearTimeout(timeoutRef.current); };
     }, [taskId]);
 
     useEffect(() => {
@@ -186,6 +222,14 @@ const Reader = () => {
                 <p className="text-lg font-medium text-muted-foreground">
                     {["processing", "parsing", "rewriting", "rendering", "highlighting"].includes(status) ? t("reader.processingDoc") : t("reader.loading")}
                 </p>
+                {progressPct > 0 && (
+                    <div className="w-64 space-y-2">
+                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${progressPct}%` }} />
+                        </div>
+                        <p className="text-xs text-muted-foreground text-center">{progressMsg} ({progressPct}%)</p>
+                    </div>
+                )}
             </div>
         );
     }
