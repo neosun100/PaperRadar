@@ -61,6 +61,11 @@ const KnowledgeBase = () => {
     const [writingStyle, setWritingStyle] = useState("ieee");
     const [writingResult, setWritingResult] = useState("");
     const [writingLoading, setWritingLoading] = useState(false);
+    // Zotero Import
+    const [showZotero, setShowZotero] = useState(false);
+    const [zoteroKey, setZoteroKey] = useState("");
+    const [zoteroLibId, setZoteroLibId] = useState("");
+    const [zoteroImporting, setZoteroImporting] = useState(false);
     const navigate = useNavigate();
 
     const fetchPapers = useCallback(async () => {
@@ -249,11 +254,36 @@ const KnowledgeBase = () => {
                                 <DropdownMenuItem onClick={() => handleExport("csv")}><FileTextIcon className="mr-2 h-4 w-4" />{t("knowledge.exportCsv")}</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        <Button variant="outline" className="gap-2" onClick={() => setShowZotero(!showZotero)}>
+                            <BookOpen className="h-4 w-4" /> {t("knowledge.importZotero")}
+                        </Button>
                     </div>
                 </div>
                 <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-violet-200/30 dark:bg-violet-500/10 blur-3xl" />
                 <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 h-64 w-64 rounded-full bg-purple-200/30 dark:bg-purple-500/10 blur-3xl" />
             </section>
+
+            {/* Zotero Import */}
+            {showZotero && (
+                <Card><CardContent className="p-4 space-y-3">
+                    <h3 className="font-semibold text-sm">{t("knowledge.importZotero")}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <Input placeholder={t("knowledge.zoteroApiKey")} value={zoteroKey} onChange={(e) => setZoteroKey(e.target.value)} type="password" />
+                        <Input placeholder={t("knowledge.zoteroLibraryId")} value={zoteroLibId} onChange={(e) => setZoteroLibId(e.target.value)} />
+                        <Button disabled={zoteroImporting || !zoteroKey || !zoteroLibId} onClick={async () => {
+                            setZoteroImporting(true);
+                            try {
+                                const r = await api.post("/api/knowledge/import/zotero", { api_key: zoteroKey, library_id: zoteroLibId });
+                                toast.success(t("knowledge.zoteroImported", { count: r.data.imported }));
+                                fetchPapers();
+                            } catch { toast.error(t("knowledge.zoteroFailed")); }
+                            finally { setZoteroImporting(false); }
+                        }}>
+                            {zoteroImporting ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />{t("knowledge.zoteroImporting")}</> : t("knowledge.zoteroImport")}
+                        </Button>
+                    </div>
+                </CardContent></Card>
+            )}
 
             {/* Cross-Paper Chat */}
             {showChat && (

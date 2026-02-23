@@ -149,7 +149,14 @@
     "relatedWorkFailed": "生成相关工作失败。",
     "copyToClipboard": "复制",
     "copied": "已复制到剪贴板。",
-    "similarityMap": "相似度地图"
+    "similarityMap": "相似度地图",
+    "importZotero": "从 Zotero 导入",
+    "zoteroApiKey": "Zotero API 密钥",
+    "zoteroLibraryId": "库 ID（数字）",
+    "zoteroImport": "导入",
+    "zoteroImporting": "导入中...",
+    "zoteroImported": "从 Zotero 导入了 {{count}} 篇论文。",
+    "zoteroFailed": "Zotero 导入失败。"
   },
   "paperDetail": {
     "knowledgeBase": "知识库",

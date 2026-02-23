@@ -1356,6 +1356,79 @@ def create_knowledge_router() -> APIRouter:
         }
 
     # ------------------------------------------------------------------
+    # Zotero Import
+    # ------------------------------------------------------------------
+
+    @router.post("/import/zotero")
+    async def import_from_zotero(request: Request) -> dict[str, Any]:
+        """Import papers from Zotero library. Requires user_id or API key + library type/id."""
+        body = await request.json()
+        api_key = body.get("api_key", "")
+        library_type = body.get("library_type", "user")  # user or group
+        library_id = body.get("library_id", "")
+        limit = min(body.get("limit", 25), 50)
+
+        if not api_key or not library_id:
+            raise HTTPException(400, "api_key and library_id are required")
+
+        base = f"https://api.zotero.org/{library_type}s/{library_id}"
+        headers = {"Zotero-API-Key": api_key, "Zotero-API-Version": "3"}
+        imported = []
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(f"{base}/items/top", headers=headers, params={"limit": limit, "format": "json", "itemType": "-attachment"})
+            if resp.status_code != 200:
+                raise HTTPException(400, f"Zotero API error: {resp.status_code}")
+            items = resp.json()
+            for item in items:
+                data = item.get("data", {})
+                title = data.get("title", "")
+                doi = data.get("DOI", "")
+                url = data.get("url", "")
+                year = None
+                date_str = data.get("date", "")
+                if date_str:
+                    import re
+                    m = re.search(r"(\d{4})", date_str)
+                    if m:
+                        year = int(m.group(1))
+                # Check if already in KB by title
+                with Session(engine) as session:
+                    existing = session.exec(select(PaperKnowledge).where(PaperKnowledge.title == title)).first()
+                if existing:
+                    imported.append({"title": title, "status": "exists", "paper_id": existing.id})
+                    continue
+                # Create a KB entry from Zotero metadata
+                import uuid
+                paper_id = f"pk_{uuid.uuid4().hex[:12]}"
+                authors = [{"name": f"{c.get('firstName', '')} {c.get('lastName', '')}".strip()} for c in data.get("creators", [])]
+                knowledge = {
+                    "id": paper_id,
+                    "metadata": {
+                        "title": {"en": title, "zh": title},
+                        "authors": authors,
+                        "year": year,
+                        "doi": doi,
+                        "venue": data.get("publicationTitle", ""),
+                        "abstract": {"en": data.get("abstractNote", ""), "zh": ""},
+                        "keywords": [],
+                    },
+                    "entities": [], "relationships": [], "findings": [],
+                    "methods": [], "datasets": [], "flashcards": [], "annotations": [],
+                    "source": "zotero",
+                }
+                with Session(engine) as session:
+                    paper = PaperKnowledge(
+                        id=paper_id, title=title, doi=doi, year=year,
+                        venue=data.get("publicationTitle", ""),
+                        knowledge_json=json.dumps(knowledge, ensure_ascii=False),
+                        extraction_status="imported",
+                    )
+                    session.add(paper)
+                    session.commit()
+                imported.append({"title": title, "status": "imported", "paper_id": paper_id})
+        return {"imported": len([i for i in imported if i["status"] == "imported"]), "total": len(imported), "items": imported}
+
+    # ------------------------------------------------------------------
     # Paper Similarity Map (2D embedding visualization)
     # ------------------------------------------------------------------
 

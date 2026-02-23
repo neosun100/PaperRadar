@@ -149,7 +149,14 @@
     "relatedWorkFailed": "Failed to generate related work.",
     "copyToClipboard": "Copy",
     "copied": "Copied to clipboard.",
-    "similarityMap": "Similarity Map"
+    "similarityMap": "Similarity Map",
+    "importZotero": "Import from Zotero",
+    "zoteroApiKey": "Zotero API Key",
+    "zoteroLibraryId": "Library ID (numeric)",
+    "zoteroImport": "Import",
+    "zoteroImporting": "Importing...",
+    "zoteroImported": "{{count}} papers imported from Zotero.",
+    "zoteroFailed": "Zotero import failed."
   },
   "paperDetail": {
     "knowledgeBase": "Knowledge Base",
