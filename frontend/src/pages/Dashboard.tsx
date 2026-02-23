@@ -19,14 +19,14 @@ interface Task {
     created_at: string;
     percent?: number;
     message?: string;
-    mode?: "translate" | "simplify";
+    mode?: "translate" | "simplify" | "zh2en";
     highlight?: boolean;
 }
 
 const Dashboard = () => {
     const { t } = useTranslation();
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [mode, setMode] = useState<"translate" | "simplify">("translate");
+    const [mode, setMode] = useState<"translate" | "simplify" | "zh2en">("translate");
     const [search, setSearch] = useState("");
     const [highlight, setHighlight] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<number | null>(null);
@@ -292,6 +292,9 @@ const Dashboard = () => {
                         <button onClick={() => setMode("translate")} className={cn("flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all", mode === "translate" ? "bg-primary text-primary-foreground shadow-md" : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent")}>
                             <Languages className="h-4 w-4" /> {t("dashboard.translateToChinese")}
                         </button>
+                        <button onClick={() => setMode("zh2en")} className={cn("flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all", mode === "zh2en" ? "bg-primary text-primary-foreground shadow-md" : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent")}>
+                            <Languages className="h-4 w-4" /> {t("dashboard.translateToEnglish")}
+                        </button>
                         <button onClick={() => setMode("simplify")} className={cn("flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-all", mode === "simplify" ? "bg-primary text-primary-foreground shadow-md" : "bg-white/80 dark:bg-white/5 text-muted-foreground border border-border hover:bg-accent")}>
                             <BookOpen className="h-4 w-4" /> {t("dashboard.simplifyEnglish")}
                         </button>
@@ -408,7 +411,7 @@ const Dashboard = () => {
                                             <CardDescription className="text-xs flex items-center gap-1.5">
                                                 {new Date(task.created_at).toLocaleDateString()}
                                                 <span className="inline-flex items-center rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                                                    {task.mode === "simplify" ? t("dashboard.simplify") : t("dashboard.translate")}
+                                                    {task.mode === "simplify" ? t("dashboard.simplify") : task.mode === "zh2en" ? "ZH→EN" : t("dashboard.translate")}
                                                 </span>
                                                 {task.highlight && (
                                                     <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">{t("dashboard.highlighted")}</span>

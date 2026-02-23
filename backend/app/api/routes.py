@@ -54,8 +54,8 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
         llm_config = get_llm_config(request)
         client_id = get_client_id(request)
 
-        if mode not in ("translate", "simplify"):
-            raise HTTPException(status_code=400, detail="mode must be 'translate' or 'simplify'")
+        if mode not in ("translate", "simplify", "zh2en"):
+            raise HTTPException(status_code=400, detail="mode must be 'translate', 'simplify', or 'zh2en'")
         if file.content_type not in {"application/pdf", "application/octet-stream"}:
             raise HTTPException(status_code=400, detail="Only PDF files are supported")
         file_bytes = await file.read()

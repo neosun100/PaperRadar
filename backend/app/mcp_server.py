@@ -132,5 +132,12 @@ def generate_related_work(paper_ids: list[str], topic: str = "", style: str = "i
     return data.get("related_work", "No content generated")
 
 
+@mcp.tool()
+def get_digest(days: int = 7) -> str:
+    """Get a digest summary of recent PaperRadar activity."""
+    data = _api("get", f"/api/knowledge/digest?days={days}")
+    return data.get("text", "No digest available")
+
+
 if __name__ == "__main__":
     mcp.run()

@@ -1,5 +1,20 @@
 # PaperRadar Changelog
 
+## v2.4.0 (2026-02-23) 🎉 ALL TODO COMPLETE
+- **Chirpz-style Paper Prioritization**
+  - AI ranks papers by personal relevance based on your KB profile
+  - POST /api/knowledge/prioritize with candidate papers
+  - Builds research profile from your completed papers' methods & topics
+- **Multi-Language Paper Support**
+  - New "Chinese → English" translation mode (zh2en)
+  - pdf2zh bidirectional: en→zh, zh→en, simplify
+  - New button on Dashboard for Chinese paper translation
+- **Activity Digest**
+  - GET /api/knowledge/digest?days=N
+  - Summary of new papers, reading events, KB stats
+  - Text format ready for email/webhook/Slack
+- **MCP Server**: 12 tools (added get_digest)
+
 ## v2.3.0 (2026-02-23)
 - **Elicit-style Data Extraction Tables**
   - Select papers → extract structured data into comparison table

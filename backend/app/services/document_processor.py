@@ -157,7 +157,12 @@ class DocumentProcessor:
         model = DocLayoutModel.load_available()
 
         # 根据模式设置目标语言
-        lang_out = "zh" if mode == "translate" else "en"
+        if mode == "zh2en":
+            lang_in, lang_out = "zh", "en"
+        elif mode == "simplify":
+            lang_in, lang_out = "en", "en"
+        else:
+            lang_in, lang_out = "en", "zh"
 
         # 创建临时目录
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -183,7 +188,7 @@ class DocumentProcessor:
                 # 调用 pdf2zh
                 results = translate(
                     files=[str(input_path)],
-                    lang_in="en",
+                    lang_in=lang_in,
                     lang_out=lang_out,
                     service="openailiked",
                     thread=4,

@@ -119,13 +119,13 @@
   - Tools: search KB, ask questions, trigger scans, get trending
   - Inspired by: blazickjp/arxiv-mcp-server (⭐2.2k), alphaXiv MCP
 
-- [ ] **Chirpz-style Paper Prioritization**
+- [x] **Chirpz-style Paper Prioritization**
   - AI agent that understands your research context
   - Ranks papers by relevance to YOUR specific work
   - Learns from your reading patterns
   - Inspired by: Chirpz Agent (280M+ papers)
 
-- [ ] **Multi-Language Paper Support**
+- [x] **Multi-Language Paper Support**
   - Support Chinese papers (翻译为英文)
   - Support papers in other languages
   - Bidirectional translation
@@ -147,7 +147,7 @@
   - Visual timeline of your research journey
   - Reading statistics and streaks
 
-- [ ] **Email Digest**
+- [x] **Email Digest**
   - Daily/weekly email summary of radar discoveries
   - Configurable frequency and format
 

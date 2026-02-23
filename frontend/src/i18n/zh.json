@@ -17,6 +17,7 @@
     "title": "PaperRadar",
     "subtitle": "自动发现、理解并串联前沿研究。上传论文或让雷达自动为你找到它们。",
     "translateToChinese": "翻译为中文",
+    "translateToEnglish": "中文 → 英文",
     "simplifyEnglish": "简化英文",
     "aiHighlights": "AI 高亮",
     "dropPdfHere": "将 PDF 拖放到此处",

@@ -1225,4 +1225,126 @@ def create_knowledge_router() -> APIRouter:
             },
         }
 
+    # ------------------------------------------------------------------
+    # Chirpz-style Paper Prioritization (personalized ranking)
+    # ------------------------------------------------------------------
+
+    @router.post("/prioritize")
+    async def prioritize_papers(request: Request) -> dict[str, Any]:
+        """Rank papers by personal relevance based on your KB and reading history."""
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        candidate_papers = body.get("papers", [])  # list of {title, abstract, ...}
+        if not candidate_papers:
+            raise HTTPException(400, "papers list is required")
+
+        # Build user research profile from KB
+        with Session(engine) as session:
+            completed = session.exec(
+                select(PaperKnowledge).where(PaperKnowledge.extraction_status == "completed")
+            ).all()
+        profile_parts = []
+        for p in completed[:10]:
+            if p.knowledge_json:
+                kj = json.loads(p.knowledge_json)
+                meta = kj.get("metadata", {})
+                title = meta.get("title", "")
+                if isinstance(title, dict):
+                    title = title.get("en", "")
+                methods = [m.get("name", "") for m in kj.get("methods", [])[:3]]
+                methods = [m.get("en", "") if isinstance(m, dict) else str(m) for m in methods]
+                profile_parts.append(f"- {title} (methods: {', '.join(methods)})")
+
+        if not profile_parts:
+            return {"ranked": candidate_papers, "message": "No KB papers for profiling"}
+
+        profile = "\n".join(profile_parts[:10])
+        candidates = "\n".join(
+            f"[{i}] {p.get('title', '')[:100]} — {p.get('abstract', '')[:150]}"
+            for i, p in enumerate(candidate_papers[:20])
+        )
+
+        prompt = (
+            f"You are a research assistant. Based on the user's research profile, "
+            f"rank these candidate papers by relevance (most relevant first).\n\n"
+            f"User's research profile (papers they've read):\n{profile}\n\n"
+            f"Candidate papers to rank:\n{candidates}\n\n"
+            f"Return ONLY a JSON array of indices in order of relevance, e.g. [3, 0, 7, 1, ...]"
+        )
+
+        import httpx as hx
+        try:
+            async with hx.AsyncClient(timeout=30.0) as client:
+                resp = await client.post(
+                    f"{llm_config['base_url']}/chat/completions",
+                    headers={"Authorization": f"Bearer {llm_config['api_key']}"},
+                    json={"model": llm_config.get("model", "gpt-4o"), "messages": [{"role": "user", "content": prompt}], "max_tokens": 200},
+                )
+                resp.raise_for_status()
+                content = resp.json()["choices"][0]["message"]["content"].strip()
+                # Parse indices
+                start = content.find("[")
+                end = content.rfind("]")
+                if start != -1 and end != -1:
+                    indices = json.loads(content[start:end+1])
+                    ranked = [candidate_papers[i] for i in indices if i < len(candidate_papers)]
+                    # Append any missing
+                    seen = set(indices)
+                    for i, p in enumerate(candidate_papers):
+                        if i not in seen:
+                            ranked.append(p)
+                    return {"ranked": ranked}
+        except Exception:
+            pass
+        return {"ranked": candidate_papers, "message": "Ranking failed, returning original order"}
+
+    # ------------------------------------------------------------------
+    # Digest (summary of recent activity for email/webhook)
+    # ------------------------------------------------------------------
+
+    @router.get("/digest")
+    async def get_digest(days: int = 7) -> dict[str, Any]:
+        """Generate a digest of recent activity for email/webhook notifications."""
+        from datetime import datetime, timedelta
+        from sqlmodel import func
+        cutoff = datetime.utcnow() - timedelta(days=days)
+
+        with Session(engine) as session:
+            # New papers
+            new_papers = session.exec(
+                select(PaperKnowledge)
+                .where(PaperKnowledge.created_at >= cutoff)
+                .order_by(PaperKnowledge.created_at.desc())
+            ).all()
+            # Reading events
+            events = session.exec(
+                select(ReadingEvent)
+                .where(ReadingEvent.created_at >= cutoff)
+            ).all()
+            total_papers = session.exec(select(func.count(PaperKnowledge.id))).one()
+
+        papers_summary = [
+            {"title": p.title[:100], "year": p.year, "status": p.extraction_status}
+            for p in new_papers[:20]
+        ]
+
+        # Build text digest
+        lines = [f"📊 PaperRadar Weekly Digest ({days}d)\n"]
+        lines.append(f"📚 Knowledge Base: {total_papers} papers total")
+        lines.append(f"🆕 New papers: {len(new_papers)}")
+        lines.append(f"📖 Reading events: {len(events)}")
+        if new_papers:
+            lines.append(f"\n🆕 Recently Added:")
+            for p in new_papers[:10]:
+                lines.append(f"  • {p.title[:80]} ({p.year or '?'})")
+
+        return {
+            "period_days": days,
+            "new_papers": len(new_papers),
+            "reading_events": len(events),
+            "total_papers": total_papers,
+            "papers": papers_summary,
+            "text": "\n".join(lines),
+        }
+
     return router
