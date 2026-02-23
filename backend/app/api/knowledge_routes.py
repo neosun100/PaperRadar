@@ -1355,4 +1355,74 @@ def create_knowledge_router() -> APIRouter:
             "text": "\n".join(lines),
         }
 
+    # ------------------------------------------------------------------
+    # Figure & Table Extraction
+    # ------------------------------------------------------------------
+
+    @router.get("/papers/{paper_id}/figures")
+    async def get_paper_figures(paper_id: str) -> dict[str, Any]:
+        """Extract figures/images from a paper's PDF."""
+        from ..services.figure_extractor import extract_figures
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper:
+            raise HTTPException(404, "Paper not found")
+        # Find original PDF via task
+        pdf_path = None
+        if paper.task_id:
+            with Session(engine) as session:
+                task = session.get(Task, paper.task_id)
+                if task and task.original_pdf_path:
+                    pdf_path = task.original_pdf_path
+        if not pdf_path or not Path(pdf_path).exists():
+            raise HTTPException(404, "Original PDF not found")
+        pdf_bytes = Path(pdf_path).read_bytes()
+        figures = extract_figures(pdf_bytes)
+        # Strip base64 for listing (return separately per figure)
+        listing = [{"index": f["index"], "page": f["page"], "width": f["width"], "height": f["height"]} for f in figures]
+        return {"paper_id": paper_id, "figures": listing, "total": len(figures)}
+
+    @router.get("/papers/{paper_id}/figures/{fig_index}")
+    async def get_paper_figure_image(paper_id: str, fig_index: int) -> Any:
+        """Get a specific figure image as PNG."""
+        from fastapi.responses import Response
+        from ..services.figure_extractor import extract_figures
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper:
+            raise HTTPException(404, "Paper not found")
+        pdf_path = None
+        if paper.task_id:
+            with Session(engine) as session:
+                task = session.get(Task, paper.task_id)
+                if task and task.original_pdf_path:
+                    pdf_path = task.original_pdf_path
+        if not pdf_path or not Path(pdf_path).exists():
+            raise HTTPException(404, "Original PDF not found")
+        figures = extract_figures(Path(pdf_path).read_bytes())
+        if fig_index < 0 or fig_index >= len(figures):
+            raise HTTPException(404, "Figure not found")
+        import base64
+        img_bytes = base64.b64decode(figures[fig_index]["data_b64"])
+        return Response(content=img_bytes, media_type="image/png")
+
+    @router.get("/papers/{paper_id}/tables")
+    async def get_paper_tables(paper_id: str) -> dict[str, Any]:
+        """Extract tables from a paper's PDF."""
+        from ..services.figure_extractor import extract_tables_text
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper:
+            raise HTTPException(404, "Paper not found")
+        pdf_path = None
+        if paper.task_id:
+            with Session(engine) as session:
+                task = session.get(Task, paper.task_id)
+                if task and task.original_pdf_path:
+                    pdf_path = task.original_pdf_path
+        if not pdf_path or not Path(pdf_path).exists():
+            raise HTTPException(404, "Original PDF not found")
+        tables = extract_tables_text(Path(pdf_path).read_bytes())
+        return {"paper_id": paper_id, "tables": tables, "total": len(tables)}
+
     return router

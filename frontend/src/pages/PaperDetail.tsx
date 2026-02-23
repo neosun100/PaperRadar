@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2, MessageCircle, Send, Headphones, Play, Pause, RotateCcw, GitFork, Globe } from "lucide-react";
+import { ArrowLeft, Download, Brain, Lightbulb, Link2, FlaskConical, Database, GraduationCap, StickyNote, Plus, Loader2, MessageCircle, Send, Headphones, Play, Pause, RotateCcw, GitFork, Globe, ImageIcon, Table2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -255,6 +255,10 @@ const PaperDetail = () => {
 
     const [enrichData, setEnrichData] = useState<any>(null);
     const [enriching, setEnriching] = useState(false);
+    const [figures, setFigures] = useState<{ index: number; page: number; width: number; height: number }[]>([]);
+    const [tables, setTables] = useState<{ index: number; page: number; headers: string[]; rows: string[][]; row_count: number; col_count: number }[]>([]);
+    const [figuresLoading, setFiguresLoading] = useState(false);
+    const [figuresLoaded, setFiguresLoaded] = useState(false);
 
     const handleEnrich = async () => {
         setEnriching(true);
@@ -263,6 +267,21 @@ const PaperDetail = () => {
             if (r.data.enriched) setEnrichData(r.data.data);
         } catch {}
         finally { setEnriching(false); }
+    };
+
+    const loadFigures = async () => {
+        if (figuresLoaded || figuresLoading) return;
+        setFiguresLoading(true);
+        try {
+            const [figRes, tabRes] = await Promise.all([
+                api.get(`/api/knowledge/papers/${paperId}/figures`),
+                api.get(`/api/knowledge/papers/${paperId}/tables`),
+            ]);
+            setFigures(figRes.data.figures || []);
+            setTables(tabRes.data.tables || []);
+            setFiguresLoaded(true);
+        } catch {}
+        finally { setFiguresLoading(false); }
     };
 
     const handleExport = async () => {
@@ -357,7 +376,7 @@ const PaperDetail = () => {
             )}
 
             <Tabs defaultValue="chat" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-grid">
+                <TabsList className="grid w-full grid-cols-9 lg:w-auto lg:inline-grid">
                     <TabsTrigger value="chat" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.chat")}</span></TabsTrigger>
                     <TabsTrigger value="audio" className="gap-1.5"><Headphones className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.audio")}</span></TabsTrigger>
                     <TabsTrigger value="citations" className="gap-1.5" onClick={loadCitations}><GitFork className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.citations")}</span></TabsTrigger>
@@ -366,6 +385,7 @@ const PaperDetail = () => {
                     <TabsTrigger value="relations" className="gap-1.5"><Link2 className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.relations")} ({relationships.length})</span><span className="sm:hidden">{relationships.length}</span></TabsTrigger>
                     <TabsTrigger value="flashcards" className="gap-1.5"><GraduationCap className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.cards")} ({flashcards.length})</span><span className="sm:hidden">{flashcards.length}</span></TabsTrigger>
                     <TabsTrigger value="notes" className="gap-1.5"><StickyNote className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.notes")}</span></TabsTrigger>
+                    <TabsTrigger value="figures" className="gap-1.5" onClick={loadFigures}><ImageIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.figures")}</span></TabsTrigger>
                 </TabsList>
 
                 {/* Chat Tab */}
@@ -596,6 +616,42 @@ const PaperDetail = () => {
                         </CardContent></Card>
                     ))}
                     {(!annotations || annotations.length === 0) && !newNote && <p className="text-sm text-muted-foreground text-center py-8">{t("paperDetail.noNotes")}</p>}
+                </TabsContent>
+
+                <TabsContent value="figures" className="space-y-4">
+                    {figuresLoading && <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin mr-2" />{t("paperDetail.loadingFigures")}</div>}
+                    {figuresLoaded && figures.length === 0 && tables.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">{t("paperDetail.noFigures")}</p>}
+                    {figures.length > 0 && (
+                        <div>
+                            <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5"><ImageIcon className="h-4 w-4" /> Figures ({figures.length})</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {figures.map((fig) => (
+                                    <Card key={fig.index} className="overflow-hidden">
+                                        <img src={`/api/knowledge/papers/${paperId}/figures/${fig.index}`} alt={`Figure ${fig.index + 1}`} className="w-full object-contain max-h-80 bg-white" loading="lazy" />
+                                        <CardContent className="p-2">
+                                            <p className="text-xs text-muted-foreground">{t("paperDetail.figureIndex", { index: fig.index + 1 })} · {t("paperDetail.page")} {fig.page} · {fig.width}×{fig.height}</p>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {tables.length > 0 && (
+                        <div>
+                            <h3 className="text-sm font-semibold mb-3 flex items-center gap-1.5"><Table2 className="h-4 w-4" /> {t("paperDetail.tables")} ({tables.length})</h3>
+                            {tables.map((tab) => (
+                                <Card key={tab.index} className="mb-4 overflow-x-auto">
+                                    <CardContent className="p-3">
+                                        <p className="text-xs text-muted-foreground mb-2">{t("paperDetail.page")} {tab.page} · {tab.row_count} rows × {tab.col_count} cols</p>
+                                        <table className="w-full text-xs border-collapse">
+                                            <thead><tr>{tab.headers.map((h, i) => <th key={i} className="border border-border px-2 py-1 bg-muted text-left font-medium">{h || ""}</th>)}</tr></thead>
+                                            <tbody>{tab.rows.slice(0, 20).map((row, ri) => <tr key={ri}>{row.map((cell, ci) => <td key={ci} className="border border-border px-2 py-1">{cell || ""}</td>)}</tr>)}</tbody>
+                                        </table>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
                 </TabsContent>
             </Tabs>
         </div>

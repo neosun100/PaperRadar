@@ -195,7 +195,15 @@
     "openOnS2": "在 Semantic Scholar 查看",
     "smartCitations": "引用上下文",
     "enrichPaper": "从 OpenAlex 补充信息",
-    "enriched": "已从 OpenAlex 补充数据"
+    "enriched": "已从 OpenAlex 补充数据",
+    "figures": "图表",
+    "figuresDesc": "从 PDF 中提取的图片和表格。",
+    "loadingFigures": "正在提取图表...",
+    "noFigures": "未在此论文中找到图片。",
+    "tables": "表格",
+    "noTables": "未在此论文中找到表格。",
+    "page": "页",
+    "figureIndex": "图 {{index}}"
   },
   "flashcard": {
     "knowledgeBase": "知识库",

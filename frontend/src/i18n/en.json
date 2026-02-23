@@ -195,7 +195,15 @@
     "openOnS2": "Open on Semantic Scholar",
     "smartCitations": "How This Paper Is Cited",
     "enrichPaper": "Enrich from OpenAlex",
-    "enriched": "Enriched with OpenAlex data"
+    "enriched": "Enriched with OpenAlex data",
+    "figures": "Figures & Tables",
+    "figuresDesc": "Figures and tables extracted from the PDF.",
+    "loadingFigures": "Extracting figures...",
+    "noFigures": "No figures found in this paper.",
+    "tables": "Tables",
+    "noTables": "No tables found in this paper.",
+    "page": "Page",
+    "figureIndex": "Figure {{index}}"
   },
   "flashcard": {
     "knowledgeBase": "Knowledge Base",
