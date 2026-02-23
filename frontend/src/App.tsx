@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import Layout from "./components/Layout";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Eager load: Dashboard (landing page)
 import Dashboard from "./pages/Dashboard";
@@ -24,6 +25,7 @@ const Loading = () => (
 
 function App() {
   return (
+    <ErrorBoundary>
     <Router>
       <Toaster richColors position="top-center" />
       <Suspense fallback={<Loading />}>
@@ -43,6 +45,7 @@ function App() {
         </Routes>
       </Suspense>
     </Router>
+    </ErrorBoundary>
   );
 }
 

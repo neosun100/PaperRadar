@@ -1,5 +1,29 @@
 # PaperRadar Changelog
 
+## v2.8.0 (2026-02-24)
+- **Figure & Table Extraction**
+  - Extract figures/images from PDFs using PyMuPDF (auto-filters icons/logos)
+  - Extract structured tables with headers and rows (PyMuPDF find_tables)
+  - New "Figures & Tables" tab on Paper Detail page
+  - API: GET /api/knowledge/papers/{id}/figures, /tables, /figures/{index}
+- **Paper Similarity Map**
+  - 2D PCA visualization of all paper embeddings from ChromaDB
+  - Interactive canvas: hover to see title, click to navigate
+  - New page at /knowledge/similarity, accessible from Knowledge Base
+  - API: GET /api/knowledge/similarity-map
+- **Zotero Import**
+  - Import papers from Zotero library via API key + library ID
+  - Auto-creates KB entries with metadata (title, authors, DOI, abstract)
+  - Deduplication by title
+  - API: POST /api/knowledge/import/zotero
+- **Error Boundary**
+  - Global React error boundary catches rendering crashes
+  - User-friendly error page with reload button
+- **Onboarding Guide**
+  - 5-step interactive guide for first-time users
+  - Covers: Upload, Knowledge Extraction, Search, Radar, Export
+  - Dismissible, persisted in localStorage
+
 ## v2.7.0 (2026-02-23)
 - **Backup & Restore**
   - GET /api/backup → download ZIP of SQLite DB + ChromaDB vector store

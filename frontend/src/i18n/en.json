@@ -299,5 +299,20 @@
     "noInsights": "No insights generated yet. Add papers to your knowledge base and click \"Generate Insights\" to get a cross-paper analysis.",
     "generateFailed": "Failed to generate insights.",
     "contribution": "Contribution"
+  },
+  "onboarding": {
+    "step1Title": "Upload Papers",
+    "step1Desc": "Drag & drop a PDF or paste an arXiv URL. PaperRadar will translate, highlight, and extract knowledge automatically.",
+    "step2Title": "Knowledge Extraction",
+    "step2Desc": "AI extracts entities, relationships, findings, and generates flashcards from every paper — all bilingual (EN/ZH).",
+    "step3Title": "Semantic Search & Chat",
+    "step3Desc": "Search across all papers with natural language. Chat with any paper or ask questions across your entire knowledge base.",
+    "step4Title": "Paper Radar",
+    "step4Desc": "The radar scans arXiv, Semantic Scholar, and HuggingFace every hour to find the most relevant papers for you.",
+    "step5Title": "Export & Integrate",
+    "step5Desc": "Export to Obsidian, BibTeX, Zotero, or CSV. Use the MCP server with Claude/Cursor for AI-powered research workflows.",
+    "prev": "Previous",
+    "next": "Next",
+    "done": "Get Started!"
   }
 }

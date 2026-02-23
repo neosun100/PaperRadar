@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api, { getLLMConfig } from "@/lib/api";
 import LLMSettings from "@/components/LLMSettings";
+import OnboardingGuide from "@/components/OnboardingGuide";
 
 interface Task {
     task_id: string;
@@ -43,6 +44,7 @@ const Dashboard = () => {
     const abortRef = useRef<AbortController | null>(null);
     const pollIntervalRef = useRef<number>(2000);
     const [showSetup, setShowSetup] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("pr_onboarding_done"));
     const hasLLMConfig = !!getLLMConfig();
 
     const fetchTasks = useCallback(async () => {
@@ -218,6 +220,10 @@ const Dashboard = () => {
                 </div>
             )}
             <LLMSettings open={showSetup} onOpenChange={setShowSetup} />
+
+            {showOnboarding && hasLLMConfig && (
+                <OnboardingGuide onDismiss={() => { setShowOnboarding(false); localStorage.setItem("pr_onboarding_done", "1"); }} />
+            )}
 
             {/* Radar Status Panel */}
             {/* Stats Overview */}

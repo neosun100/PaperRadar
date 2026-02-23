@@ -203,17 +203,17 @@
   - Push via configured notification channels (Bark/Lark/Webhook)
   - Configurable schedule in config.yaml
 
-- [ ] **Figure & Table Extraction**
+- [x] **Figure & Table Extraction**
   - Extract figures and tables from PDFs as images
   - Display in Paper Detail alongside knowledge
   - Inspired by: SciSpace, Paperguide
 
-- [ ] **Zotero / Mendeley Sync**
+- [x] **Zotero / Mendeley Sync**
   - Import from Zotero library via API
   - Export collections to Zotero
   - Two-way sync of reading status
 
-- [ ] **Paper Similarity Map**
+- [x] **Paper Similarity Map**
   - 2D embedding visualization of all KB papers
   - Cluster papers by topic using vector embeddings
   - Interactive: click cluster to see papers
