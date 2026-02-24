@@ -99,6 +99,14 @@ FINDINGS_PROMPT = (
     '"usage": {"en": "...", "zh": "..."}}]}\n'
 )
 
+TLDR_PROMPT = (
+    "You are an expert academic paper summarizer. "
+    "Write a single-sentence TLDR summary of this paper (max 30 words). "
+    "Focus on the key contribution or finding. Be specific, not generic.\n"
+    + BILINGUAL_INSTRUCTION +
+    'Respond ONLY with JSON: {"tldr": {"en": "...", "zh": "..."}}\n'
+)
+
 FLASHCARD_PROMPT = (
     "You are an expert educator creating spaced repetition flashcards. "
     "Given these key concepts and findings from a paper, create flashcards.\n\n"
@@ -333,6 +341,12 @@ class KnowledgeExtractor:
             FLASHCARD_PROMPT, flashcard_context, "flashcards"
         )
         flashcards = flashcards_data.get("flashcards", [])
+
+        # Generate TLDR (one-sentence summary)
+        tldr_input = f"Title: {_bi_text(metadata.get('title', ''))}\nAbstract: {_bi_text(metadata.get('abstract', ''))}"
+        tldr_data = await self._llm_call(TLDR_PROMPT, tldr_input, "tldr")
+        tldr = tldr_data.get("tldr", {})
+
         for fc in flashcards:
             fc["id"] = _gen_id("fc")
             fc["srs"] = {
@@ -345,6 +359,7 @@ class KnowledgeExtractor:
         knowledge = {
             "id": paper_id,
             "metadata": metadata,
+            "tldr": tldr,
             "structure": {"sections": sections},
             "entities": entities,
             "relationships": relationships,

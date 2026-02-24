@@ -21,6 +21,7 @@ interface Paper {
     venue: string | null;
     extraction_status: string;
     summary: string;
+    tldr: string;
     created_at: string | null;
 }
 
@@ -543,7 +544,8 @@ const KnowledgeBase = () => {
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                {paper.summary && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{paper.summary}</p>}
+                                {paper.tldr && <p className="text-xs font-medium text-foreground/80 line-clamp-2 leading-relaxed mb-1">💡 {paper.tldr}</p>}
+                                {!paper.tldr && paper.summary && <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{paper.summary}</p>}
                                 {paper.doi && <p className="text-[10px] text-muted-foreground/60 truncate mt-1">DOI: {paper.doi}</p>}
                             </CardContent>
                         </Card>

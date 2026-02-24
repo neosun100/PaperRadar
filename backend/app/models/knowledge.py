@@ -101,3 +101,10 @@ class ReadingEvent(SQLModel, table=True):
     task_id: str = Field(default="", index=True)
     event_type: str = Field(default="view")  # view, read, annotate, chat, export
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ReadingProgress(SQLModel, table=True):
+    id: str = Field(primary_key=True)  # task_id or paper_id
+    scroll_position: float = Field(default=0.0)  # 0.0 - 1.0
+    page_number: int = Field(default=0)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

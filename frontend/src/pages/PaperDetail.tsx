@@ -13,6 +13,7 @@ import { biText } from "@/lib/biText";
 
 interface PaperKnowledge {
     id: string;
+    tldr?: any;
     metadata: { title: any; authors: { name: string; affiliation?: string }[]; year?: number; doi?: string; venue?: string; abstract?: any; keywords?: any[] };
     entities: { id: string; name: any; type: string; definition?: any; importance: number }[];
     relationships: { id: string; source_entity_id: string; target_entity_id: string; type: string; description?: any; source?: string; target?: string }[];
@@ -60,6 +61,8 @@ const PaperDetail = () => {
     const citationAnimRef = useRef<number>(0);
     // Smart citation contexts
     const [citationContexts, setCitationContexts] = useState<{ title: string; year?: number; authors: string[]; citations: number; arxiv_id?: string; s2_id: string; contexts: string[]; intents: string[] }[]>([]);
+    // Similar papers
+    const [similarPapers, setSimilarPapers] = useState<{ paper_id: string; title: string; score: number }[]>([]);
     // Force re-render on language change
     const [, setLang] = useState(i18n.language);
     useEffect(() => {
@@ -77,6 +80,8 @@ const PaperDetail = () => {
         fetchPaper();
         // Record reading event
         api.post("/api/knowledge/reading-events", { paper_id: paperId, event_type: "view" }).catch(() => {});
+        // Fetch similar papers
+        api.get(`/api/knowledge/papers/${paperId}/similar?n=5`).then(r => setSimilarPapers(r.data.similar || [])).catch(() => {});
     }, [paperId, t]);
 
     // Check audio status on mount
@@ -371,8 +376,25 @@ const PaperDetail = () => {
             {metadata.abstract && (
                 <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t("paperDetail.abstract")}</CardTitle></CardHeader>
-                    <CardContent><p className="text-sm leading-relaxed">{biText(metadata.abstract)}</p></CardContent>
+                    <CardContent>
+                        {paper?.tldr && <p className="text-sm font-medium text-primary mb-3">💡 {biText(paper.tldr)}</p>}
+                        <p className="text-sm leading-relaxed">{biText(metadata.abstract)}</p>
+                    </CardContent>
                 </Card>
+            )}
+
+            {/* Similar Papers */}
+            {similarPapers.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-medium text-muted-foreground shrink-0">{t("knowledge.similarPapers")}:</span>
+                    {similarPapers.map(sp => (
+                        <button key={sp.paper_id} onClick={() => navigate(`/knowledge/paper/${sp.paper_id}`)}
+                            className="inline-flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-xs hover:bg-muted transition-colors">
+                            <span className="text-[10px] font-mono text-muted-foreground">{(sp.score * 100).toFixed(0)}%</span>
+                            <span className="line-clamp-1 max-w-[200px]">{sp.title}</span>
+                        </button>
+                    ))}
+                </div>
             )}
 
             <Tabs defaultValue="chat" className="space-y-4">

@@ -53,6 +53,15 @@ const Layout = () => {
 
     const toggleLang = () => i18n.changeLanguage(i18n.language === "zh" ? "en" : "zh");
 
+    const highlightMatch = (text: string, query: string): string => {
+        if (!query.trim()) return text;
+        const words = query.trim().split(/\s+/).filter(w => w.length > 1);
+        if (!words.length) return text;
+        const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+        const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+        return text.replace(regex, '<mark class="bg-yellow-200 dark:bg-yellow-800/60 rounded px-0.5">$1</mark>');
+    };
+
     const navTo = (path: string) => { navigate(path); setMobileMenuOpen(false); };
 
     const isActive = (path: string) => location.pathname.startsWith(path);
@@ -145,7 +154,7 @@ const Layout = () => {
                                         onClick={() => {
                                             if (r.metadata?.paper_id) { navigate(`/knowledge/paper/${r.metadata.paper_id}`); setSearchOpen(false); }
                                         }}>
-                                        <p className="line-clamp-2 text-foreground">{r.text}</p>
+                                        <p className="line-clamp-2 text-foreground" dangerouslySetInnerHTML={{ __html: highlightMatch(r.text, searchQuery) }} />
                                         <span className="text-[10px] text-muted-foreground">{r.metadata?.type} · {(r.score * 100).toFixed(0)}%</span>
                                     </button>
                                 ))}

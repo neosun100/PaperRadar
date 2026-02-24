@@ -21,6 +21,7 @@ from ..models.knowledge import (
     PaperCollection,
     PaperKnowledge,
     ReadingEvent,
+    ReadingProgress,
     UserAnnotation,
 )
 from ..models.task import Task, TaskStatus
@@ -103,6 +104,7 @@ def create_knowledge_router() -> APIRouter:
         result = []
         for p in papers:
             summary = ""
+            tldr = ""
             if p.knowledge_json and p.extraction_status == "completed":
                 try:
                     kj = json.loads(p.knowledge_json)
@@ -111,6 +113,11 @@ def create_knowledge_router() -> APIRouter:
                     if isinstance(abstract, dict):
                         abstract = abstract.get("en", abstract.get("zh", ""))
                     summary = str(abstract)[:200] if abstract else ""
+                    tldr_obj = kj.get("tldr", {})
+                    if isinstance(tldr_obj, dict):
+                        tldr = tldr_obj.get("en", tldr_obj.get("zh", ""))
+                    elif tldr_obj:
+                        tldr = str(tldr_obj)
                 except Exception:
                     pass
             result.append({
@@ -118,6 +125,7 @@ def create_knowledge_router() -> APIRouter:
                 "doi": p.doi, "year": p.year, "venue": p.venue,
                 "extraction_status": p.extraction_status,
                 "summary": summary,
+                "tldr": tldr,
                 "created_at": p.created_at.isoformat() if p.created_at else None,
             })
         return result
@@ -1593,5 +1601,124 @@ def create_knowledge_router() -> APIRouter:
             raise HTTPException(404, "Original PDF not found")
         tables = extract_tables_text(Path(pdf_path).read_bytes())
         return {"paper_id": paper_id, "tables": tables, "total": len(tables)}
+
+    # ------------------------------------------------------------------
+    # Similar Papers (vector-based)
+    # ------------------------------------------------------------------
+
+    @router.get("/papers/{paper_id}/similar")
+    async def get_similar_papers(paper_id: str, n: int = 5) -> dict[str, Any]:
+        """Find similar papers based on vector embeddings."""
+        from ..services.vector_search import get_vector_service
+        vs = get_vector_service()
+        if not vs:
+            return {"similar": [], "message": "Vector search not configured"}
+        try:
+            data = vs._papers.get(ids=[f"{paper_id}_abstract"], include=["embeddings"])
+            embeddings = data.get("embeddings")
+            if embeddings is None or len(embeddings) == 0 or len(embeddings[0]) == 0:
+                return {"similar": [], "message": "Paper not indexed"}
+            embedding = embeddings[0]
+            results = vs._papers.query(
+                query_embeddings=[embedding], n_results=n + 1,
+                include=["metadatas", "distances"],
+            )
+            similar = []
+            for i in range(len(results["ids"][0])):
+                pid = results["metadatas"][0][i].get("paper_id", "")
+                if pid == paper_id:
+                    continue
+                similar.append({
+                    "paper_id": pid,
+                    "title": results["metadatas"][0][i].get("title", ""),
+                    "score": round(1 - results["distances"][0][i], 3),
+                })
+            return {"similar": similar[:n]}
+        except Exception as exc:
+            logger.warning("Similar papers failed for %s: %s", paper_id, exc)
+            return {"similar": []}
+
+    # ------------------------------------------------------------------
+    # Reading Progress (save/restore scroll position)
+    # ------------------------------------------------------------------
+
+    @router.get("/reading-progress/{item_id}")
+    async def get_reading_progress(item_id: str) -> dict[str, Any]:
+        from ..models.knowledge import ReadingProgress
+        with Session(engine) as session:
+            prog = session.get(ReadingProgress, item_id)
+        if not prog:
+            return {"scroll_position": 0, "page_number": 0}
+        return {"scroll_position": prog.scroll_position, "page_number": prog.page_number}
+
+    @router.put("/reading-progress/{item_id}")
+    async def save_reading_progress(item_id: str, request: Request) -> dict[str, str]:
+        from datetime import datetime
+        from ..models.knowledge import ReadingProgress
+        body = await request.json()
+        with Session(engine) as session:
+            prog = session.get(ReadingProgress, item_id)
+            if not prog:
+                prog = ReadingProgress(id=item_id)
+            prog.scroll_position = body.get("scroll_position", 0)
+            prog.page_number = body.get("page_number", 0)
+            prog.updated_at = datetime.utcnow()
+            session.merge(prog)
+            session.commit()
+        return {"status": "saved"}
+
+    # ------------------------------------------------------------------
+    # TLDR Backfill (generate TLDR for existing papers that don't have one)
+    # ------------------------------------------------------------------
+
+    @router.post("/papers/{paper_id}/generate-tldr")
+    async def generate_tldr(paper_id: str, request: Request) -> dict[str, Any]:
+        llm_config = get_llm_config(request)
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper or not paper.knowledge_json:
+            raise HTTPException(404, "Paper not found or no knowledge")
+        kj = json.loads(paper.knowledge_json)
+        if kj.get("tldr"):
+            return {"tldr": kj["tldr"], "status": "already_exists"}
+
+        meta = kj.get("metadata", {})
+        title = meta.get("title", "")
+        if isinstance(title, dict):
+            title = title.get("en", "")
+        abstract = meta.get("abstract", "")
+        if isinstance(abstract, dict):
+            abstract = abstract.get("en", "")
+
+        prompt = (
+            "Write a single-sentence TLDR summary of this paper (max 30 words). "
+            "Focus on the key contribution. Be specific.\n"
+            'Respond ONLY with JSON: {"tldr": {"en": "...", "zh": "..."}}\n\n'
+            f"Title: {title}\nAbstract: {abstract}"
+        )
+        async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=30.0) as client:
+            resp = await client.post(
+                "/chat/completions",
+                json={"model": llm_config.get("model", ""), "messages": [{"role": "user", "content": prompt}], "max_tokens": 200, "temperature": 0.1},
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"},
+            )
+            resp.raise_for_status()
+            content = resp.json()["choices"][0]["message"]["content"].strip()
+            try:
+                start = content.find("{")
+                end = content.rfind("}")
+                tldr_data = json.loads(content[start:end+1]) if start >= 0 else {}
+            except Exception:
+                tldr_data = {"tldr": {"en": content[:100], "zh": ""}}
+
+        tldr = tldr_data.get("tldr", {})
+        kj["tldr"] = tldr
+        with Session(engine) as session:
+            p = session.get(PaperKnowledge, paper_id)
+            if p:
+                p.knowledge_json = json.dumps(kj, ensure_ascii=False)
+                session.add(p)
+                session.commit()
+        return {"tldr": tldr, "status": "generated"}
 
     return router

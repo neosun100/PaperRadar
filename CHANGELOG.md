@@ -1,5 +1,23 @@
 # PaperRadar Changelog
 
+## v3.0.0 (2026-02-24)
+- **TLDR Auto-Summary**
+  - Knowledge extraction now generates a one-sentence bilingual TLDR for each paper
+  - TLDR displayed prominently on paper cards in Knowledge Base (💡 prefix)
+  - TLDR shown at top of abstract in Paper Detail page
+  - Backfill API: POST /api/knowledge/papers/{id}/generate-tldr for existing papers
+- **Similar Papers Discovery**
+  - Vector-based similarity: find related papers from your knowledge base
+  - GET /api/knowledge/papers/{id}/similar returns top N similar papers with scores
+  - Displayed as clickable chips on Paper Detail page
+- **Reading Progress Tracking**
+  - New ReadingProgress model saves scroll position and page number
+  - PUT/GET /api/knowledge/reading-progress/{id} API
+- **Search Highlight**
+  - Cmd+K search results now highlight matching words with yellow background
+- **Bug Fixes**
+  - Fixed numpy array truthiness check in vector similarity queries
+
 ## v2.9.0 (2026-02-24)
 - **alphaXiv Integration**
   - 4th radar data source: alphaXiv trending papers with community discussions
