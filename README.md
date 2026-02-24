@@ -136,7 +136,7 @@ docker run -d --name paperradar \
 }
 ```
 
-Available tools: `search_papers`, `list_papers`, `get_paper`, `chat_with_papers`, `get_trending`, `radar_status`, `process_arxiv_paper`, `generate_literature_review`, `list_collections`, `generate_related_work`, `get_digest`
+Available tools: `search_papers`, `list_papers`, `get_paper`, `chat_with_papers`, `get_trending`, `radar_status`, `process_arxiv_paper`, `generate_literature_review`, `list_collections`, `generate_related_work`, `get_digest`, `scholar_search`, `generate_quiz`, `generate_briefing`
 
 ---
 
@@ -179,6 +179,13 @@ Available tools: `search_papers`, `list_papers`, `get_paper`, `chat_with_papers`
 | `GET /api/radar/trending` | Trending papers |
 | `GET /api/radar/recommendations` | Personalized recommendations |
 | `GET /api/knowledge/export/{format}` | Export (json, bibtex, obsidian, csv) |
+| `GET /api/knowledge/scholar-search` | Search Semantic Scholar (200M+ papers) |
+| `POST /api/knowledge/papers/{id}/quiz` | Generate quiz questions |
+| `POST /api/knowledge/papers/{id}/briefing` | Generate briefing document |
+| `POST /api/knowledge/papers/{id}/share` | Generate share link |
+| `GET /share/{token}` | Public shared paper view |
+| `GET /api/knowledge/papers/{id}/similar` | Find similar papers (vector) |
+| `POST /api/knowledge/papers/{id}/generate-tldr` | Generate TLDR summary |
 
 All LLM-dependent endpoints accept either `Authorization: Bearer <token>` or headers: `X-LLM-API-Key`, `X-LLM-Base-URL`, `X-LLM-Model`.
 

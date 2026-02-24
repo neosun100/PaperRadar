@@ -139,5 +139,37 @@ def get_digest(days: int = 7) -> str:
     return data.get("text", "No digest available")
 
 
+@mcp.tool()
+def scholar_search(query: str, limit: int = 5) -> str:
+    """Search Semantic Scholar's 200M+ paper database."""
+    data = _api("get", f"/api/knowledge/scholar-search?q={query}&n={limit}")
+    results = data.get("results", [])
+    lines = [f"Scholar search: {len(results)} results for '{query}'\n"]
+    for r in results:
+        lines.append(f"  {r['title'][:70]} ({r.get('year','?')}) — {r.get('citations',0)} cites — arXiv:{r.get('arxiv_id','N/A')}")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def generate_quiz(paper_id: str) -> str:
+    """Generate 5 multiple-choice quiz questions from a paper."""
+    data = _api("post", f"/api/knowledge/papers/{paper_id}/quiz")
+    qs = data.get("questions", [])
+    lines = [f"Quiz: {len(qs)} questions\n"]
+    for i, q in enumerate(qs):
+        lines.append(f"Q{i+1}: {q['question']}")
+        for opt in q.get("options", []):
+            lines.append(f"  {opt}")
+        lines.append(f"  Answer: {q.get('correct','')} — {q.get('explanation','')}\n")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def generate_briefing(paper_id: str) -> str:
+    """Generate a structured briefing document for a paper."""
+    data = _api("post", f"/api/knowledge/papers/{paper_id}/briefing")
+    return data.get("briefing", "No briefing generated")
+
+
 if __name__ == "__main__":
     mcp.run()
