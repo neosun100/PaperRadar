@@ -136,7 +136,7 @@ docker run -d --name paperradar \
 }
 ```
 
-Available tools: `search_papers`, `list_papers`, `get_paper`, `chat_with_papers`, `get_trending`, `radar_status`, `process_arxiv_paper`, `generate_literature_review`, `list_collections`, `generate_related_work`, `get_digest`, `scholar_search`, `generate_quiz`, `generate_briefing`
+Available tools: `search_papers`, `list_papers`, `get_paper`, `chat_with_papers`, `get_trending`, `radar_status`, `process_arxiv_paper`, `generate_literature_review`, `list_collections`, `generate_related_work`, `get_digest`, `scholar_search`, `generate_quiz`, `generate_briefing`, `deep_research`
 
 ---
 
@@ -186,6 +186,11 @@ Available tools: `search_papers`, `list_papers`, `get_paper`, `chat_with_papers`
 | `GET /share/{token}` | Public shared paper view |
 | `GET /api/knowledge/papers/{id}/similar` | Find similar papers (vector) |
 | `POST /api/knowledge/papers/{id}/generate-tldr` | Generate TLDR summary |
+| `POST /api/knowledge/batch-generate-tldr` | Batch generate TLDRs |
+| `POST /api/knowledge/deep-research` | Deep Research (auto search + synthesize) |
+| `POST /api/knowledge/expert-chat` | Expert-level topic chat with sources |
+| `GET /api/knowledge/reading-progress/{id}` | Get reading progress |
+| `PUT /api/knowledge/reading-progress/{id}` | Save reading progress |
 
 All LLM-dependent endpoints accept either `Authorization: Bearer <token>` or headers: `X-LLM-API-Key`, `X-LLM-Base-URL`, `X-LLM-Model`.
 
