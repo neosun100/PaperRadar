@@ -1,154 +1,87 @@
 # PaperRadar — Development Roadmap
 
-## ✅ Completed (v3.6.0) — 70+ Features
+## ✅ Completed (v3.9.0) — 80+ Features, 97 API Endpoints
 
-### Core Platform
-- [x] PDF Upload (drag & drop, URL upload, no size limit)
-- [x] PDF Translation (English ↔ Chinese, pdf2zh)
-- [x] PDF Simplification (Complex → Plain English)
-- [x] AI Highlighting (3-color: conclusions/methods/data)
-- [x] Document Reader (split-pane, focus mode, reading progress)
-- [x] Task Queue (per-user concurrency, queue status UI)
-- [x] Zombie/Stale Task Recovery
+*(See CHANGELOG.md for full history)*
 
-### Knowledge Base
-- [x] Bilingual Knowledge Extraction (en/zh)
-- [x] TLDR Auto-Summary (one-sentence bilingual)
-- [x] Paper Chat (single-paper + cross-paper RAG)
-- [x] Expert Chat (world-class researcher persona, cited sources)
-- [x] Claim Evidence Analysis (supports/contradicts/related)
-- [x] Deep Research (auto search → download → synthesize expert report)
-- [x] Research Insights (field overview, method comparison, gaps)
-- [x] Literature Review Generation
-- [x] Paper Comparison (2-5 papers)
-- [x] Data Extraction Tables (Elicit-style)
-- [x] Research Gaps Analysis
-- [x] Paper Quiz (5 multiple-choice questions)
-- [x] Paper Briefing Doc (structured Markdown)
-- [x] Paper Audio Summary (NotebookLM-style podcast, gpt-4o-mini-tts)
-- [x] AI Inline Explanations
-- [x] Paper Writing Assistant (Related Work, IEEE/ACM/APA)
-- [x] Knowledge Graph (force-directed, bilingual)
-- [x] Similarity Map (2D PCA visualization)
-- [x] Multi-Format Export (JSON, BibTeX, Obsidian, CSL-JSON, CSV)
-- [x] Flashcard Review (SM-2 spaced repetition)
-- [x] Paper Collections (ResearchRabbit-style)
-- [x] Paper Annotations & Notes
-- [x] Paper Sharing (public link, no auth needed)
-- [x] Similar Papers (vector-based discovery)
-- [x] Semantic Search (ChromaDB + Cohere Embed v4)
-- [x] Cmd+K Global Search (with highlight)
-- [x] KB Sorting (date/year/title)
-- [x] Batch Delete
-- [x] Batch Import (arXiv IDs, DOIs, BibTeX)
-- [x] Zotero Import
-
-### Radar Engine
-- [x] 4-Source Radar (arXiv + Semantic Scholar + HuggingFace + alphaXiv)
-- [x] Smart Hybrid Scoring (upvotes + citations + keywords)
-- [x] Trending Papers (7d/14d/30d)
-- [x] Smart Recommendations (S2 + vector fallback)
-- [x] Auto-Download & Process (top papers per scan)
-- [x] Scholar Search (200M+ papers from Dashboard)
-
-### Notifications
-- [x] Bark iOS Push
-- [x] Lark Card 2.0
-- [x] Webhook (Slack Block Kit, Discord Embed, generic JSON)
-- [x] Daily Digest (scheduled)
-
-### Infrastructure
-- [x] All-in-one Docker (nginx + uvicorn + supervisord)
-- [x] MCP Server (16 tools for Claude/Cursor)
-- [x] CI/CD Pipeline (GitHub Actions)
-- [x] Backup & Restore
-- [x] SSE Progress Streaming
-- [x] API Token Auth + BYOK
-- [x] i18n (English/Chinese, 326 keys)
-- [x] Dark Mode + Mobile Responsive
-- [x] Reading Progress (save/restore)
-- [x] Onboarding Guide
-- [x] Error Boundary
+All Phase 7 features completed: Mind Map, AI Paper Writer, Systematic Review,
+Slide Deck, Recommendation Feed, Paper Tags, Custom Extraction, PDF Thumbnails,
+Keyboard Shortcuts, Deep Research History, User Preferences.
 
 ---
 
-## 🔲 Phase 7: From Good to Great
+## 🔲 Phase 8: World-Class Research Platform
 
-### 7A: UX Polish (High Priority)
+Based on competitive analysis of NotebookLM, Elicit, Paperguide, SciSpace,
+Okara, Consensus, Perplexity, and Scite (Feb 2026).
 
-- [x] **Paper Tags/Labels**
-  - User-defined tags (e.g. "must-read", "methodology", "baseline")
-  - Filter KB by tags, combine with collections
-  - Tag suggestions based on paper content
+### 8A: Social & Community Intelligence (High Priority)
 
-- [x] **Keyboard Shortcuts Help Panel**
-  - Press ? to open shortcuts overlay
-  - Cmd+K search, Cmd+N upload, arrow navigation, Esc close
+- [ ] **Reddit/X/HN Discussion Discovery**
+  - Search Reddit, X, HackerNews for discussions about a paper
+  - Show community sentiment and key takeaways
+  - Inspired by: Okara (multi-source search), alphaXiv (discussions)
 
-- [x] **PDF Thumbnail Preview**
-  - Generate first-page thumbnail on upload
-  - Display on paper cards in KB and Dashboard
+- [x] **Paper Impact Score**
+  - Composite score: citations + social mentions + HF upvotes + recency
+  - Display on paper cards and in recommendations
+  - Inspired by: Altmetric, Semantic Scholar influence scores
 
-- [x] **Deep Research History (Server-side)**
-  - Save research reports to DB
-  - Browse past research topics
-  - Re-open and continue expert chat
+- [ ] **Weekly Research Digest Email**
+  - Auto-generated weekly summary of radar discoveries + KB activity
+  - HTML email template with paper cards
+  - Configurable via preferences
 
-- [x] **Custom Extraction Columns**
-  - User defines what to extract (e.g. "sample size", "GPU hours")
-  - LLM extracts custom fields from each paper
-  - Export as CSV with custom columns
+### 8B: Advanced Analysis (Medium Priority)
 
-### 7B: Intelligence (Medium Priority)
+- [x] **Cross-Paper Timeline**
+  - Visual timeline of papers by publication date
+  - Show how methods/ideas evolved over time
+  - Interactive: click to navigate to paper
 
-- [x] **Mind Map Visualization**
-  - Interactive concept map from paper entities
-  - Drag, zoom, click to explore
-  - Export as image
+- [x] **Method Benchmark Tracker**
+  - Track SOTA results across papers for specific benchmarks
+  - Auto-extract from paper findings
+  - Table view: method × benchmark × score
 
-- [x] **AI Paper Writer**
-  - Generate full paper sections from KB references
-  - Introduction, Methodology, Results, Discussion
-  - Proper citation formatting
+- [ ] **Paper Dependency Graph**
+  - Which papers build on which? (beyond simple citations)
+  - "This paper extends X by adding Y"
+  - Extracted from knowledge relationships
 
-- [x] **Systematic Review Pipeline**
-  - Define inclusion/exclusion criteria
-  - Auto-screen papers from search results
-  - PRISMA flow diagram
+### 8C: Productivity & Polish (Lower Priority)
 
-- [x] **Paper Recommendation Feed**
-  - Daily personalized feed based on reading history
-  - "Papers you might like" on Dashboard
-  - Learn from user interactions
+- [x] **Quick Notes (global scratchpad)**
+  - Markdown notepad accessible from any page
+  - Link notes to papers
+  - Inspired by: Obsidian daily notes
 
-### 7C: Platform (Lower Priority)
+- [ ] **Bulk Re-extract Knowledge**
+  - Re-run knowledge extraction on papers with outdated/incomplete data
+  - Progress tracking
 
-- [x] **Multi-user Support** (user preferences per API key)
-  - Separate KB per user/API key
-  - Shared collections between users
+- [ ] **API Rate Limit Dashboard**
+  - Show remaining S2/arXiv API quota
+  - Warn when approaching limits
 
-- [x] **Slide Deck Generation**
-  - Generate presentation slides from paper knowledge
-  - Export as HTML or PDF
-
-- [x] **Plugin System** (configurable data sources via config.yaml)
-  - Custom data sources (PubMed, bioRxiv)
-  - Custom notification channels
-  - Custom extraction pipelines
+- [ ] **Accessibility Improvements**
+  - ARIA labels on interactive elements
+  - Screen reader support for key workflows
+  - High contrast mode option
 
 ---
 
-## 💡 Design Inspirations
+## 💡 Design Inspirations (2026 Update)
 
-1. **NotebookLM** — Audio/Video Overviews, Mind Maps, Deep Research, Quizzes
-2. **Elicit** — Structured extraction, systematic review, custom columns
-3. **Paperguide** — AI Paper Writer, reference management, Deep Research
-4. **Consensus** — Claim-based evidence analysis, research snapshots
-5. **ResearchRabbit** — Collections, algorithmic recommendations, citation graphs
-6. **Connected Papers / Litmaps** — Citation visualization
-7. **scite.ai** — Smart citations (supporting vs contrasting)
-8. **SciSpace** — Copilot for reading, thematic analysis
+1. **NotebookLM** — Video Overviews, Interactive Audio, Mind Maps, Deep Research
+2. **Elicit** — Systematic Review workflow, custom extraction columns, screening pipeline
+3. **Paperguide** — AI Paper Writer, Deep Research, reference management
+4. **Consensus** — Claim-based evidence, research snapshots
+5. **Okara** — Multi-source search (Reddit, X, YouTube), privacy-first
+6. **SciSpace** — Copilot for reading, thematic analysis
+7. **Scite** — Smart citations (supporting/contrasting/mentioning)
+8. **Perplexity** — Real-time web search with citations
 
 ---
 
-*Last updated: 2026-02-24 — v3.6.0*
+*Last updated: 2026-02-25 — v3.9.0*

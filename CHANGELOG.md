@@ -1,5 +1,27 @@
 # PaperRadar Changelog
 
+## v4.0.0 (2026-02-25) 🎉
+- **Paper Impact Score**
+  - Composite score (0-100) based on: year recency, KB connections, TLDR, vector similarity
+  - GET /api/knowledge/papers/{id}/impact with breakdown
+- **Cross-Paper Timeline**
+  - Papers organized by publication year
+  - GET /api/knowledge/timeline
+- **Method Benchmark Tracker**
+  - Auto-extracted benchmark results from paper findings
+  - GET /api/knowledge/benchmarks — 113 entries across all papers
+- **Quick Notes (Global Scratchpad)**
+  - Floating notepad accessible from any page via ⌘N / Ctrl+N
+  - Auto-saves on blur, persisted per user (API key)
+  - Markdown support
+- **Keyboard Shortcuts Update**
+  - Added ⌘N for Quick Notes
+  - Updated help panel
+- **Phase 8 Roadmap**
+  - New TODO.md with competitive analysis-based roadmap
+  - 10 planned features across Social Intelligence, Advanced Analysis, Productivity
+- **Milestone: 101 API endpoints, 12 pages, 4.0.0**
+
 ## v3.9.0 (2026-02-24)
 - **Mind Map Visualization**
   - Interactive concept map from paper entities and relationships

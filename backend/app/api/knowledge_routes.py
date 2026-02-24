@@ -2573,4 +2573,136 @@ def create_knowledge_router() -> APIRouter:
         prefs_file.write_text(json.dumps(prefs, ensure_ascii=False))
         return {"status": "saved"}
 
+    # ------------------------------------------------------------------
+    # Paper Impact Score
+    # ------------------------------------------------------------------
+
+    @router.get("/papers/{paper_id}/impact")
+    async def get_paper_impact(paper_id: str) -> dict[str, Any]:
+        """Calculate composite impact score for a paper."""
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper:
+            raise HTTPException(404, "Paper not found")
+
+        scores = {"citations": 0, "year_recency": 0, "kb_connections": 0, "has_tldr": 0}
+
+        # Citation count from OpenAlex or knowledge
+        if paper.knowledge_json:
+            kj = json.loads(paper.knowledge_json)
+            # Check if enriched with OpenAlex data
+            meta = kj.get("metadata", {})
+            scores["has_tldr"] = 10 if kj.get("tldr") else 0
+
+        # Year recency (newer = higher)
+        if paper.year:
+            scores["year_recency"] = max(0, min(20, (paper.year - 2020) * 4))
+
+        # KB connections (entities, relationships)
+        with Session(engine) as session:
+            from sqlmodel import func
+            ent_count = session.exec(select(func.count(KnowledgeEntity.id)).where(KnowledgeEntity.paper_id == paper_id)).one()
+            rel_count = session.exec(select(func.count(KnowledgeRelationship.id)).where(KnowledgeRelationship.paper_id == paper_id)).one()
+        scores["kb_connections"] = min(30, (ent_count + rel_count) * 2)
+
+        # Similar papers count
+        try:
+            from ..services.vector_search import get_vector_service
+            vs = get_vector_service()
+            if vs:
+                data = vs._papers.get(ids=[f"{paper_id}_abstract"], include=["embeddings"])
+                if data.get("embeddings") and len(data["embeddings"]) > 0:
+                    results = vs._papers.query(query_embeddings=[data["embeddings"][0]], n_results=6, include=["distances"])
+                    close = sum(1 for d in results["distances"][0] if d < 0.5)
+                    scores["citations"] = close * 10
+        except Exception:
+            pass
+
+        total = sum(scores.values())
+        return {"paper_id": paper_id, "impact_score": min(100, total), "breakdown": scores}
+
+    # ------------------------------------------------------------------
+    # Cross-Paper Timeline
+    # ------------------------------------------------------------------
+
+    @router.get("/timeline")
+    async def get_paper_timeline() -> dict[str, Any]:
+        """Get papers organized by year for timeline visualization."""
+        with Session(engine) as session:
+            papers = session.exec(
+                select(PaperKnowledge).where(PaperKnowledge.extraction_status == "completed")
+            ).all()
+
+        timeline: dict[int, list] = {}
+        for p in papers:
+            year = p.year or 0
+            if year < 2000:
+                continue
+            tldr = ""
+            if p.knowledge_json:
+                try:
+                    kj = json.loads(p.knowledge_json)
+                    tldr_obj = kj.get("tldr", {})
+                    if isinstance(tldr_obj, dict):
+                        tldr = tldr_obj.get("en", "")
+                except Exception:
+                    pass
+            timeline.setdefault(year, []).append({
+                "id": p.id, "title": p.title, "venue": p.venue, "tldr": tldr,
+            })
+
+        years = sorted(timeline.keys())
+        return {"years": [{
+            "year": y, "count": len(timeline[y]),
+            "papers": sorted(timeline[y], key=lambda x: x["title"])
+        } for y in years], "total": len(papers)}
+
+    # ------------------------------------------------------------------
+    # Method Benchmark Tracker
+    # ------------------------------------------------------------------
+
+    @router.get("/benchmarks")
+    async def get_benchmark_tracker() -> dict[str, Any]:
+        """Extract and track benchmark results across papers."""
+        with Session(engine) as session:
+            papers = session.exec(
+                select(PaperKnowledge).where(PaperKnowledge.extraction_status == "completed")
+            ).all()
+
+        entries = []
+        for p in papers:
+            if not p.knowledge_json:
+                continue
+            kj = json.loads(p.knowledge_json)
+            title = kj.get("metadata", {}).get("title", "")
+            if isinstance(title, dict): title = title.get("en", "")
+            for f in kj.get("findings", []):
+                if f.get("type") == "result":
+                    stmt = f.get("statement", "")
+                    if isinstance(stmt, dict): stmt = stmt.get("en", "")
+                    entries.append({"paper": title[:60], "paper_id": p.id, "year": p.year, "finding": stmt})
+
+        return {"entries": entries, "total": len(entries)}
+
+    # ------------------------------------------------------------------
+    # Quick Notes (global scratchpad)
+    # ------------------------------------------------------------------
+
+    @router.get("/notes")
+    async def get_quick_notes(request: Request) -> dict[str, str]:
+        client_id = get_client_id(request)
+        notes_file = Path("/app/data/preferences") / f"{client_id}_notes.md"
+        if notes_file.exists():
+            return {"content": notes_file.read_text()}
+        return {"content": ""}
+
+    @router.put("/notes")
+    async def save_quick_notes(request: Request) -> dict[str, str]:
+        client_id = get_client_id(request)
+        body = await request.json()
+        notes_dir = Path("/app/data/preferences")
+        notes_dir.mkdir(parents=True, exist_ok=True)
+        (notes_dir / f"{client_id}_notes.md").write_text(body.get("content", ""))
+        return {"status": "saved"}
+
     return router
