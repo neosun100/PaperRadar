@@ -42,7 +42,7 @@ const DeepResearch = () => {
             setHistory(newHistory);
             localStorage.setItem("pr_research_history", JSON.stringify(newHistory));
         } catch (e: any) {
-            toast.error(e.response?.data?.detail || "Research failed");
+            toast.error(t("deepResearch.researchFailed"));
         } finally {
             setResearching(false);
         }

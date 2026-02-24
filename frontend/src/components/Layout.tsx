@@ -89,7 +89,7 @@ const Layout = () => {
                             <Radar className="h-4 w-4" />{t("radar.title")}
                         </Button>
                         <Button variant="ghost" size="sm" className={cn("gap-2", isActive("/research") && "text-amber-600 dark:text-amber-400")} onClick={() => navTo("/research")}>
-                            <Search className="h-4 w-4" />Research
+                            <Search className="h-4 w-4" />{t("deepResearch.title") || "Research"}
                         </Button>
                         <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:text-yellow-500 transition-colors">
@@ -122,7 +122,7 @@ const Layout = () => {
                             <Radar className="h-4 w-4" /> {t("radar.title")}
                         </button>
                         <button onClick={() => navTo("/research")} className={cn("flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm", isActive("/research") ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600" : "text-muted-foreground")}>
-                            <Search className="h-4 w-4" /> Research
+                            <Search className="h-4 w-4" /> {t("deepResearch.title") || "Research"}
                         </button>
                         <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                             <Button variant="ghost" size="sm" onClick={toggleLang} className="gap-2"><Globe className="h-4 w-4" />{i18n.language === "zh" ? "English" : "中文"}</Button>
