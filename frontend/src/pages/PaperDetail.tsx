@@ -72,6 +72,8 @@ const PaperDetail = () => {
     // Tags
     const [tags, setTags] = useState<string[]>([]);
     const [newTag, setNewTag] = useState("");
+    // Discussions
+    const [discussions, setDiscussions] = useState<any[]>([]);
     // Force re-render on language change
     const [, setLang] = useState(i18n.language);
     useEffect(() => {
@@ -93,6 +95,8 @@ const PaperDetail = () => {
         api.get(`/api/knowledge/papers/${paperId}/similar?n=5`).then(r => setSimilarPapers(r.data.similar || [])).catch(() => {});
         // Fetch tags
         api.get(`/api/knowledge/papers/${paperId}/tags`).then(r => setTags(r.data || [])).catch(() => {});
+        // Fetch discussions
+        api.get(`/api/knowledge/papers/${paperId}/discussions`).then(r => setDiscussions(r.data.discussions || [])).catch(() => {});
     }, [paperId, t]);
 
     // Check audio status on mount
@@ -436,6 +440,19 @@ const PaperDetail = () => {
                         }
                     }} />
             </div>
+
+            {/* Discussions */}
+            {discussions.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-medium text-muted-foreground shrink-0">💬</span>
+                    {discussions.map((d, i) => (
+                        <a key={i} href={d.url} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs hover:bg-muted transition-colors">
+                            {d.source}
+                        </a>
+                    ))}
+                </div>
+            )}
 
             <Tabs defaultValue="chat" className="space-y-4">
                 <TabsList className="flex flex-wrap gap-1 lg:w-auto">

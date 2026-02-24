@@ -1,5 +1,27 @@
 # PaperRadar Changelog
 
+## v4.1.0 (2026-02-25) — Phase 8 Complete 🎉
+- **Discussion Discovery**
+  - Find online discussions about any paper: Semantic Scholar, alphaXiv, HuggingFace, Reddit
+  - Shows citation count, influential citations, community links
+  - Discussion chips displayed on Paper Detail page
+- **Paper Dependency Graph**
+  - Shows which papers build on which (extends/uses/shared_methods)
+  - Auto-detected from knowledge relationships and shared methods
+  - GET /api/knowledge/dependency-graph
+- **Bulk Re-extract Knowledge**
+  - Re-run extraction on papers with errors or incomplete data
+  - POST /api/knowledge/bulk-reextract
+- **API Status Dashboard**
+  - System overview: LLM config, Radar status, TTS model, notification channels
+  - Storage usage: database, vector DB, audio files
+  - GET /api/knowledge/api-status
+- **Accessibility Improvements**
+  - ARIA labels on all header buttons (language, dark mode, settings)
+  - role="banner" on header, role="main" on content area
+  - ARIA label on search input
+- **Milestone: 105 API endpoints, Phase 8 Roadmap 100% complete**
+
 ## v4.0.0 (2026-02-25) 🎉
 - **Paper Impact Score**
   - Composite score (0-100) based on: year recency, KB connections, TLDR, vector similarity

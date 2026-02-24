@@ -73,7 +73,7 @@ const Layout = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-sans text-gray-900 dark:text-gray-100 transition-colors">
-            <header className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md">
+            <header className="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md" role="banner">
                 <div className="container mx-auto flex h-14 sm:h-16 items-center justify-between px-4">
                     <div className="flex items-center gap-2 cursor-pointer" onClick={() => navTo("/dashboard")}>
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
@@ -100,9 +100,9 @@ const Layout = () => {
                             className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:text-yellow-500 transition-colors">
                             <Github className="h-4 w-4" /><Star className="h-3.5 w-3.5" /><span className="text-xs">{t("nav.star")}</span>
                         </a>
-                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={toggleLang} title={i18n.language === "zh" ? "English" : "中文"}><Globe className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setDark(!dark)}>{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={toggleLang} title={i18n.language === "zh" ? "English" : "中文"} aria-label="Switch language"><Globe className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setDark(!dark)} aria-label="Toggle dark mode">{dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setSettingsOpen(true)} aria-label="LLM Settings"><Settings className="h-4 w-4" /></Button>
                     </div>
 
                     {/* Mobile: compact actions + hamburger */}
@@ -140,7 +140,7 @@ const Layout = () => {
                 )}
             </header>
 
-            <main className="container mx-auto py-4 sm:py-6 px-3 sm:px-4">
+            <main className="container mx-auto py-4 sm:py-6 px-3 sm:px-4" role="main">
                 <Outlet />
             </main>
 
@@ -186,7 +186,7 @@ const Layout = () => {
                         <div className="flex items-center gap-3 border-b px-4 py-3">
                             <Search className="h-5 w-5 text-muted-foreground shrink-0" />
                             <Input ref={searchRef} value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); doSearch(e.target.value); }}
-                                placeholder="Search knowledge base... (⌘K)" className="border-0 shadow-none focus-visible:ring-0 text-base h-auto p-0" />
+                                placeholder="Search knowledge base... (⌘K)" className="border-0 shadow-none focus-visible:ring-0 text-base h-auto p-0" aria-label="Search knowledge base" />
                             {searching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
                             <kbd className="hidden sm:inline-flex h-5 items-center rounded border bg-muted px-1.5 text-[10px] text-muted-foreground">ESC</kbd>
                         </div>

@@ -33,7 +33,7 @@ _start_time = time.time()
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(
     title="PaperRadar API",
-    version="4.0.0",
+    version="4.1.0",
     description="Discover, understand, and connect cutting-edge research — automatically.",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -97,7 +97,7 @@ async def healthcheck() -> dict:
         pass
     return {
         "status": "ok",
-        "version": "4.0.0",
+        "version": "4.1.0",
         "uptime_seconds": uptime,
         "total_tasks": total_tasks,
         "total_papers": total_papers,

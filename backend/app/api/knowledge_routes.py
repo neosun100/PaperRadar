@@ -2705,4 +2705,215 @@ def create_knowledge_router() -> APIRouter:
         (notes_dir / f"{client_id}_notes.md").write_text(body.get("content", ""))
         return {"status": "saved"}
 
+    # ------------------------------------------------------------------
+    # 1. Discussion Discovery (Reddit/HN via web search)
+    # ------------------------------------------------------------------
+
+    @router.get("/papers/{paper_id}/discussions")
+    async def find_paper_discussions(paper_id: str) -> dict[str, Any]:
+        """Search for online discussions about a paper."""
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper or not paper.title:
+            raise HTTPException(404, "Paper not found")
+
+        title = paper.title[:80]
+        discussions = []
+
+        # Search via arXiv ID on known platforms
+        arxiv_id = paper.arxiv_id or ""
+        search_queries = []
+        if arxiv_id:
+            search_queries.append(f"site:reddit.com {arxiv_id}")
+            search_queries.append(f"site:news.ycombinator.com {arxiv_id}")
+        search_queries.append(f"site:reddit.com \"{title[:50]}\"")
+
+        # Use Semantic Scholar to check if paper has community engagement
+        if arxiv_id:
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    r = await client.get(f"https://api.semanticscholar.org/graph/v1/paper/ArXiv:{arxiv_id}",
+                        params={"fields": "citationCount,influentialCitationCount,tldr"})
+                    if r.status_code == 200:
+                        data = r.json()
+                        discussions.append({
+                            "source": "Semantic Scholar",
+                            "url": f"https://www.semanticscholar.org/paper/{data.get('paperId', '')}",
+                            "title": f"{data.get('citationCount', 0)} citations ({data.get('influentialCitationCount', 0)} influential)",
+                            "snippet": (data.get("tldr") or {}).get("text", ""),
+                        })
+            except Exception:
+                pass
+
+        # alphaXiv discussion link
+        if arxiv_id:
+            discussions.append({
+                "source": "alphaXiv",
+                "url": f"https://alphaxiv.org/abs/{arxiv_id}",
+                "title": f"Community discussion on alphaXiv",
+                "snippet": "View line-by-line discussions and comments",
+            })
+
+        # HuggingFace papers link
+        if arxiv_id:
+            discussions.append({
+                "source": "HuggingFace",
+                "url": f"https://huggingface.co/papers/{arxiv_id}",
+                "title": "HuggingFace Daily Papers",
+                "snippet": "Community upvotes and discussion",
+            })
+
+        # Reddit search link
+        discussions.append({
+            "source": "Reddit",
+            "url": f"https://www.reddit.com/search/?q={title[:50].replace(' ', '+')}",
+            "title": f"Search Reddit for this paper",
+            "snippet": "Find community discussions on r/MachineLearning, r/LocalLLaMA, etc.",
+        })
+
+        return {"paper_id": paper_id, "discussions": discussions}
+
+    # ------------------------------------------------------------------
+    # 2. Paper Dependency Graph
+    # ------------------------------------------------------------------
+
+    @router.get("/dependency-graph")
+    async def get_dependency_graph() -> dict[str, Any]:
+        """Build a dependency graph showing which papers build on which."""
+        with Session(engine) as session:
+            papers = session.exec(
+                select(PaperKnowledge).where(PaperKnowledge.extraction_status == "completed")
+            ).all()
+
+        nodes = []
+        edges = []
+        paper_methods: dict[str, set] = {}  # paper_id -> set of method names
+
+        for p in papers:
+            if not p.knowledge_json:
+                continue
+            kj = json.loads(p.knowledge_json)
+            meta = kj.get("metadata", {})
+            title = meta.get("title", "")
+            if isinstance(title, dict): title = title.get("en", "")
+            nodes.append({"id": p.id, "title": title[:60], "year": p.year or 0})
+
+            methods = set()
+            for m in kj.get("methods", []):
+                name = m.get("name", "")
+                if isinstance(name, dict): name = name.get("en", "")
+                if name: methods.add(name.lower().strip())
+            paper_methods[p.id] = methods
+
+            # Check relationships for "extends" or "uses"
+            for rel in kj.get("relationships", []):
+                if rel.get("type") in ("extends", "uses", "builds_on"):
+                    # Try to find the target paper in KB
+                    target_name = rel.get("target", "").lower()
+                    for other_p in papers:
+                        if other_p.id != p.id and other_p.title and target_name in other_p.title.lower():
+                            edges.append({"source": p.id, "target": other_p.id, "type": rel.get("type", "uses")})
+                            break
+
+        # Also find method-based connections (papers sharing methods)
+        paper_ids = list(paper_methods.keys())
+        for i in range(len(paper_ids)):
+            for j in range(i + 1, len(paper_ids)):
+                shared = paper_methods[paper_ids[i]] & paper_methods[paper_ids[j]]
+                if len(shared) >= 2:
+                    edges.append({"source": paper_ids[i], "target": paper_ids[j], "type": "shared_methods", "methods": list(shared)[:3]})
+
+        return {"nodes": nodes, "edges": edges}
+
+    # ------------------------------------------------------------------
+    # 3. Bulk Re-extract Knowledge
+    # ------------------------------------------------------------------
+
+    @router.post("/bulk-reextract")
+    async def bulk_reextract(request: Request) -> dict[str, Any]:
+        """Re-run knowledge extraction on papers with outdated or incomplete data."""
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        paper_ids = body.get("paper_ids", [])
+        if not paper_ids:
+            # Default: all papers with errors or incomplete extraction
+            with Session(engine) as session:
+                papers = session.exec(
+                    select(PaperKnowledge).where(
+                        PaperKnowledge.extraction_status.in_(["error", "imported", "pending"])
+                    )
+                ).all()
+                paper_ids = [p.id for p in papers if p.task_id]
+
+        queued = 0
+        for pid in paper_ids[:20]:
+            with Session(engine) as session:
+                paper = session.get(PaperKnowledge, pid)
+            if not paper or not paper.task_id:
+                continue
+            with Session(engine) as session:
+                task = session.get(Task, paper.task_id)
+            if not task or not task.original_pdf_path or not Path(task.original_pdf_path).exists():
+                continue
+
+            pdf_bytes = Path(task.original_pdf_path).read_bytes()
+            from ..services.knowledge_extractor import KnowledgeExtractor
+            extractor = KnowledgeExtractor(
+                api_key=llm_config["api_key"], model=llm_config.get("model", ""), base_url=llm_config.get("base_url", ""),
+            )
+            async def _do(ext, pdf, tid, pid):
+                try:
+                    async with ext:
+                        await ext.extract(pdf, tid, user_id=0, paper_id=pid)
+                except Exception:
+                    pass
+            asyncio.create_task(_do(extractor, pdf_bytes, paper.task_id, pid))
+            queued += 1
+
+        return {"queued": queued, "total_candidates": len(paper_ids)}
+
+    # ------------------------------------------------------------------
+    # 4. API Rate Limit Info
+    # ------------------------------------------------------------------
+
+    @router.get("/api-status")
+    async def get_api_status() -> dict[str, Any]:
+        """Show API usage status and rate limit info."""
+        import time
+        from ..core.config import get_config
+        cfg = get_config()
+
+        status = {
+            "llm": {"base_url": cfg.llm.base_url, "model": cfg.llm.model, "embedding_model": cfg.llm.embedding_model},
+            "radar": {"enabled": cfg.radar.enabled, "interval_hours": cfg.radar.interval_hours, "categories": cfg.radar.categories},
+            "tts": {"model": cfg.tts.model},
+            "notifications": {
+                "bark": bool(cfg.notification.bark_key),
+                "lark": bool(cfg.notification.lark_webhook),
+                "webhook": bool(cfg.notification.webhook_url),
+            },
+            "storage": {},
+        }
+
+        # Check data sizes
+        data_dir = Path("/app/data")
+        if data_dir.exists():
+            db_size = 0
+            for f in data_dir.rglob("*.db"):
+                db_size += f.stat().st_size
+            vector_size = 0
+            vector_dir = data_dir / "vectordb"
+            if vector_dir.exists():
+                for f in vector_dir.rglob("*"):
+                    if f.is_file():
+                        vector_size += f.stat().st_size
+            audio_size = sum(f.stat().st_size for f in (data_dir / "audio").rglob("*") if f.is_file()) if (data_dir / "audio").exists() else 0
+            status["storage"] = {
+                "database_mb": round(db_size / 1024 / 1024, 1),
+                "vector_db_mb": round(vector_size / 1024 / 1024, 1),
+                "audio_mb": round(audio_size / 1024 / 1024, 1),
+            }
+
+        return status
+
     return router

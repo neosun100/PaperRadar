@@ -17,7 +17,7 @@ Okara, Consensus, Perplexity, and Scite (Feb 2026).
 
 ### 8A: Social & Community Intelligence (High Priority)
 
-- [ ] **Reddit/X/HN Discussion Discovery**
+- [x] **Reddit/X/HN Discussion Discovery**
   - Search Reddit, X, HackerNews for discussions about a paper
   - Show community sentiment and key takeaways
   - Inspired by: Okara (multi-source search), alphaXiv (discussions)
@@ -27,7 +27,7 @@ Okara, Consensus, Perplexity, and Scite (Feb 2026).
   - Display on paper cards and in recommendations
   - Inspired by: Altmetric, Semantic Scholar influence scores
 
-- [ ] **Weekly Research Digest Email**
+- [x] **Weekly Research Digest Email** (via daily digest + webhook)
   - Auto-generated weekly summary of radar discoveries + KB activity
   - HTML email template with paper cards
   - Configurable via preferences
@@ -44,7 +44,7 @@ Okara, Consensus, Perplexity, and Scite (Feb 2026).
   - Auto-extract from paper findings
   - Table view: method × benchmark × score
 
-- [ ] **Paper Dependency Graph**
+- [x] **Paper Dependency Graph**
   - Which papers build on which? (beyond simple citations)
   - "This paper extends X by adding Y"
   - Extracted from knowledge relationships
@@ -56,15 +56,15 @@ Okara, Consensus, Perplexity, and Scite (Feb 2026).
   - Link notes to papers
   - Inspired by: Obsidian daily notes
 
-- [ ] **Bulk Re-extract Knowledge**
+- [x] **Bulk Re-extract Knowledge**
   - Re-run knowledge extraction on papers with outdated/incomplete data
   - Progress tracking
 
-- [ ] **API Rate Limit Dashboard**
+- [x] **API Rate Limit Dashboard**
   - Show remaining S2/arXiv API quota
   - Warn when approaching limits
 
-- [ ] **Accessibility Improvements**
+- [x] **Accessibility Improvements**
   - ARIA labels on interactive elements
   - Screen reader support for key workflows
   - High contrast mode option
