@@ -1,5 +1,19 @@
 # PaperRadar Changelog
 
+## v3.6.0 (2026-02-24)
+- **Webhook Formatting**
+  - Auto-detects Slack (Block Kit) and Discord (Embed) webhook URLs
+  - Sends platform-native rich messages with paper titles
+- **Reading Progress Bar**
+  - Visual progress indicator in Reader header (percentage + bar)
+  - Auto-saves position every 5 seconds, restores on next visit
+- **Deep Research Export**
+  - "Download .md" button exports research report as Markdown file
+  - Includes synthesis + analyzed papers list
+- **Code Cleanup**
+  - Removed unused Login/Register pages (BYOK mode)
+  - Removed Login.test.tsx
+
 ## v3.5.0 (2026-02-24)
 - **Claim-based Evidence Analysis (Consensus-style)**
   - New "Evidence" mode in Expert Chat: input a claim → get structured verdict

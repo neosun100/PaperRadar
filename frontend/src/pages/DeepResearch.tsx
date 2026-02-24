@@ -131,11 +131,16 @@ const DeepResearch = () => {
                     <CardContent className="p-4 space-y-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-medium flex items-center gap-2"><Brain className="h-4 w-4" /> Expert Chat — {topic}</h3>
-                            {result?.synthesis && (
+                            {result?.synthesis && (<>
                                 <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => { navigator.clipboard.writeText(result.synthesis); toast.success("Copied!"); }}>
-                                    <Copy className="h-3 w-3" /> Copy Report
+                                    <Copy className="h-3 w-3" /> Copy
                                 </Button>
-                            )}
+                                <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                                    const md = `# Deep Research: ${topic}\n\n${result.synthesis}\n\n## Papers Analyzed\n\n${(result.papers || []).map((p: any, i: number) => `${i+1}. ${p.title} (${p.year || "?"}, ${p.citations} cites)`).join("\n")}`;
+                                    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([md], { type: "text/markdown" }));
+                                    a.download = `research-${topic.replace(/\s+/g, "-").toLowerCase()}.md`; a.click();
+                                }}><FileText className="h-3 w-3" /> .md</Button>
+                            </>)}
                         </div>
                         <div className="max-h-[600px] overflow-y-auto space-y-4 pr-2">
                             {chatHistory.map((msg, i) => (

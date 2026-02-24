@@ -58,6 +58,17 @@ const Reader = () => {
     const [explainText, setExplainText] = useState("");
     const [explanation, setExplanation] = useState("");
     const [explaining, setExplaining] = useState(false);
+    const [readingProgress, setReadingProgress] = useState(0);
+
+    // Load/save reading progress
+    useEffect(() => {
+        if (taskId) api.get(`/api/knowledge/reading-progress/${taskId}`).then(r => setReadingProgress(r.data.scroll_position || 0)).catch(() => {});
+    }, [taskId]);
+    useEffect(() => {
+        if (!taskId || readingProgress === 0) return;
+        const t = setTimeout(() => { api.put(`/api/knowledge/reading-progress/${taskId}`, { scroll_position: readingProgress }).catch(() => {}); }, 5000);
+        return () => clearTimeout(t);
+    }, [taskId, readingProgress]);
 
     useEffect(() => {
         const onResize = () => {
@@ -257,6 +268,12 @@ const Reader = () => {
                     </Button>
                     <div className="h-4 w-px bg-border mx-2 hidden sm:block" />
                     <h1 className="text-sm font-medium text-foreground hidden sm:block">{t("reader.docReader")}</h1>
+                    {readingProgress > 0 && (
+                        <div className="hidden sm:flex items-center gap-2 ml-2">
+                            <div className="h-1.5 w-20 rounded-full bg-muted overflow-hidden"><div className="h-full bg-primary transition-all" style={{ width: `${readingProgress * 100}%` }} /></div>
+                            <span className="text-[10px] text-muted-foreground">{Math.round(readingProgress * 100)}%</span>
+                        </div>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     {highlightStats && highlightStats.total > 0 && (

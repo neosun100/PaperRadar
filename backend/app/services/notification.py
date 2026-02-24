@@ -85,33 +85,24 @@ class NotificationService:
             logger.exception("Lark notification failed")
 
     async def _send_webhook(self, count: int, papers: list[dict]) -> None:
-        """Generic webhook — works with Slack, Discord, Telegram bots, n8n, etc."""
-        payload = {
-            "event": "new_papers",
-            "count": count,
-            "papers": [
-                {
-                    "title": p.get("title", "")[:120],
-                    "authors": p.get("authors", [])[:3],
-                    "score": p.get("score", 0),
-                    "source": p.get("source", ""),
-                    "pdf_url": p.get("pdf_url", ""),
-                    "arxiv_id": p.get("arxiv_id", ""),
-                }
-                for p in papers[:10]
-            ],
-            "source": "PaperRadar",
-        }
-        # Detect Slack/Discord format
+        """Generic webhook — auto-detects Slack/Discord format."""
         url = self.config.webhook_url
-        if "hooks.slack.com" in url or "discord.com/api/webhooks" in url:
-            titles = "\n".join(f"• {p.get('title', '')[:80]}" for p in papers[:5])
-            payload = {"text": f"🛰️ PaperRadar: {count} new papers discovered\n{titles}"}
+        titles = "\n".join(f"• {p.get('title', '')[:80]}" for p in papers[:5])
+
+        if "hooks.slack.com" in url:
+            payload = {"blocks": [
+                {"type": "header", "text": {"type": "plain_text", "text": f"🛰️ PaperRadar: {count} New Papers"}},
+                {"type": "section", "text": {"type": "mrkdwn", "text": titles}},
+            ]}
+        elif "discord.com/api/webhooks" in url:
+            payload = {"embeds": [{"title": f"🛰️ PaperRadar: {count} New Papers", "description": titles, "color": 3447003}]}
+        else:
+            payload = {"event": "new_papers", "count": count, "source": "PaperRadar",
+                "papers": [{"title": p.get("title", "")[:120], "score": p.get("score", 0), "pdf_url": p.get("pdf_url", "")} for p in papers[:10]]}
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(url, json=payload)
-                resp.raise_for_status()
-            logger.info("Webhook notification sent: %d papers to %s", count, url[:50])
+                await client.post(url, json=payload)
+            logger.info("Webhook sent: %d papers to %s", count, url[:50])
         except Exception:
-            logger.exception("Webhook notification failed")
+            logger.exception("Webhook failed")
