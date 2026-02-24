@@ -27,6 +27,10 @@ notification:
   lark_webhook: ""
   webhook_url: ""                            # Generic webhook (Slack, Discord, n8n, etc.)
 
+tts:
+  model: "openai/gpt-4o-mini-tts"             # TTS model (openai/gpt-4o-mini-tts, openai/tts-1-hd, etc.)
+  # base_url and api_key default to llm settings if omitted
+
 security:
   secret_key: "change-me-to-random-string"
   api_token: ""

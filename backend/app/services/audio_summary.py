@@ -85,14 +85,23 @@ class AudioSummaryService:
         m = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", content, re.DOTALL)
         if m:
             content = m.group(1)
-        return json.loads(content)
+        script = json.loads(content)
+        # Cap at 12 exchanges to keep audio under 3 minutes
+        return script[:12]
 
     async def _synthesize_audio(self, script: list[dict], out_path: Path) -> None:
         """Call TTS API for each line and concatenate raw MP3 bytes."""
+        from ..core.config import get_config
+        cfg = get_config()
+        # Use server-side TTS config (falls back to LLM config)
+        tts_base = cfg.tts.base_url or cfg.llm.base_url
+        tts_key = cfg.tts.api_key or cfg.llm.api_key
+        tts_model = cfg.tts.model or "openai/tts-1"
+
         voices = {"Alex": "alloy", "Sam": "nova"}
         chunks: list[bytes] = []
 
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=60.0) as client:
+        async with httpx.AsyncClient(base_url=tts_base, timeout=60.0) as client:
             for line in script:
                 speaker = line.get("speaker", "Alex")
                 text = line.get("text", "")
@@ -101,13 +110,12 @@ class AudioSummaryService:
                 voice = voices.get(speaker, "alloy")
                 resp = await client.post(
                     "/audio/speech",
-                    json={"model": "tts-1", "input": text, "voice": voice, "response_format": "mp3"},
-                    headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
+                    json={"model": tts_model, "input": text, "voice": voice, "response_format": "mp3"},
+                    headers={"Authorization": f"Bearer {tts_key}", "Content-Type": "application/json"},
                 )
                 resp.raise_for_status()
                 chunks.append(resp.content)
 
-        # Concatenate MP3 frames (MP3 is frame-based, simple concat works)
         out_path.write_bytes(b"".join(chunks))
 
     def _build_context(self, knowledge: dict) -> str:

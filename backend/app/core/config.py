@@ -39,6 +39,12 @@ class NotificationConfig(BaseModel):
     digest_hour: int = Field(-1, alias="digest_hour")  # Hour (0-23) to send daily digest, -1 = disabled
 
 
+class TTSConfig(BaseModel):
+    base_url: str = Field("", alias="base_url")  # TTS API base URL (defaults to llm.base_url)
+    api_key: str = Field("", alias="api_key")  # TTS API key (defaults to llm.api_key)
+    model: str = Field("openai/tts-1", alias="model")
+
+
 class StorageConfig(BaseModel):
     cleanup_minutes: int = Field(30, alias="cleanup_minutes")
     temp_dir: str = Field("./backend/tmp", alias="temp_dir")
@@ -67,6 +73,7 @@ class AppConfig(BaseModel):
     processing: ProcessingConfig = ProcessingConfig()
     radar: RadarConfig = RadarConfig()
     notification: NotificationConfig = NotificationConfig()
+    tts: TTSConfig = TTSConfig()
     storage: StorageConfig = StorageConfig()
     logging: LoggingConfig = LoggingConfig()
     database: DatabaseConfig = DatabaseConfig()
