@@ -32,7 +32,7 @@ SYSTEM_PROMPT = (
 
 
 class LLMRewriter:
-    def __init__(self, api_key: str, model: str, base_url: str = "https://api.zhizengzeng.com/v1") -> None:
+    def __init__(self, api_key: str, model: str, base_url: str = "https://api.openai.com/v1") -> None:
         self.api_key = api_key
         self.model = model
         self._client = httpx.AsyncClient(base_url=base_url, timeout=httpx.Timeout(120.0, connect=10.0))

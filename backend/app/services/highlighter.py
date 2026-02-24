@@ -76,7 +76,7 @@ class HighlightService:
         self,
         api_key: str,
         model: str,
-        base_url: str = "https://api.zhizengzeng.com/v1",
+        base_url: str = "https://api.openai.com/v1",
         max_concurrent_pages: int = 4,
     ) -> None:
         self.api_key = api_key

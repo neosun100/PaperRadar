@@ -33,7 +33,7 @@ _start_time = time.time()
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(
     title="PaperRadar API",
-    version="3.0.0",
+    version="3.5.0",
     description="Discover, understand, and connect cutting-edge research — automatically.",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -97,7 +97,7 @@ async def healthcheck() -> dict:
         pass
     return {
         "status": "ok",
-        "version": "3.0.0",
+        "version": "3.5.0",
         "uptime_seconds": uptime,
         "total_tasks": total_tasks,
         "total_papers": total_papers,
@@ -118,7 +118,6 @@ async def on_startup() -> None:
     with Session(db_eng) as session:
         stuck = session.exec(select(Task).where(Task.status.in_(active_statuses))).all()
         for t in stuck:
-            # Check if original PDF still exists — if so, reset to pending; if not, mark error
             if t.original_pdf_path and Path(t.original_pdf_path).exists():
                 t.status = TaskStatus.PENDING
                 t.percent = 0
@@ -127,9 +126,20 @@ async def on_startup() -> None:
                 t.status = TaskStatus.ERROR
                 t.message = "Lost during restart (PDF not found)"
             session.add(t)
+        # Also mark very old pending tasks as error (stuck > 24h)
+        from datetime import datetime, timedelta
+        old_pending = session.exec(
+            select(Task).where(Task.status == TaskStatus.PENDING)
+        ).all()
+        for t in old_pending:
+            if t.created_at and (datetime.utcnow() - t.created_at).total_seconds() > 86400:
+                t.status = TaskStatus.ERROR
+                t.message = "Timed out (pending > 24h)"
+                session.add(t)
+                stuck.append(t)
         if stuck:
             session.commit()
-            logger.info("Reset %d zombie tasks after restart", len(stuck))
+            logger.info("Reset %d zombie/stale tasks after restart", len(stuck))
 
     # Re-process pending tasks that have original PDFs (deduplicated)
     pending_tasks = []

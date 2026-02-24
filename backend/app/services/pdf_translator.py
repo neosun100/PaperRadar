@@ -18,7 +18,7 @@ class PDFTranslator:
     def __init__(
         self,
         api_key: str,
-        base_url: str = "https://api.zhizengzeng.com/v1",
+        base_url: str = "https://api.openai.com/v1",
         model: str = "gemini-2.5-flash",
         lang_in: str = "en",
         lang_out: str = "zh",

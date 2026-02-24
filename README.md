@@ -11,7 +11,7 @@
   <a href="https://github.com/neosun100/PaperRadar/stargazers"><img src="https://img.shields.io/github/stars/neosun100/PaperRadar?style=social" alt="Stars"></a>
   <a href="https://hub.docker.com/r/neosun/paperradar"><img src="https://img.shields.io/docker/pulls/neosun/paperradar" alt="Docker Pulls"></a>
   <a href="https://github.com/neosun100/PaperRadar/blob/main/LICENSE"><img src="https://img.shields.io/github/license/neosun100/PaperRadar" alt="License"></a>
-  <img src="https://img.shields.io/badge/version-3.0.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/version-3.5.0-blue" alt="Version">
 </p>
 
 ---

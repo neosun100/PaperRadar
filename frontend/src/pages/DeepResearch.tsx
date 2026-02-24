@@ -18,6 +18,10 @@ const DeepResearch = () => {
     const [chatInput, setChatInput] = useState("");
     const [chatLoading, setChatLoading] = useState(false);
     const [chatSources, setChatSources] = useState<any[]>([]);
+    // History
+    const [history, setHistory] = useState<{ topic: string; date: string; papers: number }[]>(() => {
+        try { return JSON.parse(localStorage.getItem("pr_research_history") || "[]"); } catch { return []; }
+    });
     const chatEndRef = useRef<HTMLDivElement>(null);
 
     const handleResearch = async () => {
@@ -31,6 +35,11 @@ const DeepResearch = () => {
             if (r.data.synthesis) {
                 setChatHistory([{ role: "assistant", content: `## Deep Research: ${topic}\n\n${r.data.synthesis}` }]);
             }
+            // Save to history
+            const entry = { topic: topic.trim(), date: new Date().toISOString(), papers: r.data.papers_found || 0 };
+            const newHistory = [entry, ...history.filter(h => h.topic !== entry.topic)].slice(0, 20);
+            setHistory(newHistory);
+            localStorage.setItem("pr_research_history", JSON.stringify(newHistory));
         } catch (e: any) {
             toast.error(e.response?.data?.detail || "Research failed");
         } finally {
@@ -80,6 +89,17 @@ const DeepResearch = () => {
             </section>
 
             {/* Results: Papers Found */}
+            {!result && history.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    <span className="text-xs text-muted-foreground self-center">Recent:</span>
+                    {history.slice(0, 8).map((h, i) => (
+                        <button key={i} onClick={() => { setTopic(h.topic); }} className="inline-flex items-center gap-1.5 rounded-full border bg-card px-3 py-1 text-xs hover:bg-muted transition-colors">
+                            {h.topic} <span className="text-muted-foreground">({h.papers})</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {result && (
                 <div className="grid gap-4 md:grid-cols-3">
                     <Card><CardContent className="p-4 text-center">
