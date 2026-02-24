@@ -88,6 +88,9 @@ const Layout = () => {
                         <Button variant="ghost" size="sm" className={cn("gap-2", isActive("/radar") && "text-emerald-600 dark:text-emerald-400")} onClick={() => navTo("/radar")}>
                             <Radar className="h-4 w-4" />{t("radar.title")}
                         </Button>
+                        <Button variant="ghost" size="sm" className={cn("gap-2", isActive("/research") && "text-amber-600 dark:text-amber-400")} onClick={() => navTo("/research")}>
+                            <Search className="h-4 w-4" />Research
+                        </Button>
                         <a href={GITHUB_URL} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-muted-foreground hover:text-yellow-500 transition-colors">
                             <Github className="h-4 w-4" /><Star className="h-3.5 w-3.5" /><span className="text-xs">{t("nav.star")}</span>
@@ -117,6 +120,9 @@ const Layout = () => {
                         </button>
                         <button onClick={() => navTo("/radar")} className={cn("flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm", isActive("/radar") ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" : "text-muted-foreground")}>
                             <Radar className="h-4 w-4" /> {t("radar.title")}
+                        </button>
+                        <button onClick={() => navTo("/research")} className={cn("flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-sm", isActive("/research") ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600" : "text-muted-foreground")}>
+                            <Search className="h-4 w-4" /> Research
                         </button>
                         <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
                             <Button variant="ghost" size="sm" onClick={toggleLang} className="gap-2"><Globe className="h-4 w-4" />{i18n.language === "zh" ? "English" : "中文"}</Button>

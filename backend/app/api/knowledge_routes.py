@@ -1940,4 +1940,96 @@ def create_knowledge_router() -> APIRouter:
             content = (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
         return {"briefing": content, "paper_id": paper_id}
 
+    # ------------------------------------------------------------------
+    # Deep Research (auto search → collect → expert synthesis)
+    # ------------------------------------------------------------------
+
+    @router.post("/deep-research")
+    async def deep_research(request: Request) -> dict[str, Any]:
+        """Given a topic, search papers, gather knowledge, and generate expert synthesis."""
+        from ..services.deep_research import DeepResearchService
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        topic = body.get("topic", "").strip()
+        max_papers = min(body.get("max_papers", 10), 20)
+        if not topic:
+            raise HTTPException(400, "topic is required")
+
+        svc = DeepResearchService(llm_config)
+        result = await svc.research(topic, max_papers)
+        return result
+
+    # ------------------------------------------------------------------
+    # Expert Chat (topic-focused RAG with deep context)
+    # ------------------------------------------------------------------
+
+    @router.post("/expert-chat")
+    async def expert_chat(request: Request) -> dict[str, Any]:
+        """Expert-level chat that searches for relevant knowledge before answering."""
+        from ..services.paper_chat import PaperChatService
+        from ..services.vector_search import get_vector_service
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        message = body.get("message", "")
+        history = body.get("history", [])
+        topic = body.get("topic", "")
+        if not message:
+            raise HTTPException(400, "message is required")
+
+        # Build rich context: vector search + topic-specific papers
+        context_parts = []
+        sources = []
+
+        vs = get_vector_service()
+        if vs:
+            # Search with both the message and topic for broader coverage
+            queries = [message]
+            if topic and topic.lower() not in message.lower():
+                queries.append(topic)
+            seen_chunks = set()
+            for q in queries:
+                hits = await vs.search(q, n_results=20)
+                for h in hits:
+                    cid = h.get("id", "")
+                    if cid not in seen_chunks:
+                        seen_chunks.add(cid)
+                        idx = len(context_parts) + 1
+                        context_parts.append(f"[{idx}] ({h['metadata'].get('type','')}) {h['text']}")
+                        sources.append({"index": idx, "text": h["text"][:100], "paper_id": h["metadata"].get("paper_id", ""), "type": h["metadata"].get("type", ""), "score": round(h.get("score", 0), 3)})
+
+        if not context_parts:
+            return {"reply": "No knowledge available. Upload papers or run Deep Research first.", "sources": []}
+
+        expert_system = (
+            "You are a world-class AI research expert with deep knowledge of the academic literature. "
+            "You have access to extracted knowledge from multiple research papers below. "
+            "Answer with the depth and nuance of a senior researcher. "
+            "Be specific — cite paper findings, mention actual methods/numbers/benchmarks. "
+            "When answering, cite sources using [1], [2] etc. "
+            "If you're uncertain, say so and explain what additional research would help. "
+            "Respond in the same language as the user's question.\n\n"
+            f"{'Topic context: ' + topic if topic else ''}\n\n"
+            "Research knowledge:\n" + "\n".join(context_parts[:40])
+        )
+
+        svc = PaperChatService(
+            api_key=llm_config["api_key"],
+            model=llm_config.get("model", ""),
+            base_url=llm_config.get("base_url", ""),
+        )
+        messages = [{"role": "system", "content": expert_system}]
+        if history:
+            messages.extend(history[-6:])
+        messages.append({"role": "user", "content": message})
+
+        async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=120.0) as client:
+            resp = await client.post("/chat/completions",
+                json={"model": llm_config.get("model", ""), "messages": messages, "temperature": 0.3, "max_tokens": 3000},
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"})
+            resp.raise_for_status()
+            msg = resp.json()["choices"][0]["message"]
+            reply = (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
+
+        return {"reply": reply, "sources": sources[:20], "context_chunks": len(context_parts)}
+
     return router

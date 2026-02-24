@@ -1,5 +1,21 @@
 # PaperRadar Changelog
 
+## v3.4.0 (2026-02-24) 🔬
+- **Deep Research**
+  - Enter any topic → auto-searches Semantic Scholar → gathers all knowledge → generates expert-level synthesis report
+  - Report includes: Executive Summary, Key Findings, Methodological Landscape, Contradictions, Frontier & Gaps, Expert Assessment, Recommended Reading Order
+  - Auto-queues new arXiv papers for download and processing
+  - Fallback to KB vector search when S2 is rate-limited
+  - S2 API retry with exponential backoff (3 attempts)
+  - New page at /research with dedicated navigation button
+- **Expert Chat**
+  - Topic-focused RAG chat with world-class expert persona
+  - Searches up to 40 knowledge chunks across all papers
+  - Returns cited sources with relevance scores
+  - POST /api/knowledge/expert-chat
+- **MCP Server: 15 tools**
+  - Added: scholar_search, generate_quiz, generate_briefing
+
 ## v3.3.0 (2026-02-24)
 - **Public Share Page**
   - Beautiful standalone page at /share/{token} for viewing shared papers
