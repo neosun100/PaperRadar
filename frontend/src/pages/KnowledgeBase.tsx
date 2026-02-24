@@ -457,6 +457,19 @@ const KnowledgeBase = () => {
                                 Extract Table
                             </Button>
                         )}
+                        {selectedForCompare.size >= 1 && (
+                            <Button size="sm" variant="outline" className="gap-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20" onClick={async () => {
+                                if (!window.confirm(`Delete ${selectedForCompare.size} selected papers?`)) return;
+                                for (const pid of selectedForCompare) {
+                                    try { await api.delete(`/api/knowledge/papers/${pid}`); } catch {}
+                                }
+                                setSelectedForCompare(new Set());
+                                fetchPapers();
+                                toast.success(`Deleted ${selectedForCompare.size} papers`);
+                            }}>
+                                <Trash2 className="h-3.5 w-3.5" /> Delete ({selectedForCompare.size})
+                            </Button>
+                        )}
                     </div>
                     {papers.length > 0 && (
                         <div className="relative max-w-sm w-full flex gap-1.5">

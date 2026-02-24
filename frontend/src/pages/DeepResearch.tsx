@@ -18,6 +18,7 @@ const DeepResearch = () => {
     const [chatInput, setChatInput] = useState("");
     const [chatLoading, setChatLoading] = useState(false);
     const [chatSources, setChatSources] = useState<any[]>([]);
+    const [chatMode, setChatMode] = useState<"expert" | "claim">("expert");
     // History
     const [history, setHistory] = useState<{ topic: string; date: string; papers: number }[]>(() => {
         try { return JSON.parse(localStorage.getItem("pr_research_history") || "[]"); } catch { return []; }
@@ -55,14 +56,14 @@ const DeepResearch = () => {
         setChatLoading(true);
         try {
             const r = await api.post("/api/knowledge/expert-chat", {
-                message: msg, topic: topic || "", history: chatHistory.slice(-6),
+                message: msg, topic: topic || "", history: chatHistory.slice(-6), mode: chatMode,
             });
             setChatHistory(prev => [...prev, { role: "assistant", content: r.data.reply }]);
             setChatSources(r.data.sources || []);
             setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
         } catch { toast.error("Chat failed"); }
         finally { setChatLoading(false); }
-    }, [chatInput, topic, chatHistory]);
+    }, [chatInput, topic, chatHistory, chatMode]);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -79,6 +80,13 @@ const DeepResearch = () => {
                             {researching ? "Researching..." : "Research"}
                         </Button>
                     </div>
+                    {!researching && !result && (
+                        <div className="flex flex-wrap justify-center gap-2 pt-1">
+                            {["LLM reasoning", "RLHF vs DPO", "efficient inference", "multimodal agents", "RAG optimization", "code generation"].map(s => (
+                                <button key={s} onClick={() => setTopic(s)} className="rounded-full border px-3 py-1 text-xs text-muted-foreground hover:bg-muted transition-colors">{s}</button>
+                            ))}
+                        </div>
+                    )}
                     {researching && (
                         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -157,7 +165,11 @@ const DeepResearch = () => {
                         )}
 
                         <div className="flex gap-2">
-                            <Input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ask a follow-up question as an expert..."
+                            <select value={chatMode} onChange={e => setChatMode(e.target.value as any)} className="h-9 rounded-md border bg-background px-2 text-xs shrink-0">
+                                <option value="expert">💬 Expert</option>
+                                <option value="claim">⚖️ Evidence</option>
+                            </select>
+                            <Input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder={chatMode === "claim" ? "Enter a claim to verify..." : "Ask a follow-up question..."}
                                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChat(); } }} />
                             <Button onClick={handleChat} disabled={chatLoading || !chatInput.trim()} size="icon" className="shrink-0">
                                 <Send className="h-4 w-4" />

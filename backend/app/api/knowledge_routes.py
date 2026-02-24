@@ -1973,6 +1973,7 @@ def create_knowledge_router() -> APIRouter:
         message = body.get("message", "")
         history = body.get("history", [])
         topic = body.get("topic", "")
+        mode = body.get("mode", "expert")  # expert or claim
         if not message:
             raise HTTPException(400, "message is required")
 
@@ -1982,7 +1983,6 @@ def create_knowledge_router() -> APIRouter:
 
         vs = get_vector_service()
         if vs:
-            # Search with both the message and topic for broader coverage
             queries = [message]
             if topic and topic.lower() not in message.lower():
                 queries.append(topic)
@@ -2000,29 +2000,36 @@ def create_knowledge_router() -> APIRouter:
         if not context_parts:
             return {"reply": "No knowledge available. Upload papers or run Deep Research first.", "sources": []}
 
-        expert_system = (
-            "You are a world-class AI research expert with deep knowledge of the academic literature. "
-            "You have access to extracted knowledge from multiple research papers below. "
-            "Answer with the depth and nuance of a senior researcher. "
-            "Be specific — cite paper findings, mention actual methods/numbers/benchmarks. "
-            "When answering, cite sources using [1], [2] etc. "
-            "If you're uncertain, say so and explain what additional research would help. "
-            "Respond in the same language as the user's question.\n\n"
-            f"{'Topic context: ' + topic if topic else ''}\n\n"
-            "Research knowledge:\n" + "\n".join(context_parts[:40])
-        )
-
-        svc = PaperChatService(
-            api_key=llm_config["api_key"],
-            model=llm_config.get("model", ""),
-            base_url=llm_config.get("base_url", ""),
-        )
-        messages = [{"role": "system", "content": expert_system}]
-        if history:
-            messages.extend(history[-6:])
-        messages.append({"role": "user", "content": message})
+        if mode == "claim":
+            system_prompt = (
+                "You are a research evidence analyst. Given a research claim or question, "
+                "analyze the evidence from the papers below and classify each relevant finding as:\n"
+                "- ✅ SUPPORTS — evidence that supports the claim\n"
+                "- ❌ CONTRADICTS — evidence that contradicts the claim\n"
+                "- ➡️ RELATED — relevant but neither supports nor contradicts\n\n"
+                "Structure your response as:\n"
+                "## Verdict\nOne sentence: what does the evidence say overall?\n\n"
+                "## Supporting Evidence\n## Contradicting Evidence\n## Related Findings\n\n"
+                "Cite sources using [1], [2] etc. Be specific about methods and numbers.\n"
+                "Respond in the same language as the user's question.\n\n"
+                f"Research knowledge:\n" + "\n".join(context_parts[:40])
+            )
+        else:
+            system_prompt = (
+                "You are a world-class AI research expert with deep knowledge of the academic literature. "
+                "Answer with the depth and nuance of a senior researcher. "
+                "Be specific — cite paper findings, mention actual methods/numbers/benchmarks. "
+                "When answering, cite sources using [1], [2] etc. "
+                "Respond in the same language as the user's question.\n\n"
+                f"{'Topic context: ' + topic if topic else ''}\n\n"
+                "Research knowledge:\n" + "\n".join(context_parts[:40])
+            )
 
         async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=120.0) as client:
+            messages = [{"role": "system", "content": system_prompt}]
+            if history:
+                messages.extend(history[-6:])
+            messages.append({"role": "user", "content": message})
             resp = await client.post("/chat/completions",
                 json={"model": llm_config.get("model", ""), "messages": messages, "temperature": 0.3, "max_tokens": 3000},
                 headers={"Authorization": f"Bearer {llm_config['api_key']}"})
@@ -2030,6 +2037,6 @@ def create_knowledge_router() -> APIRouter:
             msg = resp.json()["choices"][0]["message"]
             reply = (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
 
-        return {"reply": reply, "sources": sources[:20], "context_chunks": len(context_parts)}
+        return {"reply": reply, "sources": sources[:20], "context_chunks": len(context_parts), "mode": mode}
 
     return router

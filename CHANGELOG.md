@@ -1,18 +1,22 @@
 # PaperRadar Changelog
 
 ## v3.5.0 (2026-02-24)
-- **Deep Research: arXiv Fallback**
-  - When Semantic Scholar is rate-limited, automatically falls back to arXiv API search
-  - Ensures Deep Research always finds papers regardless of S2 availability
-- **Expert Chat in Knowledge Base**
-  - "Ask All Papers" upgraded to Expert Chat mode with source citations
-  - Responses now include [1][2] references and source list
-- **Delete Confirmation**
-  - Paper deletion now requires confirmation dialog to prevent accidental removal
-- **Dashboard Enhancements**
-  - Recent Radar discoveries shown with paper titles
-  - Deep Research quick-access button (amber accent)
-  - Stats overview panel with Papers/Chunks/Documents/Uptime
+- **Claim-based Evidence Analysis (Consensus-style)**
+  - New "Evidence" mode in Expert Chat: input a claim → get structured verdict
+  - Classifies evidence as ✅ Supporting / ❌ Contradicting / ➡️ Related
+  - Toggle between Expert and Evidence modes in Deep Research chat
+- **Deep Research UX Improvements**
+  - Suggested topic chips (LLM reasoning, RLHF vs DPO, etc.)
+  - Research history saved in localStorage, one-click to re-research
+- **Knowledge Base Batch Operations**
+  - Batch delete: select multiple papers → delete all at once with confirmation
+  - Delete confirmation dialog prevents accidental removal
+- **Privacy & Security Fix**
+  - Removed all hardcoded third-party API URLs from codebase
+  - Docker image verified clean (0 secrets, 0 hardcoded URLs)
+- **Stale Task Cleanup**
+  - Pending tasks older than 24h auto-marked as error on restart
+- **Version Fix**: health endpoint and README badge now show correct version
 
 ## v3.4.0 (2026-02-24) 🔬
 - **Deep Research**
