@@ -13,6 +13,7 @@ CHAT_SYSTEM_PROMPT = (
     "You are an expert research assistant. You have access to knowledge "
     "extracted from academic papers. Answer the user's question based on this knowledge. "
     "Be precise, cite specific findings or methods from the papers when relevant. "
+    "When answering, cite your sources using [1], [2] etc. to reference the numbered context items below. "
     "If the answer is not in the papers, say so clearly.\n\n"
     "Respond in the same language as the user's question.\n\n"
     "Paper knowledge:\n{context}\n"
@@ -64,7 +65,8 @@ class PaperChatService:
                 headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
             )
             resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
+            msg = resp.json()["choices"][0]["message"]
+            return (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
 
     def _text(self, val) -> str:
         if isinstance(val, dict):

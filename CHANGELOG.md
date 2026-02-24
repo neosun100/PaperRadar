@@ -1,5 +1,23 @@
 # PaperRadar Changelog
 
+## v3.2.0 (2026-02-24)
+- **Paper Quiz (NotebookLM-style)**
+  - Generate 5 multiple-choice questions from any paper
+  - Interactive UI: click to answer, green/red feedback, explanations
+  - POST /api/knowledge/papers/{id}/quiz
+- **Paper Briefing Doc**
+  - One-click structured briefing: Key Takeaways, Problem, Methodology, Results, Limitations, Implications
+  - Markdown output with copy-to-clipboard
+  - POST /api/knowledge/papers/{id}/briefing
+- **Chat Citation Sources**
+  - Chat responses now include [1], [2] citation markers referencing source context
+  - System prompt instructs LLM to cite specific findings
+- **Thinking Model Compatibility**
+  - All LLM calls now handle Claude thinking model's reasoning_content fallback
+  - Quiz/Briefing/TLDR auto-strip `-thinking` suffix for reliable JSON output
+- **Tab Layout Improvement**
+  - PaperDetail tabs switched from fixed grid to flex-wrap for 11 tabs
+
 ## v3.1.0 (2026-02-24)
 - **Semantic Scholar Search**
   - Search 200M+ papers directly from Dashboard

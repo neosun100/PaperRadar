@@ -63,6 +63,12 @@ const PaperDetail = () => {
     const [citationContexts, setCitationContexts] = useState<{ title: string; year?: number; authors: string[]; citations: number; arxiv_id?: string; s2_id: string; contexts: string[]; intents: string[] }[]>([]);
     // Similar papers
     const [similarPapers, setSimilarPapers] = useState<{ paper_id: string; title: string; score: number }[]>([]);
+    // Quiz & Briefing
+    const [quizData, setQuizData] = useState<any>(null);
+    const [quizLoading, setQuizLoading] = useState(false);
+    const [quizAnswers, setQuizAnswers] = useState<Record<number, string>>({});
+    const [briefing, setBriefing] = useState("");
+    const [briefingLoading, setBriefingLoading] = useState(false);
     // Force re-render on language change
     const [, setLang] = useState(i18n.language);
     useEffect(() => {
@@ -406,7 +412,7 @@ const PaperDetail = () => {
             )}
 
             <Tabs defaultValue="chat" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-9 lg:w-auto lg:inline-grid">
+                <TabsList className="flex flex-wrap gap-1 lg:w-auto">
                     <TabsTrigger value="chat" className="gap-1.5"><MessageCircle className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.chat")}</span></TabsTrigger>
                     <TabsTrigger value="audio" className="gap-1.5"><Headphones className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.audio")}</span></TabsTrigger>
                     <TabsTrigger value="citations" className="gap-1.5" onClick={loadCitations}><GitFork className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.citations")}</span></TabsTrigger>
@@ -416,6 +422,8 @@ const PaperDetail = () => {
                     <TabsTrigger value="flashcards" className="gap-1.5"><GraduationCap className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.cards")} ({flashcards.length})</span><span className="sm:hidden">{flashcards.length}</span></TabsTrigger>
                     <TabsTrigger value="notes" className="gap-1.5"><StickyNote className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.notes")}</span></TabsTrigger>
                     <TabsTrigger value="figures" className="gap-1.5" onClick={loadFigures}><ImageIcon className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.figures")}</span></TabsTrigger>
+                    <TabsTrigger value="quiz" className="gap-1.5"><GraduationCap className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.quiz")}</span></TabsTrigger>
+                    <TabsTrigger value="briefing" className="gap-1.5"><FlaskConical className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("paperDetail.briefing")}</span></TabsTrigger>
                 </TabsList>
 
                 {/* Chat Tab */}
@@ -682,6 +690,79 @@ const PaperDetail = () => {
                             ))}
                         </div>
                     )}
+                </TabsContent>
+
+                {/* Quiz Tab */}
+                <TabsContent value="quiz" className="space-y-4">
+                    <Card><CardContent className="p-6 space-y-4">
+                        {!quizData && (
+                            <div className="text-center space-y-3">
+                                <p className="text-sm text-muted-foreground">{t("paperDetail.quiz")} — Test your understanding of this paper.</p>
+                                <Button onClick={async () => {
+                                    setQuizLoading(true);
+                                    try { const r = await api.post(`/api/knowledge/papers/${paperId}/quiz`); setQuizData(r.data); }
+                                    catch { toast.error("Failed to generate quiz"); }
+                                    finally { setQuizLoading(false); }
+                                }} disabled={quizLoading} className="gap-2">
+                                    {quizLoading ? <><Loader2 className="h-4 w-4 animate-spin" />{t("paperDetail.quizGenerating")}</> : t("paperDetail.generateQuiz")}
+                                </Button>
+                            </div>
+                        )}
+                        {quizData?.questions?.map((q: any, qi: number) => (
+                            <div key={qi} className="space-y-2 border rounded-lg p-4">
+                                <p className="font-medium text-sm">{qi + 1}. {q.question}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {(q.options || []).map((opt: string, oi: number) => {
+                                        const letter = opt.charAt(0);
+                                        const answered = quizAnswers[qi] !== undefined;
+                                        const isCorrect = letter === q.correct;
+                                        const isSelected = quizAnswers[qi] === letter;
+                                        return (
+                                            <button key={oi} disabled={answered}
+                                                className={cn("text-left text-xs rounded-lg border p-2.5 transition-colors",
+                                                    !answered && "hover:bg-muted",
+                                                    answered && isCorrect && "bg-green-50 dark:bg-green-950/30 border-green-300",
+                                                    answered && isSelected && !isCorrect && "bg-red-50 dark:bg-red-950/30 border-red-300",
+                                                )}
+                                                onClick={() => setQuizAnswers(prev => ({ ...prev, [qi]: letter }))}>
+                                                {opt}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {quizAnswers[qi] !== undefined && q.explanation && (
+                                    <p className="text-xs text-muted-foreground mt-1">💡 {q.explanation}</p>
+                                )}
+                            </div>
+                        ))}
+                    </CardContent></Card>
+                </TabsContent>
+
+                {/* Briefing Tab */}
+                <TabsContent value="briefing" className="space-y-4">
+                    <Card><CardContent className="p-6 space-y-4">
+                        {!briefing && (
+                            <div className="text-center space-y-3">
+                                <p className="text-sm text-muted-foreground">{t("paperDetail.briefing")} — Generate a structured briefing document.</p>
+                                <Button onClick={async () => {
+                                    setBriefingLoading(true);
+                                    try { const r = await api.post(`/api/knowledge/papers/${paperId}/briefing`); setBriefing(r.data.briefing); }
+                                    catch { toast.error("Failed to generate briefing"); }
+                                    finally { setBriefingLoading(false); }
+                                }} disabled={briefingLoading} className="gap-2">
+                                    {briefingLoading ? <><Loader2 className="h-4 w-4 animate-spin" />{t("paperDetail.briefingGenerating")}</> : t("paperDetail.generateBriefing")}
+                                </Button>
+                            </div>
+                        )}
+                        {briefing && (
+                            <div className="space-y-2">
+                                <div className="flex justify-end">
+                                    <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(briefing); toast.success("Copied!"); }}>Copy</Button>
+                                </div>
+                                <div className="prose dark:prose-invert max-w-none text-sm whitespace-pre-wrap rounded-lg border bg-muted/50 p-4 max-h-[500px] overflow-y-auto">{briefing}</div>
+                            </div>
+                        )}
+                    </CardContent></Card>
                 </TabsContent>
             </Tabs>
         </div>

@@ -1855,4 +1855,89 @@ def create_knowledge_router() -> APIRouter:
         asyncio.create_task(_do_batch())
         return {"queued": len(missing), "message": f"Generating TLDR for {len(missing)} papers in background"}
 
+    # ------------------------------------------------------------------
+    # Paper Quiz (NotebookLM-style)
+    # ------------------------------------------------------------------
+
+    @router.post("/papers/{paper_id}/quiz")
+    async def generate_quiz(paper_id: str, request: Request) -> dict[str, Any]:
+        llm_config = get_llm_config(request)
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper or not paper.knowledge_json:
+            raise HTTPException(404, "Paper not found or no knowledge")
+        kj = json.loads(paper.knowledge_json)
+        meta = kj.get("metadata", {})
+        title = meta.get("title", "")
+        if isinstance(title, dict): title = title.get("en", "")
+        abstract = meta.get("abstract", "")
+        if isinstance(abstract, dict): abstract = abstract.get("en", "")
+        findings = "; ".join(
+            (f.get("statement", {}).get("en", "") if isinstance(f.get("statement"), dict) else str(f.get("statement", "")))
+            for f in kj.get("findings", [])[:5]
+        )
+        prompt = (
+            "Based on this paper, generate 5 multiple-choice quiz questions (4 options A-D, one correct). "
+            "Test understanding of key concepts, methods, and findings. "
+            'Respond ONLY with JSON: {"questions": [{"question": "...", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "correct": "A", "explanation": "..."}]}\n\n'
+            f"Title: {title}\nAbstract: {abstract}\nFindings: {findings}"
+        )
+        model = llm_config.get("model", "")
+        if "-thinking" in model: model = model.replace("-thinking", "")
+        async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=60.0) as client:
+            resp = await client.post("/chat/completions",
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 2000, "temperature": 0.3},
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"})
+            resp.raise_for_status()
+            msg = resp.json()["choices"][0]["message"]
+            content = (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
+        try:
+            start = content.find("{"); end = content.rfind("}")
+            data = json.loads(content[start:end+1]) if start >= 0 else {"questions": []}
+        except Exception:
+            data = {"questions": []}
+        return {"questions": data.get("questions", []), "paper_id": paper_id}
+
+    # ------------------------------------------------------------------
+    # Paper Briefing Doc
+    # ------------------------------------------------------------------
+
+    @router.post("/papers/{paper_id}/briefing")
+    async def generate_briefing(paper_id: str, request: Request) -> dict[str, Any]:
+        llm_config = get_llm_config(request)
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper or not paper.knowledge_json:
+            raise HTTPException(404, "Paper not found or no knowledge")
+        kj = json.loads(paper.knowledge_json)
+        meta = kj.get("metadata", {})
+        title = meta.get("title", "")
+        if isinstance(title, dict): title = title.get("en", "")
+        abstract = meta.get("abstract", "")
+        if isinstance(abstract, dict): abstract = abstract.get("en", "")
+        findings = "\n".join(
+            f"- {f.get('statement', {}).get('en', '') if isinstance(f.get('statement'), dict) else str(f.get('statement', ''))}"
+            for f in kj.get("findings", [])[:8]
+        )
+        methods = "\n".join(
+            f"- {m.get('name', {}).get('en', '') if isinstance(m.get('name'), dict) else str(m.get('name', ''))}: {m.get('description', {}).get('en', '') if isinstance(m.get('description'), dict) else str(m.get('description', ''))}"
+            for m in kj.get("methods", [])[:5]
+        )
+        prompt = (
+            "Generate a structured briefing document for this paper in Markdown. Include:\n"
+            "## Key Takeaways (3-5 bullet points)\n## Problem Statement\n## Methodology\n"
+            "## Key Results\n## Limitations\n## Implications\nBe concise and specific.\n\n"
+            f"Title: {title}\nAbstract: {abstract}\nFindings:\n{findings}\nMethods:\n{methods}"
+        )
+        model = llm_config.get("model", "")
+        if "-thinking" in model: model = model.replace("-thinking", "")
+        async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=120.0) as client:
+            resp = await client.post("/chat/completions",
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 3000, "temperature": 0.2},
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"})
+            resp.raise_for_status()
+            msg = resp.json()["choices"][0]["message"]
+            content = (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
+        return {"briefing": content, "paper_id": paper_id}
+
     return router
