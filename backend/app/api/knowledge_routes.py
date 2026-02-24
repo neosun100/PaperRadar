@@ -1721,4 +1721,120 @@ def create_knowledge_router() -> APIRouter:
                 session.commit()
         return {"tldr": tldr, "status": "generated"}
 
+    # ------------------------------------------------------------------
+    # Scholar Search (Semantic Scholar public API)
+    # ------------------------------------------------------------------
+
+    @router.get("/scholar-search")
+    async def scholar_search(q: str, n: int = 5) -> dict[str, Any]:
+        """Search Semantic Scholar for papers."""
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.get(
+                "https://api.semanticscholar.org/graph/v1/paper/search",
+                params={"query": q, "limit": min(n, 10), "fields": "title,year,authors,citationCount,externalIds,abstract"},
+            )
+            if r.status_code != 200:
+                return {"results": [], "message": f"S2 API error: {r.status_code}"}
+            data = r.json()
+        results = []
+        for p in data.get("data", []):
+            results.append({
+                "title": p.get("title", ""),
+                "year": p.get("year"),
+                "authors": [a.get("name", "") for a in (p.get("authors") or [])[:4]],
+                "citations": p.get("citationCount", 0),
+                "arxiv_id": (p.get("externalIds") or {}).get("ArXiv", ""),
+                "abstract": (p.get("abstract") or "")[:200],
+                "s2_id": p.get("paperId", ""),
+            })
+        return {"results": results, "total": data.get("total", 0)}
+
+    # ------------------------------------------------------------------
+    # Paper Sharing (public link)
+    # ------------------------------------------------------------------
+
+    @router.post("/papers/{paper_id}/share")
+    async def share_paper(paper_id: str) -> dict[str, Any]:
+        """Generate a share token for public access to paper knowledge."""
+        import uuid
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+            if not paper or not paper.knowledge_json:
+                raise HTTPException(404, "Paper not found or no knowledge")
+            kj = json.loads(paper.knowledge_json)
+            token = kj.get("share_token")
+            if not token:
+                token = uuid.uuid4().hex[:12]
+                kj["share_token"] = token
+                paper.knowledge_json = json.dumps(kj, ensure_ascii=False)
+                session.add(paper)
+                session.commit()
+        return {"token": token, "url": f"/share/{token}"}
+
+    # ------------------------------------------------------------------
+    # Batch TLDR generation
+    # ------------------------------------------------------------------
+
+    @router.post("/batch-generate-tldr")
+    async def batch_generate_tldr(request: Request) -> dict[str, Any]:
+        """Generate TLDR for all papers that don't have one."""
+        llm_config = get_llm_config(request)
+        with Session(engine) as session:
+            papers = session.exec(
+                select(PaperKnowledge).where(PaperKnowledge.extraction_status == "completed")
+            ).all()
+        missing = []
+        for p in papers:
+            if p.knowledge_json:
+                kj = json.loads(p.knowledge_json)
+                if not kj.get("tldr"):
+                    missing.append(p.id)
+        # Process in background
+        async def _do_batch():
+            import asyncio as aio
+            success, fail = 0, 0
+            for pid in missing:
+                try:
+                    # Reuse the single-paper endpoint logic
+                    with Session(engine) as session:
+                        paper = session.get(PaperKnowledge, pid)
+                    if not paper or not paper.knowledge_json:
+                        continue
+                    kj = json.loads(paper.knowledge_json)
+                    meta = kj.get("metadata", {})
+                    title = meta.get("title", "")
+                    if isinstance(title, dict): title = title.get("en", "")
+                    abstract = meta.get("abstract", "")
+                    if isinstance(abstract, dict): abstract = abstract.get("en", "")
+                    prompt = (
+                        "Write a single-sentence TLDR summary of this paper (max 30 words). "
+                        "Focus on the key contribution. Be specific.\n"
+                        'Respond ONLY with JSON: {"tldr": {"en": "...", "zh": "..."}}\n\n'
+                        f"Title: {title}\nAbstract: {abstract}"
+                    )
+                    async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=30.0) as client:
+                        resp = await client.post(
+                            "/chat/completions",
+                            json={"model": llm_config.get("model", ""), "messages": [{"role": "user", "content": prompt}], "max_tokens": 200, "temperature": 0.1},
+                            headers={"Authorization": f"Bearer {llm_config['api_key']}"},
+                        )
+                        resp.raise_for_status()
+                        content = resp.json()["choices"][0]["message"]["content"].strip()
+                        start = content.find("{"); end = content.rfind("}")
+                        tldr_data = json.loads(content[start:end+1]) if start >= 0 else {}
+                    tldr = tldr_data.get("tldr", {})
+                    kj["tldr"] = tldr
+                    with Session(engine) as session:
+                        p = session.get(PaperKnowledge, pid)
+                        if p:
+                            p.knowledge_json = json.dumps(kj, ensure_ascii=False)
+                            session.add(p); session.commit()
+                    success += 1
+                except Exception:
+                    fail += 1
+                await aio.sleep(1)
+            logger.info("Batch TLDR: %d success, %d fail out of %d", success, fail, len(missing))
+        asyncio.create_task(_do_batch())
+        return {"queued": len(missing), "message": f"Generating TLDR for {len(missing)} papers in background"}
+
     return router

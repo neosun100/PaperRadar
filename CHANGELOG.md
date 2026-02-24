@@ -1,5 +1,24 @@
 # PaperRadar Changelog
 
+## v3.1.0 (2026-02-24)
+- **Semantic Scholar Search**
+  - Search 200M+ papers directly from Dashboard
+  - GET /api/knowledge/scholar-search?q=query&n=5
+  - One-click "Add" to download and process arXiv papers from results
+- **Paper Sharing**
+  - Generate public share links for any paper
+  - POST /api/knowledge/papers/{id}/share → generates unique token
+  - GET /api/share/{token} → public access to paper metadata, TLDR, findings
+  - Share button on Paper Detail page copies link to clipboard
+- **Batch TLDR Generation**
+  - POST /api/knowledge/batch-generate-tldr → generates TLDR for all papers missing one
+  - Runs in background, ~1 paper/second
+- **TTS Activated (gpt-4o-mini-tts)**
+  - Audio Summary now uses OpenAI gpt-4o-mini-tts (most natural voice)
+  - TTS uses server-side config (not user BYOK key)
+  - New `tts` section in config.yaml for model/endpoint customization
+  - Script capped at 12 exchanges (~3 min audio)
+
 ## v3.0.0 (2026-02-24)
 - **TLDR Auto-Summary**
   - Knowledge extraction now generates a one-sentence bilingual TLDR for each paper

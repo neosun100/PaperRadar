@@ -560,4 +560,36 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
                 shutil.copytree(vec_src, vec_dst)
         return {"status": "restored", "message": "Restart the container to apply changes"}
 
+    # ------------------------------------------------------------------
+    # Public Share endpoint (no auth required)
+    # ------------------------------------------------------------------
+
+    @router.get("/share/{token}")
+    async def get_shared_paper(token: str):
+        from sqlmodel import Session, select
+        from ..core.db import engine as db_eng
+        from ..models.knowledge import PaperKnowledge
+        with Session(db_eng) as session:
+            papers = session.exec(
+                select(PaperKnowledge).where(PaperKnowledge.extraction_status == "completed")
+            ).all()
+        for p in papers:
+            if not p.knowledge_json:
+                continue
+            kj = json.loads(p.knowledge_json)
+            if kj.get("share_token") == token:
+                meta = kj.get("metadata", {})
+                return {
+                    "title": meta.get("title", ""),
+                    "authors": meta.get("authors", []),
+                    "year": meta.get("year"),
+                    "abstract": meta.get("abstract", ""),
+                    "tldr": kj.get("tldr", {}),
+                    "findings": kj.get("findings", [])[:10],
+                    "methods": kj.get("methods", [])[:5],
+                    "entities": kj.get("entities", [])[:10],
+                    "shared": True,
+                }
+        raise HTTPException(status_code=404, detail="Shared paper not found")
+
     return router

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain, Settings, Radar, Link as LinkIcon, Loader2 } from "lucide-react";
+import { Upload, FileText, ArrowRight, Clock, CheckCircle, AlertCircle, Languages, BookOpen, Trash2, Search, Highlighter, Brain, Settings, Radar, Link as LinkIcon, Loader2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import api, { getLLMConfig } from "@/lib/api";
@@ -40,6 +40,10 @@ const Dashboard = () => {
     const [batchImporting, setBatchImporting] = useState(false);
     const [kbSearch, setKbSearch] = useState("");
     const [kbResults, setKbResults] = useState<any[]>([]);
+    // Scholar search
+    const [scholarQuery, setScholarQuery] = useState("");
+    const [scholarResults, setScholarResults] = useState<any[]>([]);
+    const [scholarSearching, setScholarSearching] = useState(false);
     const navigate = useNavigate();
     const abortRef = useRef<AbortController | null>(null);
     const pollIntervalRef = useRef<number>(2000);
@@ -404,6 +408,33 @@ const Dashboard = () => {
                                     <span>{uploadProgress}%</span>
                                 </div>
                                 <Progress value={uploadProgress} className="h-2" />
+                            </div>
+                        )}
+                        {/* Scholar Search */}
+                        <div className="flex items-center gap-2 w-full max-w-md">
+                            <Input placeholder={`🎓 ${t("knowledge.scholarSearch")}...`} value={scholarQuery}
+                                onChange={(e) => setScholarQuery(e.target.value)}
+                                onKeyDown={async (e) => { if (e.key === "Enter" && scholarQuery.trim()) {
+                                    setScholarSearching(true);
+                                    try { const r = await api.get(`/api/knowledge/scholar-search?q=${encodeURIComponent(scholarQuery)}&n=5`); setScholarResults(r.data.results || []); }
+                                    catch { setScholarResults([]); } finally { setScholarSearching(false); }
+                                }}} className="h-9 text-sm" />
+                            {scholarSearching && <Loader2 className="h-4 w-4 animate-spin shrink-0" />}
+                        </div>
+                        {scholarResults.length > 0 && (
+                            <div className="w-full max-w-lg space-y-2 text-left max-h-[300px] overflow-y-auto">
+                                <p className="text-xs text-muted-foreground">{t("knowledge.scholarResults")} ({scholarResults.length})</p>
+                                {scholarResults.map((r: any, i: number) => (
+                                    <div key={i} className="rounded-lg bg-white/60 dark:bg-white/5 border p-3 text-xs space-y-1">
+                                        <p className="font-medium text-sm leading-tight">{r.title}</p>
+                                        <p className="text-muted-foreground">{r.authors?.slice(0, 3).join(", ")} · {r.year || "?"} · {r.citations} cites</p>
+                                        {r.abstract && <p className="text-muted-foreground line-clamp-2">{r.abstract}</p>}
+                                        {r.arxiv_id && <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={async () => {
+                                            try { await api.post("/api/upload-url", { url: r.arxiv_id, mode: "translate", highlight: true }); toast.success(t("dashboard.urlFetched")); fetchTasks(); }
+                                            catch { toast.error(t("dashboard.urlFetchFailed")); }
+                                        }}><Plus className="h-3 w-3" />{t("knowledge.addFromScholar")}</Button>}
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>

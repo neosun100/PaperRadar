@@ -370,6 +370,14 @@ const PaperDetail = () => {
                         {enriching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}OpenAlex
                     </Button>
                     <Button variant="outline" size="sm" className="gap-2" onClick={handleExport}><Download className="h-4 w-4" />.epaper.json</Button>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={async () => {
+                        try {
+                            const r = await api.post(`/api/knowledge/papers/${paperId}/share`);
+                            const url = `${window.location.origin}/api${r.data.url}`;
+                            await navigator.clipboard.writeText(url);
+                            toast.success(t("paperDetail.shareLink"));
+                        } catch { toast.error("Share failed"); }
+                    }}><Globe className="h-4 w-4" />{t("paperDetail.share")}</Button>
                 </div>
             </div>
 
