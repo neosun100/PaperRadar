@@ -18,6 +18,7 @@ const RadarPage = lazy(() => import("./pages/RadarPage"));
 const SimilarityMap = lazy(() => import("./pages/SimilarityMap"));
 const SharedPaper = lazy(() => import("./pages/SharedPaper"));
 const DeepResearch = lazy(() => import("./pages/DeepResearch"));
+const PaperMindMap = lazy(() => import("./pages/PaperMindMap"));
 
 const Loading = () => (
   <div className="flex h-[50vh] items-center justify-center">
@@ -43,6 +44,7 @@ function App() {
             <Route path="/radar" element={<RadarPage />} />
             <Route path="/knowledge/similarity" element={<SimilarityMap />} />
             <Route path="/research" element={<DeepResearch />} />
+            <Route path="/knowledge/paper/:paperId/mindmap" element={<PaperMindMap />} />
           </Route>
           <Route path="/share/:token" element={<SharedPaper />} />
           <Route path="*" element={<Navigate to="/dashboard" />} />

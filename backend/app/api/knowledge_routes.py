@@ -2213,4 +2213,334 @@ def create_knowledge_router() -> APIRouter:
             data = {"rows": []}
         return {"columns": columns, "rows": data.get("rows", []), "paper_count": len(papers_context)}
 
+    # ------------------------------------------------------------------
+    # AI Paper Writer (generate full paper sections)
+    # ------------------------------------------------------------------
+
+    @router.post("/writing/generate-section")
+    async def generate_paper_section(request: Request) -> dict[str, Any]:
+        """Generate a paper section (Introduction, Methodology, Results, Discussion) from KB papers."""
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        section = body.get("section", "introduction")  # introduction, methodology, results, discussion, conclusion
+        paper_ids = body.get("paper_ids", [])
+        topic = body.get("topic", "")
+        style = body.get("style", "ieee")
+
+        if not paper_ids:
+            raise HTTPException(400, "paper_ids required")
+
+        # Gather context
+        context_parts = []
+        with Session(engine) as session:
+            for pid in paper_ids[:15]:
+                p = session.get(PaperKnowledge, pid)
+                if p and p.knowledge_json:
+                    kj = json.loads(p.knowledge_json)
+                    meta = kj.get("metadata", {})
+                    title = meta.get("title", "")
+                    if isinstance(title, dict): title = title.get("en", "")
+                    abstract = meta.get("abstract", "")
+                    if isinstance(abstract, dict): abstract = abstract.get("en", "")
+                    findings_list = []
+                    for f in kj.get("findings", [])[:5]:
+                        s = f.get("statement", "")
+                        findings_list.append(s.get("en", "") if isinstance(s, dict) else str(s))
+                    methods_list = []
+                    for m in kj.get("methods", [])[:3]:
+                        n = m.get("name", "")
+                        methods_list.append(n.get("en", "") if isinstance(n, dict) else str(n))
+                    context_parts.append(f"[{len(context_parts)+1}] {title}\nAbstract: {abstract[:300]}\nFindings: {'; '.join(findings_list)}\nMethods: {', '.join(methods_list)}")
+
+        section_prompts = {
+            "introduction": "Write an Introduction section that motivates the research problem, reviews key related work, and states the contribution.",
+            "methodology": "Write a Methodology section describing the approaches, experimental setup, datasets, and evaluation metrics.",
+            "results": "Write a Results section presenting key findings, comparisons, and analysis of the experimental outcomes.",
+            "discussion": "Write a Discussion section interpreting results, comparing with prior work, discussing limitations, and suggesting future directions.",
+            "conclusion": "Write a Conclusion section summarizing key contributions and findings.",
+        }
+        section_prompt = section_prompts.get(section, section_prompts["introduction"])
+        context_text = "\n\n".join(context_parts)
+        prompt = (
+            f"You are an expert academic writer. {section_prompt}\n\n"
+            f"Citation style: {style.upper()}\n"
+            f"{'Topic: ' + topic if topic else ''}\n"
+            "Use [Author, Year] citations referencing the papers below.\n"
+            "Write in formal academic style. Output as Markdown.\n\n"
+            f"Reference papers:\n{context_text}"
+        )
+        model = llm_config.get("model", "")
+        if "-thinking" in model: model = model.replace("-thinking", "")
+        async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=180.0) as client:
+            resp = await client.post("/chat/completions",
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 4000, "temperature": 0.3},
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"})
+            resp.raise_for_status()
+            msg = resp.json()["choices"][0]["message"]
+            content = (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
+        return {"section": section, "content": content, "paper_count": len(context_parts)}
+
+    # ------------------------------------------------------------------
+    # Paper Recommendation Feed (personalized daily)
+    # ------------------------------------------------------------------
+
+    @router.get("/recommendation-feed")
+    async def get_recommendation_feed() -> dict[str, Any]:
+        """Personalized paper recommendations based on KB content and reading patterns."""
+        from ..services.vector_search import get_vector_service
+
+        # Build profile from recent papers
+        with Session(engine) as session:
+            recent = session.exec(
+                select(PaperKnowledge).where(PaperKnowledge.extraction_status == "completed")
+                .order_by(PaperKnowledge.created_at.desc()).limit(10)
+            ).all()
+
+        if not recent:
+            return {"recommendations": [], "message": "Add papers to get recommendations"}
+
+        # Use vector search to find papers similar to recent ones
+        vs = get_vector_service()
+        if not vs:
+            return {"recommendations": [], "message": "Vector search not configured"}
+
+        # Combine recent paper titles as query
+        titles = " ".join(p.title for p in recent[:5] if p.title)
+        hits = await vs.search_papers(titles, n_results=10)
+        existing_ids = {p.id for p in recent}
+        recs = [h for h in hits if h.get("paper_id") not in existing_ids]
+
+        # Enrich with paper details
+        enriched = []
+        with Session(engine) as session:
+            for r in recs[:8]:
+                p = session.get(PaperKnowledge, r.get("paper_id", ""))
+                if p:
+                    tldr = ""
+                    if p.knowledge_json:
+                        try:
+                            kj = json.loads(p.knowledge_json)
+                            tldr_obj = kj.get("tldr", {})
+                            if isinstance(tldr_obj, dict):
+                                tldr = tldr_obj.get("en", "")
+                        except Exception:
+                            pass
+                    enriched.append({"paper_id": p.id, "title": p.title, "year": p.year, "tldr": tldr, "score": r.get("score", 0)})
+
+        return {"recommendations": enriched, "based_on": len(recent)}
+
+    # ------------------------------------------------------------------
+    # Mind Map Data (entity relationship graph for a paper)
+    # ------------------------------------------------------------------
+
+    @router.get("/papers/{paper_id}/mindmap")
+    async def get_paper_mindmap(paper_id: str) -> dict[str, Any]:
+        """Generate mind map data from paper entities and relationships."""
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper or not paper.knowledge_json:
+            raise HTTPException(404, "Paper not found")
+        kj = json.loads(paper.knowledge_json)
+        meta = kj.get("metadata", {})
+        title = meta.get("title", "")
+        if isinstance(title, dict): title = title.get("en", "")
+
+        # Build mind map: center = paper title, branches = entities grouped by type
+        nodes = [{"id": "center", "label": title[:60], "type": "paper", "level": 0}]
+        edges = []
+
+        # Group entities by type
+        type_groups: dict[str, list] = {}
+        for e in kj.get("entities", []):
+            etype = e.get("type", "concept")
+            name = e.get("name", "")
+            if isinstance(name, dict): name = name.get("en", "")
+            if not name: continue
+            type_groups.setdefault(etype, []).append({"id": e.get("id", ""), "name": name, "importance": e.get("importance", 0.5)})
+
+        for etype, entities in type_groups.items():
+            # Type node
+            type_id = f"type_{etype}"
+            nodes.append({"id": type_id, "label": etype.capitalize(), "type": "category", "level": 1})
+            edges.append({"source": "center", "target": type_id})
+            # Entity nodes (top 5 per type)
+            for ent in sorted(entities, key=lambda x: x["importance"], reverse=True)[:5]:
+                nodes.append({"id": ent["id"], "label": ent["name"], "type": etype, "level": 2, "importance": ent["importance"]})
+                edges.append({"source": type_id, "target": ent["id"]})
+
+        # Add relationship edges between entities
+        for rel in kj.get("relationships", []):
+            src = rel.get("source_entity_id", "")
+            tgt = rel.get("target_entity_id", "")
+            if src and tgt:
+                node_ids = {n["id"] for n in nodes}
+                if src in node_ids and tgt in node_ids:
+                    edges.append({"source": src, "target": tgt, "label": rel.get("type", ""), "dashed": True})
+
+        # Add key findings as leaf nodes
+        for i, f in enumerate(kj.get("findings", [])[:5]):
+            stmt = f.get("statement", "")
+            if isinstance(stmt, dict): stmt = stmt.get("en", "")
+            if stmt:
+                fid = f"finding_{i}"
+                nodes.append({"id": fid, "label": stmt[:80], "type": "finding", "level": 2})
+                edges.append({"source": "center", "target": fid})
+
+        return {"nodes": nodes, "edges": edges, "title": title}
+
+    # ------------------------------------------------------------------
+    # Systematic Review Pipeline
+    # ------------------------------------------------------------------
+
+    @router.post("/systematic-review")
+    async def systematic_review(request: Request) -> dict[str, Any]:
+        """Automated systematic review: search → screen → extract → synthesize."""
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        query = body.get("query", "").strip()
+        inclusion = body.get("inclusion_criteria", "")
+        exclusion = body.get("exclusion_criteria", "")
+        max_papers = min(body.get("max_papers", 10), 20)
+        if not query:
+            raise HTTPException(400, "query is required")
+
+        # Step 1: Search
+        search_results = []
+        for attempt in range(3):
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                r = await client.get("https://api.semanticscholar.org/graph/v1/paper/search",
+                    params={"query": query, "limit": max_papers, "fields": "title,year,authors,citationCount,abstract,externalIds"})
+                if r.status_code == 429:
+                    await asyncio.sleep(5 * (attempt + 1)); continue
+                if r.status_code == 200:
+                    search_results = r.json().get("data", []); break
+
+        if not search_results:
+            # Fallback to arXiv
+            try:
+                import arxiv
+                for paper in arxiv.Search(query=query, max_results=max_papers, sort_by=arxiv.SortCriterion.Relevance).results():
+                    search_results.append({"title": paper.title, "year": paper.published.year if paper.published else None,
+                        "abstract": (paper.summary or "")[:500], "authors": [{"name": a.name} for a in (paper.authors or [])[:4]]})
+            except Exception:
+                pass
+
+        if not search_results:
+            return {"status": "no_results", "query": query}
+
+        # Step 2: Screen with LLM
+        screen_prompt = (
+            f"You are screening papers for a systematic review.\n"
+            f"Research question: {query}\n"
+            f"{'Inclusion criteria: ' + inclusion if inclusion else ''}\n"
+            f"{'Exclusion criteria: ' + exclusion if exclusion else ''}\n\n"
+            "For each paper, decide: INCLUDE or EXCLUDE with a brief reason.\n"
+            'Respond with JSON: {"decisions": [{"index": 0, "decision": "INCLUDE", "reason": "..."}]}\n\n'
+        )
+        for i, p in enumerate(search_results):
+            screen_prompt += f"[{i}] {p.get('title','')} — {(p.get('abstract') or '')[:200]}\n"
+
+        model = llm_config.get("model", "")
+        if "-thinking" in model: model = model.replace("-thinking", "")
+        async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=120.0) as client:
+            resp = await client.post("/chat/completions",
+                json={"model": model, "messages": [{"role": "user", "content": screen_prompt}], "max_tokens": 2000, "temperature": 0.1},
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"})
+            resp.raise_for_status()
+            msg = resp.json()["choices"][0]["message"]
+            content = (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
+
+        try:
+            start = content.find("{"); end = content.rfind("}")
+            screen_data = json.loads(content[start:end+1]) if start >= 0 else {"decisions": []}
+        except Exception:
+            screen_data = {"decisions": []}
+
+        decisions = {d["index"]: d for d in screen_data.get("decisions", []) if isinstance(d.get("index"), int)}
+        included = []
+        excluded = []
+        for i, p in enumerate(search_results):
+            d = decisions.get(i, {"decision": "INCLUDE", "reason": "No screening data"})
+            entry = {"title": p.get("title", ""), "year": p.get("year"), "abstract": (p.get("abstract") or "")[:300],
+                "authors": [a.get("name", "") for a in (p.get("authors") or [])[:3]],
+                "arxiv_id": (p.get("externalIds") or {}).get("ArXiv", ""),
+                "decision": d.get("decision", "INCLUDE"), "reason": d.get("reason", "")}
+            if d.get("decision") == "INCLUDE":
+                included.append(entry)
+            else:
+                excluded.append(entry)
+
+        return {
+            "status": "completed", "query": query,
+            "total_found": len(search_results), "included": len(included), "excluded": len(excluded),
+            "included_papers": included, "excluded_papers": excluded,
+            "prisma": {"identified": len(search_results), "screened": len(search_results), "included": len(included), "excluded": len(excluded)},
+        }
+
+    # ------------------------------------------------------------------
+    # Slide Deck Generation
+    # ------------------------------------------------------------------
+
+    @router.post("/papers/{paper_id}/slides")
+    async def generate_slides(paper_id: str, request: Request) -> dict[str, Any]:
+        """Generate presentation slides from paper knowledge."""
+        llm_config = get_llm_config(request)
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper or not paper.knowledge_json:
+            raise HTTPException(404, "Paper not found")
+        kj = json.loads(paper.knowledge_json)
+        meta = kj.get("metadata", {})
+        title = meta.get("title", "")
+        if isinstance(title, dict): title = title.get("en", "")
+        abstract = meta.get("abstract", "")
+        if isinstance(abstract, dict): abstract = abstract.get("en", "")
+        findings = "; ".join(
+            (f.get("statement", {}).get("en", "") if isinstance(f.get("statement"), dict) else str(f.get("statement", "")))
+            for f in kj.get("findings", [])[:6]
+        )
+        methods = "; ".join(
+            (m.get("name", {}).get("en", "") if isinstance(m.get("name"), dict) else str(m.get("name", "")))
+            for m in kj.get("methods", [])[:4]
+        )
+
+        prompt = (
+            "Generate a 6-slide presentation for this paper. Output as JSON array of slides.\n"
+            "Each slide: {\"title\": \"...\", \"bullets\": [\"point 1\", \"point 2\", ...], \"notes\": \"speaker notes\"}\n"
+            "Slides: 1) Title slide, 2) Problem & Motivation, 3) Methodology, 4) Key Results, 5) Discussion, 6) Conclusion\n"
+            'Respond ONLY with JSON: {"slides": [...]}\n\n'
+            f"Paper: {title}\nAbstract: {abstract[:400]}\nFindings: {findings}\nMethods: {methods}"
+        )
+        model = llm_config.get("model", "")
+        if "-thinking" in model: model = model.replace("-thinking", "")
+        async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=120.0) as client:
+            resp = await client.post("/chat/completions",
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 3000, "temperature": 0.2},
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"})
+            resp.raise_for_status()
+            msg = resp.json()["choices"][0]["message"]
+            content = (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
+        try:
+            start = content.find("{"); end = content.rfind("}")
+            data = json.loads(content[start:end+1]) if start >= 0 else {"slides": []}
+        except Exception:
+            data = {"slides": []}
+
+        # Generate HTML slide deck
+        slides = data.get("slides", [])
+        html_parts = ['<!DOCTYPE html><html><head><meta charset="utf-8"><style>',
+            'body{font-family:system-ui;margin:0}.slide{width:100vw;height:100vh;display:flex;flex-direction:column;justify-content:center;padding:8%;box-sizing:border-box;page-break-after:always}',
+            'h1{font-size:2.5em;margin-bottom:0.5em}h2{font-size:1.8em;color:#3b82f6;margin-bottom:0.5em}ul{font-size:1.3em;line-height:1.8}',
+            '.title-slide{background:linear-gradient(135deg,#1e3a5f,#3b82f6);color:white;text-align:center}',
+            '</style></head><body>']
+        for i, s in enumerate(slides):
+            cls = "title-slide" if i == 0 else ""
+            html_parts.append(f'<div class="slide {cls}"><h2>{s.get("title","")}</h2><ul>')
+            for b in s.get("bullets", []):
+                html_parts.append(f"<li>{b}</li>")
+            html_parts.append("</ul></div>")
+        html_parts.append("</body></html>")
+
+        return {"slides": slides, "html": "".join(html_parts), "paper_id": paper_id}
+
     return router

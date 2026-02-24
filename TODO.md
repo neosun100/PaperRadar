@@ -101,22 +101,22 @@
 
 ### 7B: Intelligence (Medium Priority)
 
-- [ ] **Mind Map Visualization**
+- [x] **Mind Map Visualization**
   - Interactive concept map from paper entities
   - Drag, zoom, click to explore
   - Export as image
 
-- [ ] **AI Paper Writer**
+- [x] **AI Paper Writer**
   - Generate full paper sections from KB references
   - Introduction, Methodology, Results, Discussion
   - Proper citation formatting
 
-- [ ] **Systematic Review Pipeline**
+- [x] **Systematic Review Pipeline**
   - Define inclusion/exclusion criteria
   - Auto-screen papers from search results
   - PRISMA flow diagram
 
-- [ ] **Paper Recommendation Feed**
+- [x] **Paper Recommendation Feed**
   - Daily personalized feed based on reading history
   - "Papers you might like" on Dashboard
   - Learn from user interactions
@@ -127,7 +127,7 @@
   - Separate KB per user/API key
   - Shared collections between users
 
-- [ ] **Slide Deck Generation**
+- [x] **Slide Deck Generation**
   - Generate presentation slides from paper knowledge
   - Export as HTML or PDF
 

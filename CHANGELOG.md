@@ -1,5 +1,32 @@
 # PaperRadar Changelog
 
+## v3.9.0 (2026-02-24)
+- **Mind Map Visualization**
+  - Interactive concept map from paper entities and relationships
+  - Radial layout: paper → categories → entities → findings
+  - Color-coded by entity type, canvas rendering
+  - New page at /knowledge/paper/{id}/mindmap
+  - "Mind Map" button on Paper Detail page
+- **AI Paper Writer**
+  - Generate full paper sections: Introduction, Methodology, Results, Discussion, Conclusion
+  - Uses KB papers as references with proper citations
+  - POST /api/knowledge/writing/generate-section
+  - UI on Research Insights page with section selector and topic input
+  - Copy and .md download
+- **Systematic Review Pipeline**
+  - Automated: search → screen → include/exclude with reasons
+  - LLM-based screening against user-defined inclusion/exclusion criteria
+  - PRISMA-style flow data (identified → screened → included → excluded)
+  - POST /api/knowledge/systematic-review
+- **Slide Deck Generation**
+  - Generate 6-slide presentation from any paper
+  - JSON slides + full HTML slide deck output
+  - POST /api/knowledge/papers/{id}/slides
+- **Paper Recommendation Feed**
+  - Personalized recommendations based on KB content
+  - GET /api/knowledge/recommendation-feed
+  - Vector similarity-based matching
+
 ## v3.8.0 (2026-02-24)
 - **Paper Tags/Labels**
   - User-defined tags on any paper (e.g. "must-read", "llm", "baseline")

@@ -389,6 +389,7 @@ const PaperDetail = () => {
                             toast.success(t("paperDetail.shareLink"));
                         } catch { toast.error("Share failed"); }
                     }}><Globe className="h-4 w-4" />{t("paperDetail.share")}</Button>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate(`/knowledge/paper/${paperId}/mindmap`)}>🧠 Mind Map</Button>
                 </div>
             </div>
 

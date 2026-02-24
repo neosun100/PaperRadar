@@ -20,6 +20,11 @@ const ResearchInsights = () => {
     const [reviewLoading, setReviewLoading] = useState(false);
     const [gaps, setGaps] = useState<string | null>(null);
     const [gapsLoading, setGapsLoading] = useState(false);
+    // Paper Writer
+    const [writerSection, setWriterSection] = useState("introduction");
+    const [writerTopic, setWriterTopic] = useState("");
+    const [writerResult, setWriterResult] = useState("");
+    const [writerLoading, setWriterLoading] = useState(false);
     const [, setLang] = useState(i18n.language);
     useEffect(() => { const cb = (l: string) => setLang(l); i18n.on("languageChanged", cb); return () => { i18n.off("languageChanged", cb); }; }, [i18n]);
 
@@ -221,6 +226,47 @@ const ResearchInsights = () => {
                     </TabsContent>
                 </Tabs>
             )}
+
+            {/* AI Paper Writer */}
+            <Card>
+                <CardContent className="p-6 space-y-4">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">✍️ {t("paperDetail.paperWriter")}</h3>
+                    <p className="text-sm text-muted-foreground">Generate paper sections from your knowledge base papers.</p>
+                    <div className="flex flex-wrap gap-2">
+                        <input value={writerTopic} onChange={e => setWriterTopic(e.target.value)} placeholder="Topic (optional)" className="h-9 flex-1 min-w-[200px] rounded-md border bg-background px-3 text-sm" />
+                        <select value={writerSection} onChange={e => setWriterSection(e.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm">
+                            {["introduction", "methodology", "results", "discussion", "conclusion"].map(s => (
+                                <option key={s} value={s}>{t(`paperDetail.${s}`)}</option>
+                            ))}
+                        </select>
+                        <Button size="sm" className="h-9 gap-1.5" disabled={writerLoading} onClick={async () => {
+                            setWriterLoading(true);
+                            try {
+                                const papers = await api.get("/api/knowledge/papers");
+                                const ids = papers.data.filter((p: any) => p.extraction_status === "completed").map((p: any) => p.id).slice(0, 15);
+                                const r = await api.post("/api/knowledge/writing/generate-section", { section: writerSection, paper_ids: ids, topic: writerTopic });
+                                setWriterResult(r.data.content);
+                            } catch { toast.error("Generation failed"); }
+                            finally { setWriterLoading(false); }
+                        }}>
+                            {writerLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                            {t("paperDetail.generateSection")}
+                        </Button>
+                    </div>
+                    {writerResult && (
+                        <div className="space-y-2">
+                            <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" className="text-xs" onClick={() => { navigator.clipboard.writeText(writerResult); toast.success("Copied!"); }}>Copy</Button>
+                                <Button variant="ghost" size="sm" className="text-xs" onClick={() => {
+                                    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([writerResult], { type: "text/markdown" }));
+                                    a.download = `${writerSection}.md`; a.click();
+                                }}>.md</Button>
+                            </div>
+                            <div className="prose dark:prose-invert max-w-none text-sm whitespace-pre-wrap rounded-lg border bg-muted/50 p-4 max-h-[400px] overflow-y-auto">{writerResult}</div>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 };
