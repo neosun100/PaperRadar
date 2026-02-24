@@ -1,5 +1,20 @@
 # PaperRadar Changelog
 
+## v3.3.0 (2026-02-24)
+- **Public Share Page**
+  - Beautiful standalone page at /share/{token} for viewing shared papers
+  - Shows TLDR, abstract, findings, methods, entities — no API key needed
+  - Dark mode compatible, mobile responsive
+  - "Powered by PaperRadar" footer with GitHub link
+- **Dashboard Stats Overview**
+  - 4 stat cards: Papers in KB, Vector Chunks, Documents, Uptime
+  - Auto-refreshes with task polling
+- **Recommendations Fallback**
+  - When Semantic Scholar API is unavailable, falls back to vector similarity
+  - Uses recent paper embeddings to find related papers in KB
+- **Thinking Model Fix (chat)**
+  - Paper chat now handles Claude thinking model's reasoning_content
+
 ## v3.2.0 (2026-02-24)
 - **Paper Quiz (NotebookLM-style)**
   - Generate 5 multiple-choice questions from any paper

@@ -496,6 +496,23 @@ def create_router(task_manager: TaskManager, processor: DocumentProcessor) -> AP
                     return {"recommendations": results, "based_on": len(s2_ids)}
         except Exception:
             pass
+
+        # Fallback: vector-based recommendations from our own KB
+        try:
+            from ..services.vector_search import get_vector_service
+            vs = get_vector_service()
+            if vs and vs._papers.count() >= 3:
+                # Get recent papers and find similar ones from trending
+                recent_titles = [p.title for p in papers[:3] if p.title]
+                if recent_titles:
+                    hits = await vs.search_papers(" ".join(recent_titles[:2]), n_results=10)
+                    existing_ids = {p.id for p in papers}
+                    vec_recs = [h for h in hits if h.get("paper_id") not in existing_ids]
+                    if vec_recs:
+                        return {"recommendations": [{"title": r["title"], "score": r.get("score", 0), "paper_id": r["paper_id"]} for r in vec_recs[:5]], "source": "vector_similarity"}
+        except Exception:
+            pass
+
         return {"recommendations": [], "message": "Recommendation API unavailable"}
 
     # ------------------------------------------------------------------

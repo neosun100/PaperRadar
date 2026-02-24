@@ -49,6 +49,7 @@ const Dashboard = () => {
     const pollIntervalRef = useRef<number>(2000);
     const [showSetup, setShowSetup] = useState(false);
     const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("pr_onboarding_done"));
+    const [stats, setStats] = useState<any>(null);
     const hasLLMConfig = !!getLLMConfig();
 
     const fetchTasks = useCallback(async () => {
@@ -63,6 +64,7 @@ const Dashboard = () => {
             setTasks(tasksRes.data);
             setQueueInfo(queueRes.data);
             if (radarRes) setRadarStatus(radarRes.data);
+            api.get("/health").then(r => setStats(r.data)).catch(() => {});
         } catch (error: any) {
             if (error.name === "CanceledError") return;
         }
@@ -442,6 +444,16 @@ const Dashboard = () => {
                 <div className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-blue-200/30 dark:bg-blue-500/10 blur-3xl" />
                 <div className="absolute bottom-0 right-0 translate-x-1/2 translate-y-1/2 h-64 w-64 rounded-full bg-purple-200/30 dark:bg-purple-500/10 blur-3xl" />
             </section>
+
+            {/* Stats Overview */}
+            {stats && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{stats.total_papers}</p><p className="text-xs text-muted-foreground">Papers in KB</p></CardContent></Card>
+                    <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{stats.vector?.chunks || 0}</p><p className="text-xs text-muted-foreground">Vector Chunks</p></CardContent></Card>
+                    <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold">{stats.total_tasks}</p><p className="text-xs text-muted-foreground">Documents</p></CardContent></Card>
+                    <Card><CardContent className="p-4 text-center"><p className="text-2xl font-bold text-emerald-600">{Math.floor((stats.uptime_seconds || 0) / 3600)}h</p><p className="text-xs text-muted-foreground">Uptime</p></CardContent></Card>
+                </div>
+            )}
 
             <section className="space-y-4">
                 <div className="flex items-center justify-between gap-4 px-2">
