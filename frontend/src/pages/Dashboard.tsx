@@ -233,7 +233,7 @@ const Dashboard = () => {
 
             {/* Radar Status Panel */}
             {/* Stats Overview */}
-            {(tasks.length > 0 || radarStatus?.papers_found > 0) && (
+            {(tasks.length > 0 || radarStatus?.papers_found > 0) && (<>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div className="rounded-xl border bg-card p-4 text-center">
                         <p className="text-2xl font-bold text-primary">{tasks.length}</p>
@@ -256,7 +256,15 @@ const Dashboard = () => {
                         <p className="text-xs text-muted-foreground">Semantic Search</p>
                     </div>
                 </div>
-            )}
+                {radarStatus?.recent_papers?.length > 0 && (
+                    <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Recent Discoveries</p>
+                        {radarStatus.recent_papers.slice(0, 3).map((p: any, i: number) => (
+                            <p key={i} className="text-xs text-muted-foreground truncate">📄 {p.title}</p>
+                        ))}
+                    </div>
+                )}
+            </>)}
 
             {radarStatus?.enabled && (
                 <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 p-5 space-y-3">
@@ -363,6 +371,9 @@ const Dashboard = () => {
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => setShowBatchImport(!showBatchImport)} className="shrink-0 gap-1.5">
                                 {t("dashboard.batchImport")}
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => navigate("/research")} className="shrink-0 gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20">
+                                <Search className="h-3.5 w-3.5" /> Deep Research
                             </Button>
                         </div>
                         {showBatchImport && (

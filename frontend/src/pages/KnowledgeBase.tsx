@@ -124,8 +124,13 @@ const KnowledgeBase = () => {
         setChatHistory(prev => [...prev, { role: "user", content: msg }]);
         setChatLoading(true);
         try {
-            const resp = await api.post("/api/knowledge/chat", { message: msg, history: chatHistory });
-            setChatHistory(prev => [...prev, { role: "assistant", content: resp.data.reply }]);
+            const resp = await api.post("/api/knowledge/expert-chat", { message: msg, history: chatHistory, topic: "" });
+            let reply = resp.data.reply;
+            const sources = resp.data.sources || [];
+            if (sources.length > 0) {
+                reply += `\n\n📚 Sources: ${sources.slice(0, 5).map((s: any) => `[${s.index}] ${s.type}`).join(", ")}`;
+            }
+            setChatHistory(prev => [...prev, { role: "assistant", content: reply }]);
         } catch { toast.error("Chat failed"); }
         finally { setChatLoading(false); }
     };
@@ -170,6 +175,7 @@ const KnowledgeBase = () => {
     };
 
     const handleDelete = async (paperId: string) => {
+        if (!window.confirm("Delete this paper from knowledge base?")) return;
         try { await api.delete(`/api/knowledge/papers/${paperId}`); setPapers((prev) => prev.filter((p) => p.id !== paperId)); toast.success(t("knowledge.paperDeleted")); }
         catch { toast.error(t("knowledge.paperDeleteFailed")); }
     };

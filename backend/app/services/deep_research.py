@@ -168,7 +168,22 @@ class DeepResearchService:
                     return results
                 except Exception as e:
                     logger.warning("S2 search failed: %s", e)
-                    return []
+                    break
+        # Fallback: arXiv API search
+        try:
+            import arxiv
+            search = arxiv.Search(query=topic, max_results=limit, sort_by=arxiv.SortCriterion.Relevance)
+            results = []
+            for paper in search.results():
+                aid = paper.entry_id.split("/")[-1].split("v")[0] if paper.entry_id else ""
+                results.append({"title": paper.title, "year": paper.published.year if paper.published else None,
+                    "authors": [a.name for a in (paper.authors or [])[:4]], "citations": 0,
+                    "arxiv_id": aid, "abstract": (paper.summary or "")[:500], "s2_id": ""})
+            if results:
+                logger.info("arXiv fallback: found %d papers for '%s'", len(results), topic)
+                return results
+        except Exception as e:
+            logger.warning("arXiv fallback failed: %s", e)
         return []
 
     async def _queue_papers(self, papers: list[dict]) -> list[str]:

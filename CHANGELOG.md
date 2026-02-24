@@ -1,5 +1,19 @@
 # PaperRadar Changelog
 
+## v3.5.0 (2026-02-24)
+- **Deep Research: arXiv Fallback**
+  - When Semantic Scholar is rate-limited, automatically falls back to arXiv API search
+  - Ensures Deep Research always finds papers regardless of S2 availability
+- **Expert Chat in Knowledge Base**
+  - "Ask All Papers" upgraded to Expert Chat mode with source citations
+  - Responses now include [1][2] references and source list
+- **Delete Confirmation**
+  - Paper deletion now requires confirmation dialog to prevent accidental removal
+- **Dashboard Enhancements**
+  - Recent Radar discoveries shown with paper titles
+  - Deep Research quick-access button (amber accent)
+  - Stats overview panel with Papers/Chunks/Documents/Uptime
+
 ## v3.4.0 (2026-02-24) 🔬
 - **Deep Research**
   - Enter any topic → auto-searches Semantic Scholar → gathers all knowledge → generates expert-level synthesis report
