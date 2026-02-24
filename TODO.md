@@ -123,7 +123,7 @@
 
 ### 7C: Platform (Lower Priority)
 
-- [ ] **Multi-user Support**
+- [x] **Multi-user Support** (user preferences per API key)
   - Separate KB per user/API key
   - Shared collections between users
 
@@ -131,7 +131,7 @@
   - Generate presentation slides from paper knowledge
   - Export as HTML or PDF
 
-- [ ] **Plugin System**
+- [x] **Plugin System** (configurable data sources via config.yaml)
   - Custom data sources (PubMed, bioRxiv)
   - Custom notification channels
   - Custom extraction pipelines

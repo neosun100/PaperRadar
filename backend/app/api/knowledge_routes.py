@@ -26,7 +26,7 @@ from ..models.knowledge import (
 )
 from ..models.task import Task, TaskStatus
 from ..services.knowledge_extractor import KnowledgeExtractor
-from .deps import get_llm_config
+from .deps import get_llm_config, get_client_id
 
 logger = logging.getLogger(__name__)
 
@@ -2542,5 +2542,35 @@ def create_knowledge_router() -> APIRouter:
         html_parts.append("</body></html>")
 
         return {"slides": slides, "html": "".join(html_parts), "paper_id": paper_id}
+
+    # ------------------------------------------------------------------
+    # User Preferences (per API key, stored in localStorage on frontend)
+    # ------------------------------------------------------------------
+
+    @router.get("/preferences")
+    async def get_preferences(request: Request) -> dict[str, Any]:
+        """Get user preferences (stored server-side keyed by client ID)."""
+        client_id = get_client_id(request)
+        # Simple file-based storage
+        prefs_dir = Path("/app/data/preferences")
+        prefs_dir.mkdir(parents=True, exist_ok=True)
+        prefs_file = prefs_dir / f"{client_id}.json"
+        if prefs_file.exists():
+            return json.loads(prefs_file.read_text())
+        return {"radar_topics": "", "notification_email": "", "language": "en", "theme": "system"}
+
+    @router.put("/preferences")
+    async def save_preferences(request: Request) -> dict[str, str]:
+        """Save user preferences."""
+        client_id = get_client_id(request)
+        body = await request.json()
+        prefs_dir = Path("/app/data/preferences")
+        prefs_dir.mkdir(parents=True, exist_ok=True)
+        prefs_file = prefs_dir / f"{client_id}.json"
+        # Only save allowed fields
+        allowed = {"radar_topics", "notification_email", "language", "theme", "default_mode", "highlight_default"}
+        prefs = {k: v for k, v in body.items() if k in allowed}
+        prefs_file.write_text(json.dumps(prefs, ensure_ascii=False))
+        return {"status": "saved"}
 
     return router
