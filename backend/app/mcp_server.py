@@ -171,5 +171,16 @@ def generate_briefing(paper_id: str) -> str:
     return data.get("briefing", "No briefing generated")
 
 
+@mcp.tool()
+def deep_research(topic: str, max_papers: int = 10) -> str:
+    """Deep research on a topic: searches papers, gathers knowledge, generates expert synthesis report."""
+    data = _api("post", "/api/knowledge/deep-research", json={"topic": topic, "max_papers": max_papers})
+    if data.get("status") != "completed":
+        return f"Research failed: {data.get('message', 'unknown error')}"
+    lines = [f"Deep Research: {topic}", f"Papers: {data.get('papers_found', 0)} found, {data.get('papers_in_kb', 0)} in KB, {data.get('papers_queued', 0)} queued", ""]
+    lines.append(data.get("synthesis", "No synthesis generated"))
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     mcp.run()

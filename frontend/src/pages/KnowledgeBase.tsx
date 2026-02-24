@@ -67,6 +67,7 @@ const KnowledgeBase = () => {
     const [zoteroKey, setZoteroKey] = useState("");
     const [zoteroLibId, setZoteroLibId] = useState("");
     const [zoteroImporting, setZoteroImporting] = useState(false);
+    const [sortBy, setSortBy] = useState<"date" | "year" | "title">("date");
     const navigate = useNavigate();
 
     const fetchPapers = useCallback(async () => {
@@ -218,6 +219,11 @@ const KnowledgeBase = () => {
         if (activeColPaperIds && !activeColPaperIds.includes(p.id)) return false;
         if (search && !p.title.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
+    });
+    const sortedPapers = [...filteredPapers].sort((a, b) => {
+        if (sortBy === "year") return (b.year || 0) - (a.year || 0);
+        if (sortBy === "title") return (a.title || "").localeCompare(b.title || "");
+        return (b.created_at || "").localeCompare(a.created_at || "");
     });
 
     return (
@@ -466,6 +472,11 @@ const KnowledgeBase = () => {
                                     {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "AI"}
                                 </Button>
                             )}
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="h-9 rounded-md border bg-background px-2 text-xs">
+                                <option value="date">Newest</option>
+                                <option value="year">Year</option>
+                                <option value="title">Title</option>
+                            </select>
                         </div>
                     )}
                 </div>
@@ -493,7 +504,7 @@ const KnowledgeBase = () => {
                 )}
 
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {filteredPapers.map((paper) => (
+                    {sortedPapers.map((paper) => (
                         <Card key={paper.id} className={cn("group relative overflow-hidden transition-all hover:shadow-md border-border",
                             paper.extraction_status === "completed" && "cursor-pointer",
                             selectedForCompare.has(paper.id) && "ring-2 ring-primary")}
@@ -557,7 +568,7 @@ const KnowledgeBase = () => {
                         </Card>
                     ))}
 
-                    {filteredPapers.length === 0 && (
+                    {sortedPapers.length === 0 && (
                         <div className="col-span-full py-12 text-center text-muted-foreground bg-muted/50 rounded-xl border border-dashed">
                             <Brain className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
                             <p>{search ? t("knowledge.noPapersMatch") : t("knowledge.noPapers")}</p>
