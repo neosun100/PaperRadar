@@ -36,7 +36,7 @@ Header: Authorization: Bearer {api_key}
 
 ### 需要加到 secrets config 的字段
 ```yaml
-# 在 /home/neo/easypaper-secrets/config.yaml 中加：
+# 在 /path/to/your/config.yaml 中加：
 tts:
   base_url: "http://localhost:8300/v1"  # 或你的 TTS 服务地址
   api_key: ""                            # 如果需要

@@ -2106,4 +2106,111 @@ def create_knowledge_router() -> APIRouter:
         except Exception:
             raise HTTPException(500, "Failed to generate thumbnail")
 
+    # ------------------------------------------------------------------
+    # Paper Tags
+    # ------------------------------------------------------------------
+
+    @router.get("/papers/{paper_id}/tags")
+    async def get_paper_tags(paper_id: str) -> list[str]:
+        from ..models.knowledge import PaperTag
+        with Session(engine) as session:
+            tags = session.exec(select(PaperTag).where(PaperTag.paper_id == paper_id)).all()
+        return [t.tag for t in tags]
+
+    @router.post("/papers/{paper_id}/tags")
+    async def add_paper_tag(paper_id: str, request: Request) -> dict[str, Any]:
+        import uuid
+        from ..models.knowledge import PaperTag
+        body = await request.json()
+        tag = body.get("tag", "").strip().lower()
+        if not tag:
+            raise HTTPException(400, "tag is required")
+        with Session(engine) as session:
+            existing = session.exec(select(PaperTag).where(PaperTag.paper_id == paper_id, PaperTag.tag == tag)).first()
+            if not existing:
+                session.add(PaperTag(id=f"tag_{uuid.uuid4().hex[:8]}", paper_id=paper_id, tag=tag))
+                session.commit()
+        return {"status": "added", "tag": tag}
+
+    @router.delete("/papers/{paper_id}/tags/{tag}")
+    async def remove_paper_tag(paper_id: str, tag: str) -> dict[str, str]:
+        from ..models.knowledge import PaperTag
+        with Session(engine) as session:
+            t = session.exec(select(PaperTag).where(PaperTag.paper_id == paper_id, PaperTag.tag == tag)).first()
+            if t:
+                session.delete(t)
+                session.commit()
+        return {"status": "removed"}
+
+    @router.get("/tags")
+    async def list_all_tags() -> list[dict[str, Any]]:
+        """List all unique tags with paper counts."""
+        from ..models.knowledge import PaperTag
+        from sqlmodel import func
+        with Session(engine) as session:
+            results = session.exec(
+                select(PaperTag.tag, func.count(PaperTag.id).label("count"))
+                .group_by(PaperTag.tag)
+                .order_by(func.count(PaperTag.id).desc())
+            ).all()
+        return [{"tag": r[0], "count": r[1]} for r in results]
+
+    # ------------------------------------------------------------------
+    # Custom Extraction (user-defined columns)
+    # ------------------------------------------------------------------
+
+    @router.post("/custom-extract")
+    async def custom_extract(request: Request) -> dict[str, Any]:
+        """Extract user-defined fields from selected papers."""
+        llm_config = get_llm_config(request)
+        body = await request.json()
+        paper_ids = body.get("paper_ids", [])
+        columns = body.get("columns", [])  # e.g. ["sample size", "GPU hours", "dataset"]
+        if not paper_ids or not columns:
+            raise HTTPException(400, "paper_ids and columns are required")
+
+        # Gather paper contexts
+        papers_context = []
+        with Session(engine) as session:
+            for pid in paper_ids[:15]:
+                p = session.get(PaperKnowledge, pid)
+                if p and p.knowledge_json:
+                    kj = json.loads(p.knowledge_json)
+                    meta = kj.get("metadata", {})
+                    title = meta.get("title", "")
+                    if isinstance(title, dict): title = title.get("en", "")
+                    abstract = meta.get("abstract", "")
+                    if isinstance(abstract, dict): abstract = abstract.get("en", "")
+                    findings = "; ".join(
+                        (f.get("statement", {}).get("en", "") if isinstance(f.get("statement"), dict) else str(f.get("statement", "")))
+                        for f in kj.get("findings", [])[:5]
+                    )
+                    papers_context.append(f"Paper: {title}\nAbstract: {abstract[:300]}\nFindings: {findings}")
+
+        cols_str = ", ".join(columns)
+        cols_example = ", ".join(f'"{c}": "value"' for c in columns)
+        papers_text = "\n\n".join(papers_context)
+        prompt = (
+            f"Extract the following fields from each paper: {cols_str}\n\n"
+            "For each paper, output a JSON object with the paper title and each requested field.\n"
+            "If a field is not found, use \"-\".\n"
+            f'Respond ONLY with JSON: {{"rows": [{{"paper": "title", {cols_example}}}]}}\n\n'
+            + papers_text
+        )
+        model = llm_config.get("model", "")
+        if "-thinking" in model: model = model.replace("-thinking", "")
+        async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=120.0) as client:
+            resp = await client.post("/chat/completions",
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 3000, "temperature": 0.1},
+                headers={"Authorization": f"Bearer {llm_config['api_key']}"})
+            resp.raise_for_status()
+            msg = resp.json()["choices"][0]["message"]
+            content = (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
+        try:
+            start = content.find("{"); end = content.rfind("}")
+            data = json.loads(content[start:end+1]) if start >= 0 else {"rows": []}
+        except Exception:
+            data = {"rows": []}
+        return {"columns": columns, "rows": data.get("rows", []), "paper_count": len(papers_context)}
+
     return router

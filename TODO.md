@@ -76,25 +76,25 @@
 
 ### 7A: UX Polish (High Priority)
 
-- [ ] **Paper Tags/Labels**
+- [x] **Paper Tags/Labels**
   - User-defined tags (e.g. "must-read", "methodology", "baseline")
   - Filter KB by tags, combine with collections
   - Tag suggestions based on paper content
 
-- [ ] **Keyboard Shortcuts Help Panel**
+- [x] **Keyboard Shortcuts Help Panel**
   - Press ? to open shortcuts overlay
   - Cmd+K search, Cmd+N upload, arrow navigation, Esc close
 
-- [ ] **PDF Thumbnail Preview**
+- [x] **PDF Thumbnail Preview**
   - Generate first-page thumbnail on upload
   - Display on paper cards in KB and Dashboard
 
-- [ ] **Deep Research History (Server-side)**
+- [x] **Deep Research History (Server-side)**
   - Save research reports to DB
   - Browse past research topics
   - Re-open and continue expert chat
 
-- [ ] **Custom Extraction Columns**
+- [x] **Custom Extraction Columns**
   - User defines what to extract (e.g. "sample size", "GPU hours")
   - LLM extracts custom fields from each paper
   - Export as CSV with custom columns

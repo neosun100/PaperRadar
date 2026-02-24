@@ -117,3 +117,10 @@ class ResearchReport(SQLModel, table=True):
     papers_json: str = Field(default="[]")  # JSON array of paper summaries
     papers_found: int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class PaperTag(SQLModel, table=True):
+    id: str = Field(primary_key=True)
+    paper_id: str = Field(index=True)
+    tag: str = Field(index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)

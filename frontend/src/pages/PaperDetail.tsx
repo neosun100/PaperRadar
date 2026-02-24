@@ -69,6 +69,9 @@ const PaperDetail = () => {
     const [quizAnswers, setQuizAnswers] = useState<Record<number, string>>({});
     const [briefing, setBriefing] = useState("");
     const [briefingLoading, setBriefingLoading] = useState(false);
+    // Tags
+    const [tags, setTags] = useState<string[]>([]);
+    const [newTag, setNewTag] = useState("");
     // Force re-render on language change
     const [, setLang] = useState(i18n.language);
     useEffect(() => {
@@ -88,6 +91,8 @@ const PaperDetail = () => {
         api.post("/api/knowledge/reading-events", { paper_id: paperId, event_type: "view" }).catch(() => {});
         // Fetch similar papers
         api.get(`/api/knowledge/papers/${paperId}/similar?n=5`).then(r => setSimilarPapers(r.data.similar || [])).catch(() => {});
+        // Fetch tags
+        api.get(`/api/knowledge/papers/${paperId}/tags`).then(r => setTags(r.data || [])).catch(() => {});
     }, [paperId, t]);
 
     // Check audio status on mount
@@ -410,6 +415,26 @@ const PaperDetail = () => {
                     ))}
                 </div>
             )}
+
+            {/* Tags */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-medium text-muted-foreground shrink-0">🏷️</span>
+                {tags.map(tag => (
+                    <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-2.5 py-0.5 text-xs text-blue-700 dark:text-blue-300">
+                        {tag}
+                        <button onClick={async () => { await api.delete(`/api/knowledge/papers/${paperId}/tags/${tag}`); setTags(prev => prev.filter(t => t !== tag)); }} className="ml-0.5 hover:text-red-500">×</button>
+                    </span>
+                ))}
+                <input value={newTag} onChange={e => setNewTag(e.target.value)} placeholder={t("knowledge.addTag")}
+                    className="h-6 w-24 rounded-full border bg-transparent px-2 text-xs outline-none focus:w-32 transition-all"
+                    onKeyDown={async e => {
+                        if (e.key === "Enter" && newTag.trim()) {
+                            await api.post(`/api/knowledge/papers/${paperId}/tags`, { tag: newTag.trim() });
+                            setTags(prev => [...new Set([...prev, newTag.trim().toLowerCase()])]);
+                            setNewTag("");
+                        }
+                    }} />
+            </div>
 
             <Tabs defaultValue="chat" className="space-y-4">
                 <TabsList className="flex flex-wrap gap-1 lg:w-auto">

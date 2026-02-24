@@ -68,6 +68,10 @@ const KnowledgeBase = () => {
     const [zoteroLibId, setZoteroLibId] = useState("");
     const [zoteroImporting, setZoteroImporting] = useState(false);
     const [sortBy, setSortBy] = useState<"date" | "year" | "title">("date");
+    const [customCols, setCustomCols] = useState("");
+    const [customExtracting, setCustomExtracting] = useState(false);
+    const [filterTag, setFilterTag] = useState("");
+    const [allTags, setAllTags] = useState<{tag: string; count: number}[]>([]);
     const navigate = useNavigate();
 
     const fetchPapers = useCallback(async () => {
@@ -78,7 +82,7 @@ const KnowledgeBase = () => {
         try { const response = await api.get("/api/knowledge/flashcards/due?limit=100"); setDueCount(response.data.length); } catch { /* silently fail */ }
     }, []);
 
-    useEffect(() => { fetchPapers(); fetchDueCount(); fetchCollections(); }, [fetchPapers, fetchDueCount]);
+    useEffect(() => { fetchPapers(); fetchDueCount(); fetchCollections(); api.get("/api/knowledge/tags").then(r => setAllTags(r.data || [])).catch(() => {}); }, [fetchPapers, fetchDueCount]);
 
     const fetchCollections = async () => {
         try { const r = await api.get("/api/knowledge/collections"); setCollections(r.data); } catch {}
@@ -456,6 +460,24 @@ const KnowledgeBase = () => {
                                 {extractLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileTextIcon className="h-3.5 w-3.5" />}
                                 Extract Table
                             </Button>
+                        )}
+                        {selectedForCompare.size >= 2 && (
+                            <div className="flex items-center gap-1">
+                                <input value={customCols} onChange={e => setCustomCols(e.target.value)} placeholder={t("knowledge.customColumns")}
+                                    className="h-8 w-48 rounded-md border bg-background px-2 text-xs" />
+                                <Button size="sm" variant="outline" disabled={customExtracting || !customCols.trim()} className="gap-1 h-8" onClick={async () => {
+                                    setCustomExtracting(true);
+                                    try {
+                                        const cols = customCols.split(",").map(c => c.trim()).filter(Boolean);
+                                        const r = await api.post("/api/knowledge/custom-extract", { paper_ids: Array.from(selectedForCompare), columns: cols });
+                                        setExtractTable(r.data);
+                                    } catch { toast.error("Custom extraction failed"); }
+                                    finally { setCustomExtracting(false); }
+                                }}>
+                                    {customExtracting ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                                    {t("knowledge.customExtract")}
+                                </Button>
+                            </div>
                         )}
                         {selectedForCompare.size >= 1 && (
                             <Button size="sm" variant="outline" className="gap-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20" onClick={async () => {

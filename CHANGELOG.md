@@ -1,5 +1,22 @@
 # PaperRadar Changelog
 
+## v3.8.0 (2026-02-24)
+- **Paper Tags/Labels**
+  - User-defined tags on any paper (e.g. "must-read", "llm", "baseline")
+  - Add/remove tags inline on Paper Detail page
+  - GET /api/knowledge/tags — list all tags with paper counts
+  - Tag chips with one-click delete
+- **Custom Extraction Columns (Elicit-style)**
+  - User defines what to extract: "method", "dataset", "GPU hours", etc.
+  - LLM extracts custom fields from selected papers
+  - POST /api/knowledge/custom-extract with user-defined columns
+  - Results displayed in extraction table, exportable as TSV
+- **Privacy Hardening**
+  - Removed all internal server paths from documentation
+  - Docker image verified: 0 leaked secrets, 0 internal paths
+- **Bug Fix**
+  - Fixed Python 3.11 f-string backslash syntax error in custom extract
+
 ## v3.7.0 (2026-02-24)
 - **Deep Research History (Server-side)**
   - Research reports now saved to database

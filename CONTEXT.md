@@ -13,7 +13,7 @@
 - **Backend**: FastAPI + Python 3.11 + pdf2zh + PyMuPDF + httpx + SQLModel (SQLite) + ChromaDB
 - **Vector DB**: ChromaDB (embedded, persistent at /app/data/vectordb)
 - **Embedding**: Via LLM API /embeddings endpoint (configured in config.yaml, NOT in code)
-- **Source**: /home/neo/upload/EasyPaper (local path, repo name is PaperRadar)
+- **Source**: /path/to/PaperRadar (local path, repo name is PaperRadar)
 
 ## Key Files
 - `Dockerfile` — All-in-one multi-stage build (node → python+nginx+supervisor), pre-downloads fonts+ONNX model
@@ -69,14 +69,14 @@
 - All-in-one Docker with pre-downloaded fonts + ONNX model
 
 ## Secrets (NEVER commit to Git)
-- Real config at `/home/neo/easypaper-secrets/config.yaml` (mounted read-only)
+- Real config at `/path/to/your/config.yaml` (mounted read-only)
 - Docker image contains only empty placeholder config
 - `backend/config/config.yaml` is in `.gitignore`
 - Embedding model, LLM keys, API tokens — all in secrets config only
 
 ## Build & Deploy Workflow
 ```bash
-cd /home/neo/upload/EasyPaper
+cd /path/to/PaperRadar
 # Frontend
 cd frontend && npx tsc --noEmit && npm run build && cd ..
 # Docker
@@ -84,7 +84,7 @@ docker stop paperradar && docker rm paperradar
 docker build -t neosun/paperradar:VERSION -t neosun/paperradar:latest -f Dockerfile .
 # Deploy
 docker run -d --name paperradar -p 9201:80 -p 9200:8000 \
-  -v /home/neo/easypaper-secrets/config.yaml:/app/config/config.yaml:ro \
+  -v /path/to/your/config.yaml:/app/config/config.yaml:ro \
   -v easypaper-data:/app/data -v easypaper-tmp:/app/tmp \
   neosun/paperradar:VERSION
 # Push
