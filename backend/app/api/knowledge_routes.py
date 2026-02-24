@@ -116,6 +116,8 @@ def create_knowledge_router() -> APIRouter:
                     tldr_obj = kj.get("tldr", {})
                     if isinstance(tldr_obj, dict):
                         tldr = tldr_obj.get("en", tldr_obj.get("zh", ""))
+                        if tldr and "unable to generate" in tldr.lower():
+                            tldr = ""
                     elif tldr_obj:
                         tldr = str(tldr_obj)
                 except Exception:
@@ -1697,13 +1699,20 @@ def create_knowledge_router() -> APIRouter:
             f"Title: {title}\nAbstract: {abstract}"
         )
         async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=30.0) as client:
+            # Use non-thinking model for simple TLDR generation
+            model = llm_config.get("model", "")
+            if "-thinking" in model:
+                model = model.replace("-thinking", "")
             resp = await client.post(
                 "/chat/completions",
-                json={"model": llm_config.get("model", ""), "messages": [{"role": "user", "content": prompt}], "max_tokens": 200, "temperature": 0.1},
+                json={"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 200, "temperature": 0.1},
                 headers={"Authorization": f"Bearer {llm_config['api_key']}"},
             )
             resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"]["content"].strip()
+            msg = resp.json()["choices"][0]["message"]
+            content = (msg.get("content") or "").strip()
+            if not content:
+                content = msg.get("reasoning_content", "")
             try:
                 start = content.find("{")
                 end = content.rfind("}")
@@ -1795,7 +1804,6 @@ def create_knowledge_router() -> APIRouter:
             success, fail = 0, 0
             for pid in missing:
                 try:
-                    # Reuse the single-paper endpoint logic
                     with Session(engine) as session:
                         paper = session.get(PaperKnowledge, pid)
                     if not paper or not paper.knowledge_json:
@@ -1803,9 +1811,13 @@ def create_knowledge_router() -> APIRouter:
                     kj = json.loads(paper.knowledge_json)
                     meta = kj.get("metadata", {})
                     title = meta.get("title", "")
-                    if isinstance(title, dict): title = title.get("en", "")
+                    if isinstance(title, dict): title = title.get("en", "") or title.get("zh", "")
                     abstract = meta.get("abstract", "")
-                    if isinstance(abstract, dict): abstract = abstract.get("en", "")
+                    if isinstance(abstract, dict): abstract = abstract.get("en", "") or abstract.get("zh", "")
+                    if not title and paper.title:
+                        title = paper.title
+                    if not title:
+                        continue
                     prompt = (
                         "Write a single-sentence TLDR summary of this paper (max 30 words). "
                         "Focus on the key contribution. Be specific.\n"
@@ -1813,13 +1825,19 @@ def create_knowledge_router() -> APIRouter:
                         f"Title: {title}\nAbstract: {abstract}"
                     )
                     async with httpx.AsyncClient(base_url=llm_config.get("base_url", ""), timeout=30.0) as client:
+                        batch_model = llm_config.get("model", "")
+                        if "-thinking" in batch_model:
+                            batch_model = batch_model.replace("-thinking", "")
                         resp = await client.post(
                             "/chat/completions",
-                            json={"model": llm_config.get("model", ""), "messages": [{"role": "user", "content": prompt}], "max_tokens": 200, "temperature": 0.1},
+                            json={"model": batch_model, "messages": [{"role": "user", "content": prompt}], "max_tokens": 200, "temperature": 0.1},
                             headers={"Authorization": f"Bearer {llm_config['api_key']}"},
                         )
                         resp.raise_for_status()
-                        content = resp.json()["choices"][0]["message"]["content"].strip()
+                        msg = resp.json()["choices"][0]["message"]
+                        content = (msg.get("content") or "").strip()
+                        if not content:
+                            content = msg.get("reasoning_content", "")
                         start = content.find("{"); end = content.rfind("}")
                         tldr_data = json.loads(content[start:end+1]) if start >= 0 else {}
                     tldr = tldr_data.get("tldr", {})

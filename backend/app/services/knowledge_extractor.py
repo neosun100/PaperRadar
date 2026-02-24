@@ -434,7 +434,10 @@ class KnowledgeExtractor:
         )
         response.raise_for_status()
         data = response.json()
-        content = data["choices"][0]["message"]["content"].strip()
+        msg = data["choices"][0]["message"]
+        content = (msg.get("content") or "").strip()
+        if not content:
+            content = (msg.get("reasoning_content") or "").strip()
 
         if content.startswith("```"):
             lines = content.split("\n")
