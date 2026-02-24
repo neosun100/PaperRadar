@@ -1,5 +1,24 @@
 # PaperRadar Changelog
 
+## v3.7.0 (2026-02-24)
+- **Deep Research History (Server-side)**
+  - Research reports now saved to database
+  - GET /api/knowledge/research-history — list past research topics
+  - GET /api/knowledge/research-history/{id} — retrieve full report
+  - History displayed on Deep Research page, one-click to re-research
+- **PDF Thumbnail Preview**
+  - GET /api/knowledge/papers/{id}/thumbnail — first page as PNG
+  - Generated on-demand using PyMuPDF, cached via HTTP headers
+- **Keyboard Shortcuts Help**
+  - Press ? to open shortcuts overlay
+  - Shows ⌘K (search), ? (help), Esc (close)
+- **TODO.md Rewrite**
+  - Complete Phase 7 roadmap with 15+ planned features
+  - Organized by priority: UX Polish, Intelligence, Platform
+- **Code Cleanup**
+  - Removed unused Login/Register pages
+  - ResearchReport model for persistent history
+
 ## v3.6.0 (2026-02-24)
 - **Webhook Formatting**
   - Auto-detects Slack (Block Kit) and Discord (Embed) webhook URLs

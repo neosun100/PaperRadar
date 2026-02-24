@@ -23,6 +23,7 @@ const Layout = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [searching, setSearching] = useState(false);
+    const [shortcutsOpen, setShortcutsOpen] = useState(false);
     const searchRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -32,6 +33,7 @@ const Layout = () => {
                 setSearchOpen(prev => !prev);
             }
             if (e.key === "Escape") setSearchOpen(false);
+            if (e.key === "?" && !searchOpen && !(e.target as HTMLElement)?.closest("input,textarea")) setShortcutsOpen(prev => !prev);
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
@@ -140,6 +142,22 @@ const Layout = () => {
             </main>
 
             <LLMSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+            {/* Keyboard Shortcuts Help */}
+            {shortcutsOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center" onClick={() => setShortcutsOpen(false)}>
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                    <div className="relative w-full max-w-sm rounded-xl border bg-card shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-lg font-semibold mb-4">⌨️ Keyboard Shortcuts</h3>
+                        <div className="space-y-2 text-sm">
+                            {[["⌘K / Ctrl+K", "Search knowledge base"], ["?", "Show this help"], ["Esc", "Close panels"]].map(([key, desc]) => (
+                                <div key={key} className="flex justify-between"><kbd className="rounded border bg-muted px-2 py-0.5 text-xs font-mono">{key}</kbd><span className="text-muted-foreground">{desc}</span></div>
+                            ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-4">Press Esc or ? to close</p>
+                    </div>
+                </div>
+            )}
 
             {/* Cmd+K Search Overlay */}
             {searchOpen && (

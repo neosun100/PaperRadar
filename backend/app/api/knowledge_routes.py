@@ -1957,6 +1957,22 @@ def create_knowledge_router() -> APIRouter:
 
         svc = DeepResearchService(llm_config)
         result = await svc.research(topic, max_papers)
+
+        # Persist report
+        if result.get("status") == "completed":
+            import uuid
+            from ..models.knowledge import ResearchReport
+            report = ResearchReport(
+                id=f"rr_{uuid.uuid4().hex[:12]}", topic=topic,
+                synthesis=result.get("synthesis", ""),
+                papers_json=json.dumps(result.get("papers", []), ensure_ascii=False),
+                papers_found=result.get("papers_found", 0),
+            )
+            with Session(engine) as session:
+                session.add(report)
+                session.commit()
+            result["report_id"] = report.id
+
         return result
 
     # ------------------------------------------------------------------
@@ -2038,5 +2054,56 @@ def create_knowledge_router() -> APIRouter:
             reply = (msg.get("content") or "").strip() or msg.get("reasoning_content", "")
 
         return {"reply": reply, "sources": sources[:20], "context_chunks": len(context_parts), "mode": mode}
+
+    # ------------------------------------------------------------------
+    # Deep Research History (server-side persistence)
+    # ------------------------------------------------------------------
+
+    @router.get("/research-history")
+    async def list_research_history() -> list[dict[str, Any]]:
+        from ..models.knowledge import ResearchReport
+        with Session(engine) as session:
+            reports = session.exec(select(ResearchReport).order_by(ResearchReport.created_at.desc()).limit(50)).all()
+        return [{"id": r.id, "topic": r.topic, "papers_found": r.papers_found, "created_at": r.created_at.isoformat() if r.created_at else None} for r in reports]
+
+    @router.get("/research-history/{report_id}")
+    async def get_research_report(report_id: str) -> dict[str, Any]:
+        from ..models.knowledge import ResearchReport
+        with Session(engine) as session:
+            r = session.get(ResearchReport, report_id)
+        if not r:
+            raise HTTPException(404, "Report not found")
+        return {"id": r.id, "topic": r.topic, "synthesis": r.synthesis, "papers": json.loads(r.papers_json) if r.papers_json else [], "papers_found": r.papers_found, "created_at": r.created_at.isoformat() if r.created_at else None}
+
+    # ------------------------------------------------------------------
+    # PDF Thumbnail (first page as image)
+    # ------------------------------------------------------------------
+
+    @router.get("/papers/{paper_id}/thumbnail")
+    async def get_paper_thumbnail(paper_id: str):
+        """Generate and return a thumbnail of the paper's first page."""
+        from fastapi.responses import Response
+        import fitz
+        with Session(engine) as session:
+            paper = session.get(PaperKnowledge, paper_id)
+        if not paper:
+            raise HTTPException(404, "Paper not found")
+        pdf_path = None
+        if paper.task_id:
+            with Session(engine) as session:
+                task = session.get(Task, paper.task_id)
+                if task and task.original_pdf_path:
+                    pdf_path = task.original_pdf_path
+        if not pdf_path or not Path(pdf_path).exists():
+            raise HTTPException(404, "PDF not found")
+        try:
+            doc = fitz.open(pdf_path)
+            page = doc.load_page(0)
+            pix = page.get_pixmap(matrix=fitz.Matrix(0.5, 0.5))  # 50% scale
+            img_bytes = pix.tobytes("png")
+            doc.close()
+            return Response(content=img_bytes, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+        except Exception:
+            raise HTTPException(500, "Failed to generate thumbnail")
 
     return router

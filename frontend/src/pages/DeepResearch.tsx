@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,10 +20,17 @@ const DeepResearch = () => {
     const [chatSources, setChatSources] = useState<any[]>([]);
     const [chatMode, setChatMode] = useState<"expert" | "claim">("expert");
     // History
-    const [history, setHistory] = useState<{ topic: string; date: string; papers: number }[]>(() => {
-        try { return JSON.parse(localStorage.getItem("pr_research_history") || "[]"); } catch { return []; }
-    });
+    const [history, setHistory] = useState<{ topic: string; date: string; papers: number; id?: string }[]>([]);
     const chatEndRef = useRef<HTMLDivElement>(null);
+
+    // Load history from server
+    useEffect(() => {
+        api.get("/api/knowledge/research-history").then(r => {
+            setHistory((r.data || []).map((h: any) => ({ topic: h.topic, date: h.created_at, papers: h.papers_found, id: h.id })));
+        }).catch(() => {
+            try { setHistory(JSON.parse(localStorage.getItem("pr_research_history") || "[]")); } catch { /* */ }
+        });
+    }, []);
 
     const handleResearch = async () => {
         if (!topic.trim()) return;
@@ -36,11 +43,10 @@ const DeepResearch = () => {
             if (r.data.synthesis) {
                 setChatHistory([{ role: "assistant", content: `## Deep Research: ${topic}\n\n${r.data.synthesis}` }]);
             }
-            // Save to history
-            const entry = { topic: topic.trim(), date: new Date().toISOString(), papers: r.data.papers_found || 0 };
-            const newHistory = [entry, ...history.filter(h => h.topic !== entry.topic)].slice(0, 20);
-            setHistory(newHistory);
-            localStorage.setItem("pr_research_history", JSON.stringify(newHistory));
+            // Refresh history from server
+            api.get("/api/knowledge/research-history").then(rh => {
+                setHistory((rh.data || []).map((h: any) => ({ topic: h.topic, date: h.created_at, papers: h.papers_found, id: h.id })));
+            }).catch(() => {});
         } catch (e: any) {
             toast.error(t("deepResearch.researchFailed"));
         } finally {

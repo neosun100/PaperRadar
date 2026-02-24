@@ -108,3 +108,12 @@ class ReadingProgress(SQLModel, table=True):
     scroll_position: float = Field(default=0.0)  # 0.0 - 1.0
     page_number: int = Field(default=0)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ResearchReport(SQLModel, table=True):
+    id: str = Field(primary_key=True)
+    topic: str = Field(index=True)
+    synthesis: str = Field(default="")
+    papers_json: str = Field(default="[]")  # JSON array of paper summaries
+    papers_found: int = Field(default=0)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
