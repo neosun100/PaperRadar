@@ -73,28 +73,33 @@ class RadarEngine:
         # 然后等到下一个整点
         while True:
             try:
-                # Check if queue is empty — if so, scan sooner
+                # Check queue status
                 tasks = self._task_manager.list_tasks(limit=200) if self._task_manager else []
                 from ..models.task import TaskStatus
                 active = sum(1 for t in tasks if t.status in (TaskStatus.PARSING, TaskStatus.REWRITING, TaskStatus.RENDERING, TaskStatus.HIGHLIGHTING, TaskStatus.PENDING))
 
                 if active == 0:
-                    # Queue empty — scan in 10 minutes
-                    wait_seconds = 600
+                    # Queue empty — scan soon
+                    wait_seconds = 300  # 5 minutes
                     self._next_scan = datetime.utcnow() + timedelta(seconds=wait_seconds)
-                    logger.info("Radar: queue empty, next scan in 10min")
+                    logger.info("Radar: queue empty, next scan in 5min")
                 else:
-                    # Queue busy — wait until next hour
-                    now = datetime.utcnow()
-                    next_hour = (now + timedelta(hours=self.radar_cfg.interval_hours)).replace(minute=0, second=0, microsecond=0)
-                    if next_hour <= now:
-                        next_hour += timedelta(hours=1)
-                    wait_seconds = (next_hour - now).total_seconds()
-                    self._next_scan = next_hour
-                    logger.info("Radar: %d active tasks, next scan at %s (in %.0fs)", active, next_hour.isoformat(), wait_seconds)
+                    # Queue busy — check again in 5 min (not full hour)
+                    # This way we detect when queue empties quickly
+                    wait_seconds = 300
+                    self._next_scan = datetime.utcnow() + timedelta(seconds=wait_seconds)
+                    logger.info("Radar: %d active tasks, checking again in 5min", active)
 
                 await asyncio.sleep(wait_seconds)
-                await self._scan_and_process()
+
+                # Re-check: only scan if queue is actually empty or low
+                tasks2 = self._task_manager.list_tasks(limit=200) if self._task_manager else []
+                active2 = sum(1 for t in tasks2 if t.status in (TaskStatus.PARSING, TaskStatus.REWRITING, TaskStatus.RENDERING, TaskStatus.HIGHLIGHTING, TaskStatus.PENDING))
+                if active2 < 3:
+                    await self._scan_and_process()
+                else:
+                    logger.info("Radar: still %d active, skipping scan", active2)
+
             except asyncio.CancelledError:
                 break
             except Exception:
