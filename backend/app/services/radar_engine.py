@@ -38,6 +38,7 @@ class RadarEngine:
         self._recent_papers: list[dict] = []
         self._task_manager = None
         self._processor = None
+        self._backlog: list[dict] = []  # Papers discovered but not yet processed
 
     def set_processor(self, task_manager, processor):
         self._task_manager = task_manager
@@ -52,6 +53,7 @@ class RadarEngine:
             "next_scan": self._next_scan.isoformat() if self._next_scan else None,
             "scan_count": self._scan_count,
             "papers_found": self._papers_found,
+            "backlog": len(self._backlog),
             "categories": self.radar_cfg.categories,
             "interval_hours": self.radar_cfg.interval_hours,
             "recent_papers": self._recent_papers[-10:],
@@ -73,32 +75,28 @@ class RadarEngine:
         # 然后等到下一个整点
         while True:
             try:
-                # Check queue status
                 tasks = self._task_manager.list_tasks(limit=200) if self._task_manager else []
                 from ..models.task import TaskStatus
                 active = sum(1 for t in tasks if t.status in (TaskStatus.PARSING, TaskStatus.REWRITING, TaskStatus.RENDERING, TaskStatus.HIGHLIGHTING, TaskStatus.PENDING))
 
-                if active == 0:
-                    # Queue empty — scan soon
-                    wait_seconds = 300  # 5 minutes
+                if self._backlog and active < 3:
+                    # Backlog has papers and queue has room — process immediately
+                    wait_seconds = 30
                     self._next_scan = datetime.utcnow() + timedelta(seconds=wait_seconds)
-                    logger.info("Radar: queue empty, next scan in 5min")
-                else:
-                    # Queue busy — check again in 5 min (not full hour)
-                    # This way we detect when queue empties quickly
+                    logger.info("Radar: backlog=%d, active=%d, processing in 30s", len(self._backlog), active)
+                elif active == 0 and not self._backlog:
+                    # Queue empty, backlog empty — scan for new papers in 5min
                     wait_seconds = 300
                     self._next_scan = datetime.utcnow() + timedelta(seconds=wait_seconds)
-                    logger.info("Radar: %d active tasks, checking again in 5min", active)
+                    logger.info("Radar: queue+backlog empty, scanning in 5min")
+                else:
+                    # Queue busy — check again in 2min
+                    wait_seconds = 120
+                    self._next_scan = datetime.utcnow() + timedelta(seconds=wait_seconds)
+                    logger.info("Radar: %d active, backlog=%d, checking in 2min", active, len(self._backlog))
 
                 await asyncio.sleep(wait_seconds)
-
-                # Re-check: only scan if queue is actually empty or low
-                tasks2 = self._task_manager.list_tasks(limit=200) if self._task_manager else []
-                active2 = sum(1 for t in tasks2 if t.status in (TaskStatus.PARSING, TaskStatus.REWRITING, TaskStatus.RENDERING, TaskStatus.HIGHLIGHTING, TaskStatus.PENDING))
-                if active2 < 3:
-                    await self._scan_and_process()
-                else:
-                    logger.info("Radar: still %d active, skipping scan", active2)
+                await self._scan_and_process()
 
             except asyncio.CancelledError:
                 break
@@ -107,24 +105,29 @@ class RadarEngine:
                 await asyncio.sleep(60)
 
     async def _scan_and_process(self) -> None:
-        """扫描 + 仅在队列空闲时处理新论文"""
+        """扫描 + 从 backlog 中持续处理论文"""
         try:
-            # Check how many tasks are currently active
             from ..models.task import TaskStatus
             active_statuses = {TaskStatus.PARSING, TaskStatus.REWRITING, TaskStatus.RENDERING, TaskStatus.HIGHLIGHTING, TaskStatus.PENDING}
             tasks = self._task_manager.list_tasks(limit=200)
             active_count = sum(1 for t in tasks if t.status in active_statuses)
+            slots = max(0, 3 - active_count)
 
-            if active_count >= 3:
-                logger.info("Radar: %d tasks active, skipping auto-process (will scan only)", active_count)
-                await self.scan()  # Still scan to discover papers, just don't process
-                return
+            # If backlog is empty, scan for new papers
+            if not self._backlog:
+                papers = await self.scan()
+                if papers:
+                    self._backlog.extend(papers)
+                    logger.info("Radar: added %d papers to backlog (total: %d)", len(papers), len(self._backlog))
 
-            papers = await self.scan()
-            if papers and self._task_manager and self._processor:
-                slots = max(0, 3 - active_count)
-                if slots > 0:
-                    asyncio.create_task(self._auto_process(papers[:slots]))
+            # Process from backlog
+            if self._backlog and slots > 0 and self._task_manager and self._processor:
+                to_process = self._backlog[:slots]
+                self._backlog = self._backlog[slots:]
+                logger.info("Radar: processing %d from backlog (%d remaining)", len(to_process), len(self._backlog))
+                asyncio.create_task(self._auto_process(to_process))
+            elif self._backlog:
+                logger.info("Radar: %d in backlog, but %d active tasks (waiting)", len(self._backlog), active_count)
         except Exception:
             logger.exception("Radar scan failed")
 
